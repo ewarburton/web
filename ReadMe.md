@@ -5,3 +5,6 @@
 
 ## SVG
 ![Learning SVG](pic1.svg)
+
+## Russia
+![Russia](Russia.svg)
