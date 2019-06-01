@@ -4,4 +4,4 @@
 6045301500
 
 ## SVG
-[Learning SVG](Pic1.svg)
+[Learning SVG](pic1.svg)
