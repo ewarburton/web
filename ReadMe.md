@@ -3,7 +3,7 @@
 ## History
 6045301500
 
-## SVG
+## Scalable Vector Graphics
 ![Learning SVG](pic1.svg)
 
 ## Russia
