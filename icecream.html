@@ -5,11 +5,34 @@
     <meta charset="utf-8">
     <title>Pony Icecream</title>
 	<style>
-	button { width: 40pt; height: 40pt; border: none}
+	button { width: 40pt; height: 40pt; border: none; padding: 0; margin: 0}
 	body { background: #ded }
+	div.block { display: inline-block }
+	div { margin: 0; padding: 0 }
+	div.myColours { margin: 0.5em 0 3em 0 }
 </style>
 <script>
 function changeColor(col) {document.getElementById("icecream").style.fill = col;}
+
+window.onload = function() {
+	let buttons = document.getElementById("buttons");
+	for(let r=0;r<360;r+=20) {
+		let block = document.createElement('div');
+		block.className = "block";
+		for(let g=10;g<=100;g+=5) {
+			let row = document.createElement('div');
+			for(let b=10;b<100;b+=5) {
+				let button = document.createElement("button");
+				let colour = "hsl("+r+","+g+"%,"+b+"%)";
+				button.style.backgroundColor = colour;
+				button.onclick = function() { changeColor(colour); };
+				row.appendChild(button);
+			}
+			block.appendChild(row);
+		}
+		buttons.appendChild(block);
+	}
+}
 </script>
 </head>
 <body id="body">
@@ -20,6 +43,7 @@ function changeColor(col) {document.getElementById("icecream").style.fill = col;
 	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
 </svg>
 
+<div class="myColours">
 <button style="background: red" onclick="changeColor('red')">&nbsp;</button>
 <button style="background: orange" onclick="changeColor('orange')">&nbsp;</button>
 <button style="background: yellow" onclick="changeColor('yellow')">&nbsp;</button> 
@@ -34,6 +58,11 @@ function changeColor(col) {document.getElementById("icecream").style.fill = col;
 <button style="background: gray" onclick="changeColor('gray')">&nbsp;</button>
 <button style="background: black" onclick="changeColor('black')">&nbsp</button>
 <button style="background: #ffcc00" onclick="changeColor('#ffcc00')">&nbsp</button>
-</body>	
-5
 <button style="background: #ffcc88" onclick="changeColor('#ffcc88')">&nbsp</button>
+</div>
+
+
+<div id="buttons"></div>
+
+</body>	
+</html>
