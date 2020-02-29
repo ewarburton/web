@@ -17,7 +17,7 @@ function changeColor(col) {document.getElementById("icecream").style.fill = col;
 
 window.onload = function() {
 	let buttons = document.getElementById("buttons");
-	for(let r=0;r<360;r+=20) {
+	for(let r=0;r<360;r+=1) {
 		let block = document.createElement('div');
 		block.className = "block";
 		for(let g=10;g<=100;g+=5) {
