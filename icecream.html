@@ -13,11 +13,16 @@
 	div.myColours { margin: 0.5em 0 3em 0 }
 </style>
 <script>
-function changeColor(col) {document.getElementById("icecream").style.fill = col;}
+	
+var currentIcecream = "icecream1";
+
+function changeColor(col) {document.getElementById(currentIcecream).style.fill = col;}
+
+
 
 window.onload = function() {
 	let buttons = document.getElementById("buttons");
-	for(let r=0;r<360;r+=1) {
+	for(let r=0;r<360;r+=10) {
 		let block = document.createElement('div');
 		block.className = "block";
 		for(let g=10;g<=100;g+=5) {
@@ -39,11 +44,35 @@ window.onload = function() {
 <body id="body">
 	<h1>My Little Pony Icecream</h1>
 
-<svg width="200" height="200" viewBox="0 0 200 200">
-	<circle id="icecream" r="50" cx="100" cy="60" fill="red" />
+<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream1'">
+	<circle id="icecream1" r="50" cx="100" cy="60" fill="red" />
 	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
 </svg>
 
+<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.1'">
+	<circle id="icecream2.1" r="50" cx="100" cy="60" fill="red" />
+	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
+</svg>
+
+<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.2'">
+	<circle id="icecream2.2" r="50" cx="100" cy="60" fill="red" />
+	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
+</svg>
+
+<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.3'">
+	<circle id="icecream2.3" r="50" cx="100" cy="60" fill="red" />
+	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
+</svg>
+
+<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.4'">
+	<circle id="icecream2.4" r="50" cx="100" cy="60" fill="red" />
+	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
+</svg>
+
+<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.5'">
+	<circle id="icecream2.5" r="50" cx="100" cy="60" fill="red" />
+	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
+</svg>
 <div class="myColours">
 <button style="background: red" onclick="changeColor('red')">&nbsp;</button>
 <button style="background: orange" onclick="changeColor('orange')">&nbsp;</button>
