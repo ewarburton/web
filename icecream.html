@@ -14,7 +14,7 @@
 </style>
 <script>
 	
-var currentIcecream = "icecream1";
+var currentIcecream = "icecream1a";
 
 function changeColor(col) {document.getElementById(currentIcecream).style.fill = col;}
 
@@ -44,51 +44,65 @@ window.onload = function() {
 <body id="body">
 	<h1>My Little Pony Icecream</h1>
 
-<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream1'">
-	<circle id="icecream1" r="50" cx="100" cy="60" fill="red" />
+icecream1<svg width="160" height="420" viewBox="0 -200 160 340" >
+	<circle r="50" cx="100" cy="60" id="icecream1a" onclick="currentIcecream = this.id" fill="red" />
+	<path d="M60 30 A50 50 1 1 1 140 30L60 30" id="icecream1b" onclick="currentIcecream = this.id" fill="red"/>
+	<path d="M60 -30 A50 50 1 1 1 140 -30L60 -30" id="icecream1c" onclick="currentIcecream = this.id" fill="red"/>
+	<path d="M60 -90 A50 50 1 1 1 140 -90L60 -90" id="icecream1d" onclick="currentIcecream = this.id" fill="red"/>
+	<path d="M60 -150 A50 50 1 1 1 140 -150L60 -150" id="icecream1e" onclick="currentIcecream = this.id" fill="red"/>
 	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
 </svg>
 
-<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.1'">
+icecream2.1<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.1'">
 	<circle id="icecream2.1" r="50" cx="100" cy="60" fill="red" />
 	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
 </svg>
 
-<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.2'">
+icecream2.2<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.2'">
 	<circle id="icecream2.2" r="50" cx="100" cy="60" fill="red" />
 	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
 </svg>
 
-<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.3'">
+icecream2.3<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.3'">
 	<circle id="icecream2.3" r="50" cx="100" cy="60" fill="red" />
 	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
 </svg>
 
-<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.4'">
+icecream2.4<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.4'">
 	<circle id="icecream2.4" r="50" cx="100" cy="60" fill="red" />
 	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
 </svg>
 
-<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.5'">
+icecream2.5<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream2.5'">
+	<circle id="icecream2.4" r="50" cx="100" cy="60" fill="red" />
+	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
+</svg>
+
+icecream3<svg width="160" height="200" viewBox="20 0 160 200" onclick="currentIcecream = 'icecream3'">
+	<circle id="icecream2.4" r="50" cx="100" cy="60" fill="red" />
+	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
+</svg>
+
+
 	<circle id="icecream2.5" r="50" cx="100" cy="60" fill="red" />
 	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="black" fill="brown"/> 
 </svg>
 <div class="myColours">
-<button style="background: red" onclick="changeColor('red')">&nbsp;</button>
-<button style="background: orange" onclick="changeColor('orange')">&nbsp;</button>
-<button style="background: yellow" onclick="changeColor('yellow')">&nbsp;</button> 
-<button style="background: lime" onclick="changeColor('lime')">&nbsp;</button> 
-<button style="background: green"  onclick="changeColor('green')">&nbsp;</button>
-<button style="background: aqua"  onclick="changeColor('aqua')">&nbsp;</button>
-<button style="background: blue" onclick="changeColor('blue')">&nbsp;</button>
-<button style="background: indigo" onclick="changeColor('indigo')">&nbsp;</button>
-<button style="background: violet" onclick="changeColor('violet')">&nbsp;</button> 
-<button style="background: #e00060" onclick="changeColor('#e00060')">&nbsp;</button>
-<button style="background: white" onclick="changeColor('white')">&nbsp;</button>
-<button style="background: gray" onclick="changeColor('gray')">&nbsp;</button>
-<button style="background: black" onclick="changeColor('black')">&nbsp</button>
-<button style="background: #ffcc00" onclick="changeColor('#ffcc00')">&nbsp</button>
-<button style="background: #ffcc88" onclick="changeColor('#ffcc88')">&nbsp</button>
+	<button style="background: red" onclick="changeColor('red')">&nbsp;</button>
+	<button style="background: orange" onclick="changeColor('orange')">&nbsp;</button>
+	<button style="background: yellow" onclick="changeColor('yellow')">&nbsp;</button> 
+	<button style="background: lime" onclick="changeColor('lime')">&nbsp;</button> 
+	<button style="background: green"  onclick="changeColor('green')">&nbsp;</button>
+	<button style="background: aqua"  onclick="changeColor('aqua')">&nbsp;</button>
+	<button style="background: blue" onclick="changeColor('blue')">&nbsp;</button>
+	<button style="background: indigo" onclick="changeColor('indigo')">&nbsp;</button>
+	<button style="background: violet" onclick="changeColor('violet')">&nbsp;</button> 
+	<button style="background: #e00060" onclick="changeColor('#e00060')">&nbsp;</button>
+	<button style="background: white" onclick="changeColor('white')">&nbsp;</button>
+	<button style="background: gray" onclick="changeColor('gray')">&nbsp;</button>
+	<button style="background: black" onclick="changeColor('black')">&nbsp;</button>
+	<button style="background: #ffcc00" onclick="changeColor('#ffcc00')">&nbsp;</button>
+	<button style="background: #ffcc88" onclick="changeColor('#ffcc88')">&nbsp;</button>
 </div>
 
 

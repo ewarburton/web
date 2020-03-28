@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8" />
+<title>Grid</title>
+ <meta name="viewport" content="initial-scale=1" />
+   <meta name="apple-mobile-web-app-capable" content="yes" />
+   <style>
+	button { width: 10pt; height: 10pt; border: none; padding: 0; margin: 0}
+	.myColours button { width: 40pt; height: 40pt }
+	body { background: #ded }
+	div.block { display: inline-block }
+	div { margin: 0; padding: 0 }
+	div.myColours { margin: 0.5em 0 3em 0 }
+</style>
+   <script>
+	
+var colour = "red";
+
+function changeColor(col) { colour = col;}
+
+const width=20;
+const height=20;
+const cellWidth = 20;
+const cellHeight = 20;
+const borderWidth = 2;
+const svgNS = "http://www.w3.org/2000/svg";
+
+window.onload = function() {
+	let grid = document.getElementById("grid");
+	for(let x=0;x<width;x++) {
+      for(let y=0;y<height;y++) {
+         let block = document.createElementNS(svgNS,'rect');
+         block.setAttribute("x",cellWidth * x);
+         block.setAttribute("y",cellHeight * y);
+         block.setAttribute("width",cellWidth);
+         block.setAttribute("height",cellHeight);
+         block.setAttribute("fill","white");
+         block.onclick = function() { block.setAttribute("fill",colour); };
+         block.setAttribute("stroke","black");
+         block.setAttribute("strokeWidth",borderWidth);
+         grid.appendChild(block);
+		}
+	}
+}
+</script>
+   
+</head>
+
+<body>
+   <h1>Grid</h1>
+   
+   <div class="myColours">
+      <button style="background: red" onclick="changeColor('red')">&nbsp;</button>
+      <button style="background: orange" onclick="changeColor('orange')">&nbsp;</button>
+      <button style="background: yellow" onclick="changeColor('yellow')">&nbsp;</button> 
+      <button style="background: lime" onclick="changeColor('lime')">&nbsp;</button> 
+      <button style="background: green"  onclick="changeColor('green')">&nbsp;</button>
+      <button style="background: aqua"  onclick="changeColor('aqua')">&nbsp;</button>
+      <button style="background: blue" onclick="changeColor('blue')">&nbsp;</button>
+      <button style="background: indigo" onclick="changeColor('indigo')">&nbsp;</button>
+      <button style="background: violet" onclick="changeColor('violet')">&nbsp;</button> 
+      <button style="background: #e00060" onclick="changeColor('#e00060')">&nbsp;</button>
+      <button style="background: white" onclick="changeColor('white')">&nbsp;</button>
+      <button style="background: gray" onclick="changeColor('gray')">&nbsp;</button>
+      <button style="background: black" onclick="changeColor('black')">&nbsp;</button>
+      <button style="background: #ffcc00" onclick="changeColor('#ffcc00')">&nbsp;</button>
+      <button style="background: #ffcc88" onclick="changeColor('#ffcc88')">&nbsp;</button>
+   </div>
+   
+   <svg xmlns="http://www.w3.org/2000/svg" id="grid" width="400" height="400" viewBox="0 0 400 400" ></svg>
+
+</body>
+
+</html>
