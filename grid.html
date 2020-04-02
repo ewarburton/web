@@ -20,15 +20,17 @@ var colour = "red";
 
 function changeColor(col) { colour = col;}
 
-const width=20;
-const height=20;
-const cellWidth = 20;
-const cellHeight = 20;
+const width=40;
+const height=40;
+const cellWidth = 17;
+const cellHeight = 15;
 const borderWidth = 2;
 const svgNS = "http://www.w3.org/2000/svg";
 
 window.onload = function() {
 	let grid = document.getElementById("grid");
+	grid.setAttribute("width",width*cellWidth);
+	grid.setAttribute("height",height*cellHeight);
 	for(let x=0;x<width;x++) {
       for(let y=0;y<height;y++) {
          let block = document.createElementNS(svgNS,'rect');
@@ -56,12 +58,14 @@ window.onload = function() {
       <button style="background: orange" onclick="changeColor('orange')">&nbsp;</button>
       <button style="background: yellow" onclick="changeColor('yellow')">&nbsp;</button> 
       <button style="background: lime" onclick="changeColor('lime')">&nbsp;</button> 
-      <button style="background: green"  onclick="changeColor('green')">&nbsp;</button>
+      <button style="background: #0fc"  onclick="changeColor('#0fc')">&nbsp;</button>
       <button style="background: aqua"  onclick="changeColor('aqua')">&nbsp;</button>
       <button style="background: blue" onclick="changeColor('blue')">&nbsp;</button>
-      <button style="background: indigo" onclick="changeColor('indigo')">&nbsp;</button>
-      <button style="background: violet" onclick="changeColor('violet')">&nbsp;</button> 
-      <button style="background: #e00060" onclick="changeColor('#e00060')">&nbsp;</button>
+      <button style="background: #70f" onclick="changeColor('#40f')">&nbsp;</button>
+      <button style="background: #a0f" onclick="changeColor('#a0f')">&nbsp;</button> 
+      <button style="background: #f0f" onclick="changeColor('#f0f')">&nbsp;</button>
+      <button style="background: #f09" onclick="changeColor('#f09')">&nbsp;</button>
+
       <button style="background: white" onclick="changeColor('white')">&nbsp;</button>
       <button style="background: gray" onclick="changeColor('gray')">&nbsp;</button>
       <button style="background: black" onclick="changeColor('black')">&nbsp;</button>
@@ -69,7 +73,7 @@ window.onload = function() {
       <button style="background: #ffcc88" onclick="changeColor('#ffcc88')">&nbsp;</button>
    </div>
    
-   <svg xmlns="http://www.w3.org/2000/svg" id="grid" width="400" height="400" viewBox="0 0 400 400" ></svg>
+<svg xmlns="http://www.w3.org/2000/svg" id="grid" ></svg>
 
 </body>
 
