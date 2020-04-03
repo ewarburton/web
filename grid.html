@@ -27,12 +27,26 @@ const cellHeight = 15;
 const borderWidth = 2;
 const svgNS = "http://www.w3.org/2000/svg";
 
+let down = false;
+
+function move(e) {
+   var rect = grid.getBoundingClientRect();
+   var x = e.pageX - rect.left;
+   var y = e.pageY - rect.top;
+   
+   var index = Math.round(y / cellHeight)* width + Math.round(x/cellWidth);
+   if(index < 0 || index > width * height) return;
+   grid.children[index].setAttribute("fill",colour);
+   
+}
+
 window.onload = function() {
 	let grid = document.getElementById("grid");
 	grid.setAttribute("width",width*cellWidth);
 	grid.setAttribute("height",height*cellHeight);
-	for(let x=0;x<width;x++) {
+	
       for(let y=0;y<height;y++) {
+	 for(let x=0;x<width;x++) {
          let block = document.createElementNS(svgNS,'rect');
          block.setAttribute("x",cellWidth * x);
          block.setAttribute("y",cellHeight * y);
@@ -43,8 +57,12 @@ window.onload = function() {
          block.setAttribute("stroke","black");
          block.setAttribute("strokeWidth",borderWidth);
          grid.appendChild(block);
-		}
-	}
+	 }
+      }
+      
+      grid.onmousedown = grid.touchstart = function(e) { grid.onmousemove = grid.touchmove = move; move(e); };
+      grid.onmouseup = grid.touchend = function() { grid.onmousemove = grid.touchmove = null; };
+      
 }
 </script>
    
