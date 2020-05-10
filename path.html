@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Alphabet Choices</title>
+	<style>
+	button { }
+	.myColours button { width: 40pt; height: 40pt }
+	body { background: #ded }
+	div.block { display: inline-block }
+	div { margin: 0; padding: 0 }
+	div.myColours { margin: 0.5em 0 3em 0 }
+	section { display: none }
+</style>
+<script>
+
+var page;
+
+function goPage() {
+	if(page != null)
+		page.style.display = 'none';
+	page = document.getElementById('page'+document.getElementById('pageInput').value);
+	if(page==null) 
+		page = document.getElementById('page0');
+	page.style.display = 'block';
+}
+
+window.onload = function() {
+	goPage("1");
+}
+</script>
+</head>
+<body id="body">
+	<h1>Alphabet Choices</h1>
+	<form onsubmit="goPage(); return false;">
+	<h2>Page: <input id="pageInput" type="number" size="4" value="1"/><button onclick="goPage()" >Go</button></h2>
+	</form>
+	<section id="page0"><h1>N/A</h1></section>
+	
+	<section id="page1">
+		<h1>Make your Own Alphabet</h1>
+	
+		<p>Cyrillic or Random Letters?</p>
+		
+		<p>Go to page 2 for Cyrillic or 52 for random</p>
+	</section>
+	
+	<section id="page2">
+		<h1>Cyrillic</h1>
+	
+		<p>add I or add J?</p>
+		
+		<p>Go to page 3 for add I or 26 for add J</p>
+	
+	</section>
+
+	<section id="page3">
+		<h1>Cyrillic: Adding I</h1>
+	
+		<p>Adding J or Dont?</p>
+		
+		<p>Go to page 4 for Add J or 13 for Dont</p>
+	</section>
+	
+	<section id="page4">
+		<h1>Cyrillic: Adding I and J</h1>
+	
+		<p>That's it</p>
+	
+	</section>	
+	<section id="page13">
+		<h1>Cyrillic: Adding I and N/A</h1>
+	
+		<p>Party!</p>
+	</section>
+		
+	<section id="page26">
+		<h1>Cyrillic: Adding J</h1>
+	
+		<p>Adding I or Dont?</p>
+		
+		<p>Go to page 59 for Add I or 79 for Dont</p>
+	</section>
+	
+	<section id="page59">
+		<h1>Cyrillic: Adding J and I</h1>
+	
+		<p>That's it</p>
+	
+	</section>
+		
+	<section id="page79">
+		<h1>Cyrillic: Adding J and N/A</h1>
+	
+		<p>Party!</p>
+	</section>
+
+</body>
+</html>
