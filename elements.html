@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8" />
+<title>Elements</title>
+ <meta name="viewport" content="initial-scale=1" />
+   <meta name="apple-mobile-web-app-capable" content="yes" />
+   <style>
+	body { background: #ded }
+   </style>
+   <script>
+	
+var elements = {
+      1 : { name: "Hydrogen", symbol: "H" },
+      2 : { name: "Helium", symbol: "He" },
+      3 : { name: "Lithium", symbol: "Li" },
+      4 : { name: "Beryllium", symbol: "Be" },
+      5 : { name: "Boron", symbol: "B" },
+      6 : { name: "Carbon", symbol: "C" },
+      7 : { name: "Nitrogen", symbol: "Nt" },
+};
+
+function getElement(e) {
+   let element = elements[e.target.value];
+   if(element == null) element = { name: "Unknown", symbol: "Uk"};
+   document.getElementById('eName').innerHTML=element.name;
+   document.getElementById('eSymbol').innerHTML=element.symbol;
+}
+
+</script>
+   
+</head>
+
+<body>
+   <h1>Elements</h1>
+   
+   <h2>Protons: <input type="number" oninput="getElement(event)" /></h2>
+   
+   <h2>Symbol: <span id="eSymbol" /></h2>
+   
+   <h2>Name: <span id="eName" /></h2>
+
+</body>
+
+</html>
