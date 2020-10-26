@@ -1,74 +1,93 @@
 <!DOCTYPE html>
 <html><head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="initial-scale=1" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-<title>MLP Icecream</title>
-<style>button { width: 200pt; padding:0; height: 50pt; border: none}	body { background: #C88}</style>
-<script>function changeColor(col) {document.getElementById("icecream").style.fill = col;}
-</script></head>
-<body id="body">	<h1>My Little Pony Icecream</h1>
-<svg width="200" height="200" viewBox="0 0 222 222">	<circle id="icecream" r="50" cx="100" cy="60" fill="#333" />	<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="none" fill="lightsalmon"/> </svg>
-<hr/>
-<hr/>
-<hr/><div id="buttons" />
+    <meta charset="utf-8">
+    <title>MLP Icecream</title>
+	<style>
+	button { width: 150pt; height: 150pt; border: none; border-radius: 75pt; box-shadow: 10px 10px 5px grey; 
+		margin: 0 10px 10px 0; display: inline-block}
+	button:active { box-shadow: none; margin:0px 0 10px 10px;}
+	body { background: #ecc; width: 100%}
+	div.buttons { background: #ecc; }
+	</style>
+	<script>
+		function changeColor(col) {
+			document.getElementById("icecream").style.fill = col; return true;}
+	function changeColour(col) {
+		document.getElementById("icecream").style.fill = col;}
+	</script>
+</head>
 
-<button style="background: red" onclick="changeColor('red')">Red</button>
+<body id="body">
+		<h1>My Little Pony Icecream</h1>
+	<svg width="400" height="400" viewBox="0 0 222 222">
+		<circle id="icecream" r="50" cx="100" cy="60" fill="#fff" />
+		<path d="M50 75 L100 175 L150 75" stroke-width="3" stroke="none" fill="lightsalmon"/>
+	</svg>
+<div class="buttons">
+<button style="background: #f00" onclick="changeColor('#f00')">Red</button>
 <button style="background: #f80" onclick="changeColor('#f80')">Orange</button>
-<button style="background: yellow" onclick="changeColor('yellow')">Yellow</button> 
-<button style="background: lime" onclick="changeColor('lime')">Lime</button> 
-<button style="background: aquamarine"  onclick="changeColor('aquamarine')">Green</button>
-<button style="background: aqua"  onclick="changeColor('aqua')">Aqua</button>
-<button style="background: deepskyblue" onclick="changeColor('deepskyblue')">Blue</button> 
-<button style="background:mediumslateblue" onclick="changeColor('mediumslateblue')">Violet</button> 
-<button style="background:mediumorchid" onclick="changeColor('mediumorchid')">Purple</button>
-<button style="background: fuchsia" onclick="changeColor('fuchsia')">Fuchsia</button> 
-<button style="background: deeppink" onclick="changeColor('deeppink')">Magenta</button>
-<hr/>
-<hr/>
-<hr/>
-
+<button style="background: #ff0" onclick="changeColor('#ff0')">Yellow</button> 
+<button style="background: #bf0" onclick="changeColor('#df0')">Lime</button> 
+<button style="background: #0f0"  onclick="changeColor('#0f0')">Green</button>
+<button style="background: #0fc"  onclick="changeColor('#0fc')">Aqua</button>
+<button style="background: #0af" onclick="changeColor('#0af')">Blue</button> 
+<button style="background:#00f" onclick="changeColor('#00f')">Violet</button> 
+<button style="background:#80f" onclick="changeColor('#80f')">Purple</button>
+<button style="background: #f0f" onclick="changeColor('#f0f')">Fuchsia</button> 
+<button style="background: #f08" onclick="changeColor('#f08')">Magenta</button>————————————————————————————————————————————————————————————————
 <button style="background: #F40009" onclick="changeColor('#F40009')">Coke Red (N.O)</button> 
-<button style="background: #cc8888" onclick="changeColor('#c88')">Camouflaging Red (N.O)</button> 
+<button style="background: #ecc" onclick="changeColor('#ecc')">Camouflaging Red (N.O)</button> 
 <button style="background:#a88" onclick="changeColor('#a88')">Redish Gray (N.O)</button>
+<button style="background:indianred" onclick="changeColor('indianred')">Indian Red (N.O)</button>
 <button style="background:orangered" onclick="changeColor('orangered')">Tomato (N.O)</button>
+<button style="background:#804000" onclick="changeColor('#804000')">Great Ape (N.O)</button>
+<button style="background:#ffC080" onclick="changeColor('#ffc080')">Skin (N.O)</button>
 <button style="background: #ff8628" onclick="changeColor('#ff8628')">Vermilion (N.O)</button>
 <button style="background:gold" onclick="changeColor('gold')">Gold (N.O)</button>
-<button style="background:khaki" onclick="changeColor('khaki')">Khaki (N.O)</button>
+<button style="background:#aa8" onclick="changeColor('#aa8')">Yellowish Gray (N.O)</button>
+<button style="background:khaki" onclick="changeColor('khaki')">Khaki (N.O)</button> 
+<button style="background:darkkhaki" onclick="changeColor('darkkhaki')">Dark Khaki (N.O)</button>
 <button style="background:yellowgreen" onclick="changeColor('yellowgreen')">Chartreuse (N.O)</button>
 <button style="background:olive" onclick="changeColor('olive')">Olive (N.O)</button>
+<button style="background:#efe" onclick="changeColor('#efe')"> Ballet Green (N.O)</button>
+<button style="background:#696" onclick="changeColor('#696')">Crocodile (N.O)</button>
 <button style="background:#ded" onclick="changeColor('#ded')">Light Crocodile (N.O)</button>
 <button style="background:palegreen" onclick="changeColor('palegreen')">Pale Green  (N.O)</button>
-<button style="background:green" onclick="changeColor('green')">Dark Lime (N.O)</button>
+<button style="background:#030; color:#fff" onclick="changeColor('#030')">Forest Green (N.O)</button>
+<button style="background:#8c8" onclick="changeColor('#8c8')">Light Forest Green (N.O)</button>
+<button style="background:#8a8" onclick="changeColor('#8a8')">Greenish Gray (N.O)</button>
+<button style="background:#8a9" onclick="changeColor('#8a9')">Greenish Gray+17 (N.O)</button>
+<button style="background:#8aa" onclick="changeColor('#8aa')">Aquish Gray (N.O)</button>
+<button style="background:#088" onclick="changeColor('#088')"> Teal (N.O)</button> 
 <button style="background:cadetblue" onclick="changeColor('cadetblue')">Cadet Blue (N.O)</button>
+<button style="background:#0ff" onclick="changeColor('#0ff')"> Cyan (N.O)</button>
+<button style="background:lightblue" onclick="changeColor('lightblue')">Light Blue (N.O)</button>
 <button style="background:dodgerblue" onclick="changeColor('dodgerblue')">Dodger Blue (N.O)</button>
+<button style="background:#04f" onclick="changeColor('#04f')">Indigo (N.O)</button>
 <button style="background:#88a" onclick="changeColor('#88a')">Bluish Gray (N.O)</button>
-<button style="background:mediumorchid" onclick="changeColor('mediumorchid')">Dark Magenta (N.O)</button> <hr/>
+<button style="background:#008; color:#fff" onclick="changeColor('#008')">Blueberry (N.O)</button>
+<button style="background:lavender" onclick="changeColor('lavender')">Lavender (N.O)</button>
+<button style="background:#5000d0; color:#fff" onclick="changeColor('#5000d0')">Ultraviolet (N.O)</button>
+<button style="background:#b19cd9" onclick="changeColor('#b19cd9')">Lavender-Dark Magenta (N.O)</button>
+<button style="background:mediumorchid" onclick="changeColor('mediumorchid')">Dark Magenta (N.O)</button>
+<button style="background:#a8a" onclick="changeColor('#a8a')">Magentish Gray (N.O)</button>
+<button style="background:#f8f" onclick="changeColor('#f8f')">Pink (N.O)</button>
+<button style="background:#800" onclick="changeColor('#800')">Infrared (N.O)</button>————————————————————————————————————————————————————————————————
+
+
 <button style="background:brown" onclick="changeColor('brown')">Brown (N.O)</button>
 <button style="background:white" onclick="changeColor('white')">White (N.O)</button>
-<button style="background:snow" onclick="changeColor('snow')">Snow (N.O)</button>
-<button style="background:#888" onclick="changeColor('#888')">Gray (N.O)</button>
-<button style="background:#666" onclick="changeColor('#666')">Jupiter Moon Gray (N.O)</button>
-<button style="background:#111; color:#fff" onclick="changeColor('#111')">Black (N.O)</button>
-<button style="background:#f8f" onclick="changeColor('#f8f')">Pink (N.O)</button><hr/> 
-<hr/> 
-
-<hr/>
-
-N.O means Not Official<hr/>
-
-
-<hr/>
-<hr/>
-5m old (Feb 2020)
-
-<hr/>
-
-
-<hr/>
-<hr/>
-
-16,777,182 colours to be discovered
-
+<button style="background:snow" onclick="changeColor('snow')">Snow (N.O)</button> 
+<button style="background:#ccc" onclick="changeColor('#ccc')">Light Grey (N.O)</button>
+<button style="background:#888" onclick="changeColor('#888')">Grey (N.O)</button>
+<button style="background:#666" onclick="changeColor('#666')">Jupiter Moon Grey (N.O)</button>
+<button style="background:#333" onclick="changeColor('#333')">Jupiter Moon Black (N.O)</button>
+<button style="background:#000; color:#fff" onclick="changeColor('#000')">Black (N.O)</button>
+</div>
+————————————————————————————————————————————————————————————————
+N.O means Not Official
+————————————————————————————————————————————————————————————————
+7-9m old (Feb 2020)————————————————————————————————————————————————————————————————
+55 colours in this app, 45 more until another suprise, and 16,777,161 more to be in this app.
 </body>
 </html>
