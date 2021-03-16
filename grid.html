@@ -30,12 +30,31 @@ const svgNS = "http://www.w3.org/2000/svg";
 let down = false;
 
 function move(e) {
+   e.preventDefault();
+
+   var touches = e.changedTouches;
    var rect = grid.getBoundingClientRect();
-   var x = e.pageX - rect.left;
-   var y = e.pageY - rect.top;
+   if(touches.length > 0) {
+      for (var i = 0; i < touches.length; i++) {
+         let e = touches[i];
+         let x = e.clientX - rect.left;
+         let y = e.clientY - rect.top;
+         var index = Math.round(y / cellHeight)* width + Math.round(x/cellWidth);
+
+
+         if(index < 0 || index > width * height || index == null) return;
+         grid.children[index].setAttribute("fill",colour);
+      }
+      return;
+   }
+
    
+   let x = e.clientX - rect.left;
+   let y = e.clientY - rect.top;
    var index = Math.round(y / cellHeight)* width + Math.round(x/cellWidth);
-   if(index < 0 || index > width * height) return;
+
+
+   if(index < 0 || index > width * height || index == null) return;
    grid.children[index].setAttribute("fill",colour);
    
 }
@@ -59,9 +78,19 @@ window.onload = function() {
          grid.appendChild(block);
 	 }
       }
+
+grid.addEventListener("touchstart", move, false);
+  //el.addEventListener("touchend", handleEnd, false);
+  //el.addEventListener("touchcancel", handleCancel, false);
+  grid.addEventListener("touchmove", move, false);
       
-      grid.onmousedown = grid.touchstart = function(e) { grid.onmousemove = grid.touchmove = move; move(e); };
-      grid.onmouseup = grid.touchend = function() { grid.onmousemove = grid.touchmove = null; };
+      grid.onmousedown = grid.ontouchstart = function(e) { 
+         e.preventDefault();
+         grid.onmousemove = grid.ontouchmove = move; // move(e);
+      };
+      grid.onmouseup = grid.ontouchend = function(e) { 
+         e.preventDefault();
+         grid.onmousemove = grid.ontouchmove = null; };
       
 }
 </script>
@@ -75,10 +104,10 @@ window.onload = function() {
       <button style="background: red" onclick="changeColor('red')">Red</button>
       <button style="background: orange" onclick="changeColor('orange')">Orange</button>
       <button style="background: yellow" onclick="changeColor('yellow')">Yellow</button> 
-      <button style="background: lime" onclick="changeColor('lime')">Lime</button> 
-      <button style="background: #0fc"  onclick="changeColor('#0fc')">Green</button>
-      <button style="background: aqua"  onclick="changeColor('aqua')">Aqua</button>
-      <button style="background: #08f" onclick="changeColor('#08f')">Blue</button>
+      <button style="background: #df0" onclick="changeColor('lime')">Lime</button> 
+      <button style="background: #0f0"  onclick="changeColor('#0fc')">Green</button>
+      <button style="background: rgb(0, 255, 212)"  onclick="changeColor('aqua')">Aqua</button>
+      <button style="background: rgb(0, 162, 255)" onclick="changeColor('#08f')">Blue</button>
       <button style="background: #00f" onclick="changeColor('#00f')">Violet</button>
       <button style="background: #a0f" onclick="changeColor('#a0f')">Purple</button> 
       <button style="background: #f0f" onclick="changeColor('#f0f')">Fuchsia</button>
