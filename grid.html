@@ -30,11 +30,11 @@ const svgNS = "http://www.w3.org/2000/svg";
 let down = false;
 
 function move(e) {
-   e.preventDefault();
+   //e.preventDefault();
 
    var touches = e.changedTouches;
    var rect = grid.getBoundingClientRect();
-   if(touches.length > 0) {
+   if(touches != null && touches.length > 0) {
       for (var i = 0; i < touches.length; i++) {
          let e = touches[i];
          let x = e.clientX - rect.left;
@@ -82,7 +82,7 @@ window.onload = function() {
 grid.addEventListener("touchstart", move, false);
   //el.addEventListener("touchend", handleEnd, false);
   //el.addEventListener("touchcancel", handleCancel, false);
-  grid.addEventListener("touchmove", move, false);
+ // grid.addEventListener("touchmove", move, false);
       
       grid.onmousedown = grid.ontouchstart = function(e) { 
          e.preventDefault();
