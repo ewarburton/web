@@ -20,10 +20,10 @@ var colour = "red";
 
 function changeColor(col) { colour = col;}
 
-const width=40;
-const height=40;
-const cellWidth = 17;
-const cellHeight = 15;
+const width=60;
+const height=60;
+const cellWidth = 15;
+const cellHeight = 1;
 const borderWidth = 2;
 const svgNS = "http://www.w3.org/2000/svg";
 
@@ -34,7 +34,7 @@ function move(e) {
 
    var touches = e.changedTouches;
    var rect = grid.getBoundingClientRect();
-   if(touches.length > 0) {
+   if(touches != null && touches.length > 0) {
       for (var i = 0; i < touches.length; i++) {
          let e = touches[i];
          let x = e.clientX - rect.left;
@@ -107,7 +107,7 @@ grid.addEventListener("touchstart", move, false);
       <button style="background: #df0" onclick="changeColor('lime')">Lime</button> 
       <button style="background: #0f0"  onclick="changeColor('#0fc')">Green</button>
       <button style="background: rgb(0, 255, 212)"  onclick="changeColor('aqua')">Aqua</button>
-      <button style="background: rgb(0, 162, 255)" onclick="changeColor('#08f')">Blue</button>
+      <button style="background: #0af" onclick="changeColor('#0af')">Blue</button>
       <button style="background: #00f" onclick="changeColor('#00f')">Violet</button>
       <button style="background: #a0f" onclick="changeColor('#a0f')">Purple</button> 
       <button style="background: #f0f" onclick="changeColor('#f0f')">Fuchsia</button>
