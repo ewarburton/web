@@ -7,7 +7,7 @@
  <meta name="viewport" content="initial-scale=1" />
    <meta name="apple-mobile-web-app-capable" content="yes" />
    <style>
-	button { width: 10pt; height: 10pt; border: none; padding: 0; margin: 0}
+	.myColours button { width: 10pt; height: 10pt; border: none; padding: 0; margin: 0}
 	.myColours button { width: 40pt; height: 40pt }
 	body { background: #ded }
 	div.block { display: inline-block }
@@ -59,43 +59,96 @@ function move(e) {
    
 }
 
+var grid;
 window.onload = function() {
-	let grid = document.getElementById("grid");
+	grid = document.getElementById("grid");
 	grid.setAttribute("width",width*cellWidth);
 	grid.setAttribute("height",height*cellHeight);
 	
-      for(let y=0;y<height;y++) {
-	 for(let x=0;x<width;x++) {
-         let block = document.createElementNS(svgNS,'rect');
+   for(let y=0;y<height;y++) {
+	   for(let x=0;x<width;x++) {
+         var block = document.createElementNS(svgNS,'rect');
          block.setAttribute("x",cellWidth * x);
          block.setAttribute("y",cellHeight * y);
          block.setAttribute("width",cellWidth);
          block.setAttribute("height",cellHeight);
-         block.setAttribute("fill","white");
          block.onclick = function() { block.setAttribute("fill",colour); };
          block.setAttribute("stroke","black");
          block.setAttribute("strokeWidth",borderWidth);
          grid.appendChild(block);
-	 }
       }
+   }
 
-grid.addEventListener("touchstart", move, false);
+   
+
+   grid.addEventListener("touchstart", move, false);
   //el.addEventListener("touchend", handleEnd, false);
   //el.addEventListener("touchcancel", handleCancel, false);
   grid.addEventListener("touchmove", move, false);
       
       grid.onmousedown = grid.ontouchstart = function(e) { 
          e.preventDefault();
-         grid.onmousemove = grid.ontouchmove = move; // move(e);
+         grid.onmousemove = grid.ontouchmove = move;
+         move(e);
       };
       grid.onmouseup = grid.ontouchend = function(e) { 
          e.preventDefault();
          grid.onmousemove = grid.ontouchmove = null; };
+
+         load(1);
       
 }
+
+function reset() {
+   for(var i in grid.children) {
+      if(grid.children[i].setAttribute)
+         grid.children[i].setAttribute("fill","white");
+   }
+}
+
+
+   var number = 1;
+
+   function load(n) {
+      if(n<1) n=1;
+      number = n;
+      document.getElementById("pageNo").innerHTML = number;
+      let p = localStorage.getItem("grid"+number);
+      if(p == null) {
+         reset();
+         return;
+      }
+      reset();
+      let pixels = width * height;
+      let c = document.createElement("canvas");
+      let ctx = c.getContext("2d");
+      let img = new Image(width, height);
+      img.onload = () => {
+         ctx.drawImage(img,0,0);
+         let d = ctx.getImageData(0, 0, width, height).data; 
+         for(let i=0;i<pixels;i++) 
+            grid.children[i].setAttribute("fill","rgba("+d[i*4+3]+","+d[i*4+2]+","+d[i*4+1]+","+d[i*4]+")");
+      };
+      img.src = p;
+   }
+
+   function save() {
+      let pixels = width * height;
+      let c = document.createElement("canvas");
+      let ctx = c.getContext("2d");
+
+      for(let i =0; i< pixels ; i++) {
+         ctx.fillStyle = grid.children[i].getAttribute("fill");
+         ctx.fillRect(i%width, Math.floor(i/width), 1, 1);
+      }
+      localStorage.setItem("grid"+number, c.toDataURL());
+   }
+
 </script>
    
 </head>
+
+
 
 <body>
    <h1>Grid</h1>
@@ -125,6 +178,7 @@ grid.addEventListener("touchstart", move, false);
       <button style="background: #f8f" onclick="changeColor('#f8f')">&nbsp;</button>
    </div>
    
+<button onclick="load(number-1)">&lt;</button> <span id="pageNo"></span> <button onclick="load(number+1)">&gt;</button> <button onclick="save()">Save</button> <button onclick="reset()">Clear</button>
 <svg xmlns="http://www.w3.org/2000/svg" id="grid" ></svg>
 
 </body>
