@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Alphabet Choices</title>
+	<style>
+	button { }
+	.myColours button { width: 40pt; height: 40pt }
+	body { background: #ded }
+	div.block { display: inline-block }
+	div { margin: 0; padding: 0 }
+	div.myColours { margin: 0.5em 0 3em 0 }
+	section { display: none }
+</style>
+<script>
+
+var page;
+
+function goPage() {
+	if(page != null)
+		page.style.display = 'none';
+	page = document.getElementById('page'+document.getElementById('pageInput').value);
+	if(page==null) 
+		page = document.getElementById('page0');
+	page.style.display = 'block';
+}
+
+window.onload = function() {
+	goPage("1");
+}
+</script>
+</head>
+<body id="body">
+	<h1>Alphabet Choices</h1>
+	<form onsubmit="goPage(); return false;">
+	<h2>Page: <input id="pageInput" type="number" size="4" value="1"/><button onclick="goPage()" >Go</button></h2>
+	</form>
+	<section id="page0"><h1>
+      <!DOCTYPE html>
+      <html lang="en">
+      
+      <head>
+      <meta charset="utf-8" />
+      <title>Grid</title>
+       <meta name="viewport" content="initial-scale=1" />
+         <meta name="apple-mobile-web-app-capable" content="yes" />
+         <style>
+         button { width: 10pt; height: 10pt; border: none; padding: 0; margin: 0}
+         .myColours button { width: 40pt; height: 40pt }
+         body { background: #ded }
+         div.block { display: inline-block }
+         div { margin: 0; padding: 0 }
+         div.myColours { margin: 0.5em 0 3em 0 }
+      </style>
+         <script>
+         
+      var colour = "red";
+      
+      function changeColor(col) { colour = col;}
+      
+      const width=60;
+      const height=60;
+      const cellWidth = 15;
+      const cellHeight = 15;
+      const borderWidth = 2;
+      const svgNS = "http://www.w3.org/2000/svg";
+      
+      let down = false;
+      
+      function move(e) {
+         e.preventDefault();
+      
+         var touches = e.changedTouches;
+         var rect = grid.getBoundingClientRect();
+         if(touches != null && touches.length > 0) {
+            for (var i = 0; i < touches.length; i++) {
+               let e = touches[i];
+               let x = e.clientX - rect.left;
+               let y = e.clientY - rect.top;
+               var index = Math.round(y / cellHeight)* width + Math.round(x/cellWidth);
+      
+      
+               if(index < 0 || index > width * height || index == null) return;
+               grid.children[index].setAttribute("fill",colour);
+            }
+            return;
+         }
+      
+         
+         let x = e.clientX - rect.left;
+         let y = e.clientY - rect.top;
+         var index = Math.round(y / cellHeight)* width + Math.round(x/cellWidth);
+      
+      
+         if(index < 0 || index > width * height || index == null) return;
+         grid.children[index].setAttribute("fill",colour);
+         
+      }
+      
+      window.onload = function() {
+         let grid = document.getElementById("grid");
+         grid.setAttribute("width",width*cellWidth);
+         grid.setAttribute("height",height*cellHeight);
+         
+            for(let y=0;y<height;y++) {
+          for(let x=0;x<width;x++) {
+               let block = document.createElementNS(svgNS,'rect');
+               block.setAttribute("x",cellWidth * x);
+               block.setAttribute("y",cellHeight * y);
+               block.setAttribute("width",cellWidth);
+               block.setAttribute("height",cellHeight);
+               block.setAttribute("fill","white");
+               block.onclick = function() { block.setAttribute("fill",colour); };
+               block.setAttribute("stroke","black");
+               block.setAttribute("strokeWidth",borderWidth);
+               grid.appendChild(block);
+          }
+            }
+      
+      grid.addEventListener("touchstart", move, false);
+        //el.addEventListener("touchend", handleEnd, false);
+        //el.addEventListener("touchcancel", handleCancel, false);
+        grid.addEventListener("touchmove", move, false);
+            
+            grid.onmousedown = grid.ontouchstart = function(e) { 
+               e.preventDefault();
+               grid.onmousemove = grid.ontouchmove = move; // move(e);
+            };
+            grid.onmouseup = grid.ontouchend = function(e) { 
+               e.preventDefault();
+               grid.onmousemove = grid.ontouchmove = null; };
+            
+      }
+      </script>
+         
+      </head>
+      
+      <body>
+         <h1>Grid</h1>
+         
+         <div class="myColours">
+            <button style="background: red" onclick="changeColor('red')">Red</button>
+            <button style="background: orange" onclick="changeColor('orange')">Orange</button>
+            <button style="background: yellow" onclick="changeColor('yellow')">Yellow</button> 
+            <button style="background: #df0" onclick="changeColor('#df0')">Lime</button> 
+            <button style="background: #0f0"  onclick="changeColor('lime')">Green</button>
+            <button style="background: #0fa" onclick="changeColor('#0fa')">Aqua</button>
+            <button style="background: #0af" onclick="changeColor('#0af')">Blue</button>
+            <button style="background: #00f" onclick="changeColor('#00f')">Violet</button>
+            <button style="background: #a0f" onclick="changeColor('#a0f')">Purple</button> 
+            <button style="background: #f0f" onclick="changeColor('#f0f')">Fuchsia</button>
+            <button style="background: #f09" onclick="changeColor('#f09')">Magenta</button>
+            <hr/>
+            <button style="background: coral" onclick="changeColor('coral')">Coral</button>
+            <button style="background: dodgerblue" onclick="changeColor('dodgerblue')">Dodger Blue</button>
+            <button style="background: #da0" onclick="changeColor('#da0')">Gold</button>
+            <hr/>
+            
+            <button style="background: white" onclick="changeColor('white')">&nbsp;</button>
+            <button style="background: gray" onclick="changeColor('gray')">&nbsp;</button>
+            <button style="background: black" onclick="changeColor('black')">&nbsp;</button>
+            <button style="background: #850" onclick="changeColor('#850')">&nbsp;</button>
+            <button style="background: #f8f" onclick="changeColor('#f8f')">&nbsp;</button>
+         </div>
+         
+      <svg xmlns="http://www.w3.org/2000/svg" id="grid" ></svg>
+      remove(Grid)
+      </body>
+   </section>
+	
+

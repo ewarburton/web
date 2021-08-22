@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Axolotl Choices</title>
+	<style>
+	button { }
+	.myColours button { width: 40pt; height: 40pt }
+	body { background: #ded }
+	div.block { display: inline-block }
+	div { margin: 0; padding: 0 }
+	div.myColours { margin: 0.5em 0 3em 0 }
+	section { display: none }
+</style>
+<script>
+
+var page;
+
+function goPage() {
+	if(page != null)
+		page.style.display = 'none';
+	page = document.getElementById('page'+document.getElementById('pageInput').value);
+	if(page==null) 
+		page = document.getElementById('page0');
+	page.style.display = 'block';
+}
+
+window.onload = function() {
+	goPage("1");
+}
+</script>
+</head>
+<body id="body">
+	<h1>Axolotl Choices</h1>
+	<form onsubmit="goPage(); return false;">
+	<h2>Page: <input id="pageInput" type="text" size="4" value="1"/><button onclick="goPage()" >Go</button></h2>
+	</form>
+	<section id="page0"><h1>
+    N/A
+    </h1></section>
+    <section id="page1"><h1>
+    You've got an axolotl!
+    What colour do you want it to be?
+    R for red, O for orange, Y for yellow,
+    L for lime, G for green,
+    A for aqua, B for blue,
+    V for violet, P for purple,
+    F for fuchsia, or M for magenta?
+    </h1></section>
+    <section id="pageR"><h1>
+    You've got a red axolotl!
+    </h1></section>
+    <section id="pageO"><h1>
+    You've got an orange axolotl!
+    </h1></section>
+    <section id="pageY"><h1>
+    You've got a yellow axolotl!
+    </h1></section>
+    <section id="pageL"><h1>
+    You've got a lime axolotl!
+    </h1></section>
+    <section id="pageG"><h1>
+    You've got a green axolotl!
+    </h1></section>
+    <section id="pageA"><h1>
+    You've got an aqua axolotl!
+    </h1></section>
+    <section id="pageB"><h1>
+    You've got a blue axolotl!
+    </h1></section>
+    <section id="pageV"><h1>
+    You've got a violet axolotl!
+    </h1></section>
+    <section id="pageP"><h1>
+    You've got a purple axolotl!
+    </h1></section>
+    <section id="pageF"><h1>
+    You've got a fuchsia axolotl!
+    </h1></section>
+    <section id="pageM"><h1>
+    You've got a magenta axolotl!
+    </h1></section>
+</body>
+</html>
