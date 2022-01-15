@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8" />
+<title>pr/Quark</title>
+ <meta name="viewport" content="initial-scale=1" />
+   <meta name="apple-mobile-web-app-capable" content="yes" />
+   <style>
+	.myColours button { width: 10pt; height: 10pt; border: none; padding: 0; margin: 0}
+	.myColours button { width: 40pt; height: 40pt }
+	body { background: #f60 }
+	div.block { display: inline-block }
+	div { margin: 0; padding: 0 }
+	div.myColours { margin: 0.5em 0 3em 0 }
+</style>
+   <script>
+	
+var colour = "red";
+
+function changeColor(col) { colour = col;}
+
+const width=120;
+const height=120;
+const cellRadius = 15;
+const borderWidth = 2;
+const svgNS = "http://www.w3.org/2000/svg";
+
+let down = false;
+
+function move(e) {
+   e.preventDefault();
+
+   var touches = e.changedTouches;
+   var rect = grid.getBoundingClientRect();
+   if(touches != null && touches.length > 0) {
+      for (var i = 0; i < touches.length; i++) {
+         let e = touches[i];
+         let x = e.clientX - rect.left;
+         let y = e.clientY - rect.top;
+         var index = Math.round(y / cellRadius)* width + Math.round(x/cellRadius);
+
+
+         if(index < 0 || index > width * height || index == null) return;
+         grid.children[index].setAttribute("fill",colour);
+      }
+      return;
+   }
+
+   
+   let x = e.clientX - rect.left;
+   let y = e.clientY - rect.top;
+   var index = Math.round(y / cellRadius)* width + Math.round(x/cellRadius);
+
+
+   if(index < 0 || index > width * height || index == null) return;
+   grid.children[index].setAttribute("fill",colour);
+   
+}
+
+var grid;
+window.onload = function() {
+	grid = document.getElementById("grid");
+	grid.setAttribute("width",width*cellRadius);
+	grid.setAttribute("height",height*cellRadius);
+	
+   for(let y=0;y<height;y++) {
+	   for(let x=0;x<width;x++) {
+         var block = document.createElementNS(svgNS,'ellipse');
+         block.setAttribute("x",cellRadius * x);
+         block.setAttribute("y",cellRadius * y);
+         block.onclick = function() { block.setAttribute("fill",colour); };
+         //block.setAttribute("stroke","black");
+         //block.setAttribute("strokeWidth",borderWidth);
+         grid.appendChild(block);
+      }
+   }
+
+   
+
+   grid.addEventListener("touchstart", move, false);
+  //el.addEventListener("touchend", handleEnd, false);
+  //el.addEventListener("touchcancel", handleCancel, false);
+  grid.addEventListener("touchmove", move, false);
+      
+      grid.onmousedown = grid.ontouchstart = function(e) { 
+         e.preventDefault();
+         grid.onmousemove = grid.ontouchmove = move;
+         move(e);
+      };
+      grid.onmouseup = grid.ontouchend = function(e) { 
+         e.preventDefault();
+         grid.onmousemove = grid.ontouchmove = null; };
+
+         load(1);
+      
+}
+
+function reset() {
+   for(var i in grid.children) {
+      if(grid.children[i].setAttribute)
+         grid.children[i].setAttribute("fill","black");
+   }
+}
+
+
+   var number = 1;
+
+   function load(n) {
+      if(n<1) n=1;
+      number = n;
+      document.getElementById("pageNo").innerHTML = number;
+      let p = localStorage.getItem("grid"+number);
+      if(p == null) {
+         reset();
+         return;
+      }
+      reset();
+      let pixels = width * height;
+      let c = document.createElement("canvas");
+      let ctx = c.getContext("2d");
+      let img = new Image(width, height);
+      img.onload = () => {
+         ctx.drawImage(img,0,0);
+         let d = ctx.getImageData(0, 0, width, height).data; 
+         for(let i=0;i<pixels;i++) 
+            grid.children[i].setAttribute("fill","rgba("+d[i*4+3]+","+d[i*4+2]+","+d[i*4+1]+","+d[i*4]+")");
+      };
+      img.src = p;
+   }
+
+   function save() {
+      let pixels = width * height;
+      let c = document.createElement("canvas");
+      let ctx = c.getContext("2d");
+
+      for(let i =0; i< pixels ; i++) {
+         ctx.fillStyle = grid.children[i].getAttribute("fill");
+         ctx.fillRect(i%width, Math.floor(i/width), 1, 1);
+      }
+      localStorage.setItem("grid"+number, c.toDataURL());
+   }
+
+</script>
+</head>
+
+
+
+<body>
+   <h1>pr/Quark</h1>
+   
+   <div class="myColours">
+      <button style="background: red" onclick="changeColor('red')">Red</button>
+      <button style="background: orange" onclick="changeColor('orange')">Orange</button>
+      <button style="background: yellow" onclick="changeColor('yellow')">Yellow</button> 
+      <button style="background: #df0" onclick="changeColor('#df0')">Lime</button> 
+      <button style="background: #0f0"  onclick="changeColor('lime')">Green</button>
+      <button style="background: #0fa" onclick="changeColor('#0fa')">Aqua</button>
+      <button style="background: #0af" onclick="changeColor('#0af')">Blue</button>
+      <button style="background: #00f" onclick="changeColor('#00f')">Violet</button>
+      <button style="background: #a0f" onclick="changeColor('#a0f')">Purple</button> 
+      <button style="background: #f0f" onclick="changeColor('#f0f')">Fuchsia</button>
+      <button style="background: #f09" onclick="changeColor('#f09')">Magenta</button>
+      <hr/>
+      <button style="background: #F40009" onclick="changeColor('#F40009')">Coke Red (N.O)</button> 
+      <button style="background: #ecc" onclick="changeColor('#ecc')">Camouflaging Red (N.O)</button> 
+      <button style="background:#a88" onclick="changeColor('#a88')">Redish Gray (N.O)</button>
+      <button style="background:indianred" onclick="changeColor('indianred')">Indian Red (N.O)</button>
+      <button style="background:orangered" onclick="changeColor('orangered')">Tomato (N.O)</button>
+      <button style="background:#804000" onclick="changeColor('#804000')">Great Ape (N.O)</button>
+      <button style="background:#ffC080" onclick="changeColor('#ffc080')">Skin (N.O)</button>
+      <button style="background: #ff8628" onclick="changeColor('#ff8628')">Vermilion (N.O)</button>
+      <button style="background:#fa4" onclick="changeColor('#fa4')">Owange (N.O)</button>
+      <button style="background:gold" onclick="changeColor('gold')">Gold (N.O)</button>
+      <button style="background:#cc4" onclick="changeColor('#cc4')">Goldfish (N.O)</button>
+      <button style="background:#aa8" onclick="changeColor('#aa8')">Yellowish Gray (N.O)</button>
+      <button style="background:khaki" onclick="changeColor('khaki')">Khaki (N.O)</button> 
+      <button style="background:darkkhaki" onclick="changeColor('darkkhaki')">Dark Khaki (N.O)</button>
+      <button style="background:yellowgreen" onclick="changeColor('yellowgreen')">Chartreuse (N.O)</button>
+      <button style="background:olive" onclick="changeColor('olive')">Olive (N.O)</button>
+      <button style="background:#efe" onclick="changeColor('#efe')"> Ballet Green (N.O)</button>
+      <button style="background:#696" onclick="changeColor('#696')">Crocodile (N.O)</button>
+      <button style="background:#ded" onclick="changeColor('#ded')">Light Crocodile (N.O)</button>
+      <button style="background:palegreen" onclick="changeColor('palegreen')">Pale Green  (N.O)</button>
+      <button style="background:#030; color:#fff" onclick="changeColor('#030')">Forest Green (N.O)</button>
+      <button style="background:#8c8" onclick="changeColor('#8c8')">Light Forest Green (N.O)</button>
+      <button style="background:#8a8" onclick="changeColor('#8a8')">Greenish Gray (N.O)</button>
+      <button style="background:#88aa90" onclick="changeColor('#88aa90')"> Greenish Gray+7 (N.O)</button>
+      <button style="background:#8a9" onclick="changeColor('#8a9')">Greenish Gray+17 (N.O)</button>
+      <button style="background:#8aa" onclick="changeColor('#8aa')">Aquish Gray (N.O)</button>
+      <button style="background:#088" onclick="changeColor('#088')"> Teal (N.O)</button> 
+      <button style="background:cadetblue" onclick="changeColor('cadetblue')">Cadet Blue (N.O)</button>
+      <button style="background:#0cc" onclick="changeColor('#0cc')">Cadet Cyan (N.O)</button>
+      <button style="background:#0ff" onclick="changeColor('#0ff')"> Cyan (N.O)</button>
+      <button style="background:lightblue" onclick="changeColor('lightblue')">Light Blue (N.O)</button>
+      <button style="background:dodgerblue" onclick="changeColor('dodgerblue')">Dodger Blue (N.O)</button>
+      <button style="background:#04f" onclick="changeColor('#04f')">Indigo (N.O)</button>
+      <button style="background:#88a" onclick="changeColor('#88a')">Bluish Gray (N.O)</button>
+      <button style="background:#008; color:#fff" onclick="changeColor('#008')">Blueberry (N.O)</button>
+      <button style="background:lavender" onclick="changeColor('lavender')">Lavender (N.O)</button>
+      <button style="background:#5000d0; color:#fff" onclick="changeColor('#5000d0')">Ultraviolet (N.O)</button>
+      <button style="background:#b19cd9" onclick="changeColor('#b19cd9')">Lavender-Dark Magenta (N.O)</button>
+      <button style="background:mediumorchid" onclick="changeColor('mediumorchid')">Dark Magenta (N.O)</button>
+      <button style="background:#a8a" onclick="changeColor('#a8a')">Magentish Gray (N.O)</button>
+      <button style="background:#f8f" onclick="changeColor('#f8f')">Pink (N.O)</button>
+      <button style="background:#c48" onclick="changeColor('#c48')">Coral (N.O)</button>
+      <button style="background:#800" onclick="changeColor('#800')">Infrared (N.O)</button>
+      <hr/>
+      <button style="background:brown" onclick="changeColor('brown')">Brown (N.O)</button>
+      <button style="background:white" onclick="changeColor('white')">White (N.O)</button>
+      <button style="background:snow" onclick="changeColor('snow')">Snow (N.O)</button> 
+      <button style="background:#ccc" onclick="changeColor('#ccc')">Light Grey (N.O)</button>
+      <button style="background:#888" onclick="changeColor('#888')">Grey (N.O)</button>
+      <button style="background:#666; color:#fff" onclick="changeColor('#666')">Jupiter Moon Grey (N.O)</button>
+      <button style="background:#333; color:#fff" onclick="changeColor('#333')">Jupiter Moon Black (N.O)</button>
+      <button style="background:#000; color:#fff" onclick="changeColor('#000')">Black (N.O)</button>
+   </div>
+   
+<p><button onclick="load(number-1)">&lt;</button> <span id="pageNo"></span> <button onclick="load(number+1)">&gt;</button> <button onclick="save()">Save</button> <button onclick="reset()">Clear</button></p>
+<svg xmlns="http://www.w3.org/2000/svg" id="grid" ></svg>
+
+</body>
+
+</html>
