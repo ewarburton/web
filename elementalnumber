@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Elemental 6</title>
+    <style type="text/css">
+        div.ele { 
+            vertical-align: top;
+            border-radius: 10pt;
+            text-align: center;
+            width: 50pt;
+            min-height: 50pt;
+            margin: 0;
+            display: inline-block;
+            margin-right: 1em;
+            margin-bottom: 1em;
+            
+        }
+        div.ele > div.title {
+            padding-top: 12pt;
+            font-size: 12pt;
+        }
+        p.anc span {
+            padding: 4pt;
+            display: inline-block;
+            margin-right: 4pt;
+            border-radius: 4pt;
+        }
+        div.ele div.anc {
+            text-align: center;
+            display: inline-block;
+        }
+
+        div.ele small {
+            padding: 2pt;
+            display:table-cell;
+            border-radius: 2pt;
+            font-size: 5pt;
+        }
+    </style>
+    <script>
+        function updateParent(p, colour) {
+            let p1 = document.getElementById("p1");
+            let p2 = document.getElementById("p2");
+            p2.innerText = p1.innerText;
+            p2.style.backgroundColor = p1.style.backgroundColor;
+            p1.innerText = p;
+            p1.style.backgroundColor = colour;
+        }
+
+        function create(name, colour, p1, c1, p2, c2) {
+            let e = document.createElement("div");
+            e.className = "ele";
+            e.style.background = colour;
+            e.onclick = function() { updateParent(name, colour); };
+            let p = document.createElement("div");
+            p.className = "title";
+            p.innerText = name;
+            e.appendChild(p);
+            if(p1 || p2) {
+                let anc = document.createElement("div");
+                anc.className = "anc";
+                if(p1) {
+                    let pp1 = document.createElement("small");
+                    pp1.innerText = p1;
+                    pp1.style.backgroundColor = c1;
+                    anc.appendChild(pp1);
+                }
+                if(p2) {
+                    let pp2 = document.createElement("small");
+                    pp2.innerText = p2;
+                    pp2.style.backgroundColor = c2;
+                    anc.appendChild(pp2);
+                }
+                e.appendChild(anc);
+            }
+            document.getElementById("elements").appendChild(e);
+            return e;
+        }
+        function createFromForm() {
+            let p1 = document.getElementById("p1");
+            let p2 = document.getElementById("p2");
+            create(document.getElementById("eName").value,
+                document.getElementById("eColour").value,
+                p1.innerText, p1.style.backgroundColor,
+                p2.innerText, p2.style.backgroundColor);
+        }
+        window.onload = function() {
+            let air = create("Air","#8ff");
+            let water = create("Water","#55f");
+            let earth = create("Earth","#940");
+            create("Fire","#f80");
+            create("Energy","#90f");
+            create("Number","#eee");
+            earth.onclick();
+            water.onclick();
+            air.onclick();
+        }
+    </script>
+</head>
+<body>
+   <h1>Elemental 6</h1>
+    <div id="elements"></div>
+    <h2>New Element</h2>
+    <p class="anc">Parents: <span id="p1"></span><span id="p2"></span></p>
+    <p>Name: <input type="text" id="eName" size="10" value="Rock" /></p>
+    <p>Colour: <input type="color" id="eColour" value="#888888" /></p>
+    <p><button type="button" onclick="createFromForm()">Create</button></p>
+</body>
+</html>

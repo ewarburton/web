@@ -13,6 +13,7 @@
 	div.block { display: inline-block }
 	div { margin: 0; padding: 0 }
 	div.myColours { margin: 0.5em 0 3em 0 }
+   #grid { background: black }
 </style>
    <script>
 	
@@ -22,7 +23,7 @@ function changeColor(col) { colour = col;}
 
 const width=120;
 const height=120;
-const cellRadius = 15;
+const cellRadius = 7.5;
 const borderWidth = 2;
 const svgNS = "http://www.w3.org/2000/svg";
 
@@ -50,7 +51,7 @@ function move(e) {
    
    let x = e.clientX - rect.left;
    let y = e.clientY - rect.top;
-   var index = Math.round(y / cellRadius)* width + Math.round(x/cellRadius);
+   var index = Math.round((y-cellRadius) / cellRadius/2)* width + Math.round((x-cellRadius)/cellRadius/2);
 
 
    if(index < 0 || index > width * height || index == null) return;
@@ -61,14 +62,16 @@ function move(e) {
 var grid;
 window.onload = function() {
 	grid = document.getElementById("grid");
-	grid.setAttribute("width",width*cellRadius);
-	grid.setAttribute("height",height*cellRadius);
+	grid.setAttribute("width",width*cellRadius*2);
+	grid.setAttribute("height",height*cellRadius*2);
 	
    for(let y=0;y<height;y++) {
 	   for(let x=0;x<width;x++) {
          var block = document.createElementNS(svgNS,'ellipse');
-         block.setAttribute("x",cellRadius * x);
-         block.setAttribute("y",cellRadius * y);
+         block.setAttribute("cx",cellRadius * (1+x*2));
+         block.setAttribute("cy",cellRadius * (1+y*2));
+         block.setAttribute("rx",cellRadius);
+         block.setAttribute("ry",cellRadius);
          block.onclick = function() { block.setAttribute("fill",colour); };
          //block.setAttribute("stroke","black");
          //block.setAttribute("strokeWidth",borderWidth);
