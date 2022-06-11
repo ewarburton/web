@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Maker</title>
+</head>
+<body>
+    <input type="color" value="#973164"/><br/>
+    <svg width="100" height="100">
+        <rect x="34" y="16" height="50" width="50" />
+    </svg>
+    <script>
+        
+        audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+        
+        show();
+        
+        function show() {
+          frequency = document.getElementById("fIn").value;
+          document.getElementById("fOut").innerHTML = frequency + ' Hz';
+        
+          switch (document.getElementById("tIn").value * 1) {
+            case 0: type = 'sine'; break;
+            case 1: type = 'square'; break;
+            case 2: type = 'sawtooth'; break;
+            case 3: type = 'triangle'; break;
+          }
+          document.getElementById("tOut").innerHTML = type;
+        
+          volume = document.getElementById("vIn").value / 100;
+          document.getElementById("vOut").innerHTML = volume;
+        
+          duration = document.getElementById("dIn").value;
+          document.getElementById("dOut").innerHTML = duration + ' ms';
+        }
+        
+        function beep() {
+          var oscillator = audioCtx.createOscillator();
+          var gainNode = audioCtx.createGain();
+        
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+        
+          gainNode.gain.value = volume;
+          oscillator.frequency.value = frequency;
+          oscillator.type = type;
+        
+          oscillator.start();
+        
+          setTimeout(
+            function() {
+              oscillator.stop();
+            },
+            duration
+          );
+        };
+    </script>
+        frequency
+        <input type="range" id="fIn" min="150" max="800" oninput="show()" />
+        <span id="fOut"></span><br>
+        type
+        <input type="range" id="tIn" min="0" max="3" oninput="show()" />
+        <span id="tOut"></span><br>
+        volume
+        <input type="range" id="vIn" min="0" max="100" oninput="show()" />
+        <span id="vOut"></span><br>
+        duration
+        <input type="range" id="dIn" min="1000" max="10000" oninput="show()" />
+        <span id="dOut"></span>
+        <br>
+        <button onclick='beep();'>Play</button>
+</body>
+</html>
