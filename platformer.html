@@ -9,11 +9,27 @@
         body { padding:0; margin: 0;}
         svg { background: white; width: 100vw; height: 100vh; position:absolute; margin:0; top: 0; left:0 }
     </style>
+    <script>
+    var aps = 0;
+    var avn;
+    window.onload=function(){
+    avn=document.getElementById("avatar")
+    document.getElementById("b").addEventListener('keypress',moveava)
+    }
+    function moveava(){
+        aps-=10;
+        avn.setAttribute("transform", "translate(0, "+aps+")")
+    }
+    </script>
 </head>
-<body>
-    <svg viewBox="0 0 300 200">
-        <rect x="0" y="0" width="300" height="200" fill="blue" />
-        <rect x="75" y="173.3" height="20" width="20" fill="orange" />
+<body id="b">
+    <svg viewBox="0 0 300 200"
+        <g id="background">
+            <rect x="0" y="0" width="300" height="200" fill="blue" />
+        </g>
+        <g id="avatar">
+            <rect x="75" y="173.3" height="20" width="20" fill="orange" />
+        </g>
     </svg>
 </body>
 </html>
