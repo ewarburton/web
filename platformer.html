@@ -9,15 +9,32 @@
         body { padding:0; margin: 0;}
         svg { background: white; width: 100vw; height: 100vh; position:absolute; margin:0; top: 0; left:0 }
     </style>
-    <script>
+    <script>   
     var aps = 0;
-    var avn;
+    var avn;                                                    
+    var avatar_up = true;
     window.onload=function(){
-    avn=document.getElementById("avatar")
-    document.getElementById("b").addEventListener('keypress',moveava)
+        avn=document.getElementById("avatar")
+        document.getElementById("b").addEventListener('keypress',function(e){
+            moveava(1);
+            avatar_up = true;
+        });
+        setInterval(function(){
+            console.log("hello");
+            if(aps == 0) return;
+            if(avatar_up == true) {
+                avatar_up = false;
+                return;
+            }
+            moveavareverse(1);
+        }, 100);
     }
-    function moveava(){
-        aps-=10;
+    function moveava(dist){
+        aps-=dist;
+        avn.setAttribute("transform", "translate(0, "+aps+")")
+    }
+    function moveavareverse(dist){
+        aps+=dist;
         avn.setAttribute("transform", "translate(0, "+aps+")")
     }
     </script>

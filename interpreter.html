@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADB Interpreter</title>
+    <script>
+        function output(text){
+            console.log(text);
+            let t = document.createElement("div");
+            t.innerText=text;
+            document.getElementById("output").appendChild(t);
+        }
+
+        function run(){
+        let lines = document.getElementById("code").value.split('\n');
+        var labels = new Map();
+        for(let i in lines){
+            let parts = lines[i].split(' ');
+            let firstWord = parts[0];
+            if(firstWord.endsWith('/')){
+                labels[firstWord.slice(0,-1)] = i;
+                lines[i] = parts.slice(1).join(" ");
+            }
+        }
+        var vars = new Map();
+        let index=0;
+        while(index < lines.length){
+            let parts = lines[index].split(' ');
+            let command = parts[0];
+            console.log(command);
+            switch (command) {
+                case "adb":
+                    vars[parts[1]]+=parseInt(parts[2]);
+                    output(vars[parts[1]]);
+                    index=labels[parts[3]];
+                    if (index==null) alert()
+
+                    continue;
+                case "var":
+                    vars[parts[1]]=parseInt(parts[2]);
+                    output(parts[2])
+                    break;
+            }
+            index+=1;
+        }
+    }
+    </script>
+</head>
+<body>
+    <textarea id="code" placeholder="Put the text:" cols="40" rows="20">
+var c 8
+adb c 8 3
+3/ adb c 8 E
+E/
+    </textarea>
+    <br/><button onclick="run()">Run Adb:</button>
+    <h2>Output:</h2>
+    <div id="output"></div>
+</body>
+</html>
