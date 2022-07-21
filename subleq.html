@@ -19,42 +19,29 @@
         for(let i in lines){
             let parts = lines[i].split(' ');
             let firstWord = parts[0];
-            if(firstWord.endsWith('/')){
+            if(firstWord.endsWith(':')){
                 labels[firstWord.slice(0,-1)] = i;
                 lines[i] = parts.slice(1).join(" ");
             }
         }
-        var vars = new Map();
-        let index=0;
-        while(index < lines.length){
-            let parts = lines[index].split(' ');
-            let command = parts[0];
-            console.log(command);
-            switch (command) {
-                case "adb":
-                    vars[parts[1]]+=parseInt(parts[2]);
-                    output(vars[parts[1]]);
-                    index=labels[parts[3]];
-                    if (index==null) alert()
-                    continue;
-                case "var":
-                    vars[parts[1]]=parseInt(parts[2]);
-                    output(parts[2])
-                    break;
-            }
-            index+=1;
-        }
-    }
+
     </script>
 </head>
 <body>
     <textarea id="code" placeholder="Put the text:" cols="40" rows="20">
-var c 8
-adb c 8 3
-3/ adb c 8 E
-E/
+(-1) Input
+loop:
+Input (-1)
+tmp
+Input tmp
+Constant tmp loop
+
+0 0 (-1)
+tmp: 0
+Input: 0
+Constant: -49
     </textarea>
-    <br/><button onclick="run()">Run Adb:</button>
+    <br/><button onclick="run()">Run Subleq:</button>
     <h2>Output:</h2>
     <div id="output"></div>
 </body>
