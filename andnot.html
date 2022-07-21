@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ADB Interpreter</title>
+    <title>AndNot Interpreter</title>
     <script>
         function output(text){
             console.log(text);
             let t = document.createElement("div");
             t.innerText=text;
             document.getElementById("output").appendChild(t);
+        }
+
+        function reset(text){
+            console.log(text);
+            let o = document.getElementById("output");
+            while(o.childElementCount>0) o.removeChild(o.firstElementChild);
         }
 
         function run(){
@@ -62,13 +68,15 @@
     <textarea id="code" placeholder="Put the text:" cols="40" rows="20">
 var c 1
 var d 1
+
+com Adder
 and c d
 out c
 xor d c
 out d
 
     </textarea>
-    <br/><button onclick="run()">Run Adb:</button>
+    <br/><button onclick="run()">Run</button> <button onclick="reset()">Reset</button>
     <h2>Output:</h2>
     <div id="output"></div>
 </body>
