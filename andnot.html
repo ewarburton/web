@@ -6,9 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AndNot Interpreter</title>
     <script>
-        function output(text){
+        let outcol = "red"
+
+        function output(text) {
             console.log(text);
             let t = document.createElement("div");
+            t.setAttribute("style","color:"+outcol)
             t.innerText=text;
             document.getElementById("output").appendChild(t);
         }
@@ -21,7 +24,7 @@
 
         function run(){
         let lines = document.getElementById("code").value.split('\n');
-        var labels = new Map();
+        let labels = new Map();
         for(let i in lines){
             let parts = lines[i].split(' ');
             let firstWord = parts[0];
@@ -58,6 +61,14 @@
                 case "out":
                     output(vars[parts[1]]);
                     break;
+                case "pup":
+                    let t = parseInt(parts[1]);
+                    //output(t);
+                    output(Math.random()*2+t-1);
+                    break;
+                case "wire":
+                    outcol=parts[1];
+                    break;
             }
             index+=1;
         }
@@ -74,6 +85,9 @@ and c d
 out c
 xor d c
 out d
+
+com This messes with technology!
+pup 5
 
     </textarea>
     <br/><button onclick="run()">Run</button> <button onclick="reset()">Reset</button>

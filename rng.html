@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Number Game</title>
+    <script>
+        let rndm = Math.ceil(Math.random()*100);
+
+        console.log("the secret number is: "+rndm);
+
+        function output(text){
+            console.log(text);
+            let t = document.createElement("div");
+            t.innerText=text;
+            document.getElementById("output").appendChild(t);
+        }
+
+        function guess(){
+            let varofguess = parseInt(document.getElementById('guess').value);
+            if(varofguess==rndm) output(varofguess+": you win");
+            if(varofguess==2022) output(varofguess+": i'm guessing it is "+rndm);
+            if(varofguess>100) output(varofguess+": i'm guessing it is lower than 101");
+            if(varofguess>rndm) output(varofguess+": i'm guessing it is lower");
+            if(varofguess<1) output(varofguess+": i'm guessing it is higher than 0");
+            if(varofguess<rndm) output(varofguess+": i'm guessing it is higher");  
+        }
+    </script>
+</head>
+<body>
+    <input id="guess" />
+    <button onclick="guess()">Guess</button>
+    <h2>Output:</h2>
+    <div id="output"></div>
+</body>
+</html>
