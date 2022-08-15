@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AndNot Interpreter</title>
     <script>
-        let outcol = "red"
+        let outcol = "#444"
 
         function output(text) {
             console.log(text);
@@ -40,7 +40,7 @@
             let command = parts[0];
             console.log(command);
             switch (command) {
-                case "got":
+                case "goto":
                     index=labels[parts[1]];
                     if (index==null) alert()
                     continue;
@@ -59,7 +59,7 @@
                 case "com":
                     break;    
                 case "out":
-                    output(vars[parts[1]]);
+                    output(parts[1]);
                     break;
                 case "pup":
                     let t = parseInt(parts[1]);
@@ -68,6 +68,9 @@
                     break;
                 case "wire":
                     outcol=parts[1];
+                    output(parts[1]);
+                    if(parts[2]=1){}
+                    if(parts[2]=0) outcol="#444";
                     break;
             }
             index+=1;
