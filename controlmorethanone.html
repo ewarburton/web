@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control More Than One</title>
+    <script>
+        window.onload=function(){
+        let avn=document.getElementById("avatar1");
+        let avt=document.getElementById("avatar2");
+        let avnv_offset = 0;
+        let avnh_offset = 0;
+        let avtv_offset = 0;
+        let avth_offset = 0;
+
+        let avnv_move = 0;
+        let avnh_move = 0;
+        let avtv_move = 0;
+        let avth_move = 0;
+
+        document.addEventListener('keydown',function(e){
+            console.log("keydown: "+e.keyCode);
+            switch(e.keyCode) {
+                case 65: // 'a'
+                    avnh_move = -1;
+                    break;
+                case 68: // 'd'
+                    avnh_move = 1;
+                    break;
+                case 87: // 'w'
+                    avnv_move = -1;
+                    break;
+                case 83: //'s'
+                    avnv_move = 1;
+                    break;
+                case 37: // 'a'
+                    avth_move = -1;
+                    break;
+                case 39: // 'd'
+                    avth_move = 1;
+                    break;
+                case 38: // 'w'
+                    avtv_move = -1;
+                    break;
+                case 40: //'s'
+                    avtv_move = 1;
+                    break;
+                
+            }
+        });
+        document.addEventListener('keyup',function(e){
+            switch(e.keyCode) {
+                case 65:
+                case 68:
+                    avnh_move = 0;
+                    break;
+                case 87:
+                case 83:
+                    avnv_move = 0;
+                    break;
+                case 37:
+                case 39:
+                    avth_move = 0;
+                    break;
+                case 40:
+                case 38:
+                    avtv_move = 0;
+                    break;
+            }
+        });
+        setInterval(function(){
+            //console.log("hello");
+            avnh_offset += avnh_move;
+            avnv_offset += avnv_move;
+            avn.setAttribute("transform", "translate("+avnh_offset+","+avnv_offset+")");
+            avth_offset += avth_move;
+            avtv_offset += avtv_move;
+            avt.setAttribute("transform", "translate("+avth_offset+","+avtv_offset+")");
+            //avt.setAttribute("transform", "translate("+avn_offset%100+",0)");
+        }, 40);
+    }
+    </script>
+</head>
+<body>
+    <svg viewBox="0 0 300 200"
+        <g id="background">
+            <rect x="0" y="0" width="300" height="200" fill="blue" />
+        </g>
+        <g id="avatar1">
+            <rect x="75" y="173.3" height="20" width="20" fill="orange" />
+        </g>
+        <g id="avatar2">
+            <rect x="150" y="173.3" height="20" width="20" fill="orange" />
+        </g>
+    </svg>
+</body>
