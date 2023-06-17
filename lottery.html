@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottery</title>
+    <style>
+        p { display: inline-block; width: 20pt; vertical-align: top;}
+    </style>
+    <script>
+        function addcolor(column,color) {
+            let div = document.createElement("div");
+            div.className="color";
+            div.style.width="20pt";
+            div.style.height="20pt";
+            div.style.borderRadius="10pt";
+            div.style.backgroundColor=color;
+            document.getElementById("colortype"+column).appendChild(div);       
+        }
+    </script>
+</head>
+<body>
+    <button style="background-color:#ff0000" onclick="addcolor(1,'#ff0000')">0</button>
+    <button style="background-color:#ff8000" onclick="addcolor(2,'#ff8000')">1</button>
+    <button style="background-color:#ffff00" onclick="addcolor(3,'#ffff00')">2</button>
+    
+    
+    <div><p id="colortype1"></p><p id="colortype2"></p><p id="colortype3"></p></div>
+</body>
+</html>

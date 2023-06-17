@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>catNS</title>
+    <script>
+        // object responsible for playing sounds
+        class Sound {
+            constructor() {
+                this.playing = new Map(); // Map to track playing sounds.
+                this.audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+                this.volume = 1.0; // Volume 0-1
+                this.type = 'sine'; // sine,square,sawtooth,triangle
+                this.zeroCentsHertz = 440;
+                this.octaveCents = 1200;
+            }
+
+            play(ce, hz , du){
+                this.zeroCentsHertz = hz;
+                this.start(ce);
+                let t = this;
+                setTimeout(function() {t.stop(ce); }, du*100);
+
+            }
+
+            start(cents) {
+                // If already playing, exit here, no need to recreate
+                if(this.playing.has(cents)) return;
+
+                // Setup sound
+                let oscillator = this.audioCtx.createOscillator();
+                let gainNode = this.audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioCtx.destination);
+                gainNode.gain.value = this.volume;
+                oscillator.frequency.value = this.zeroCentsHertz*Math.pow(2.0,cents/this.octaveCents);
+                oscillator.type = this.type;
+                
+                // Store sound in map (so we can switch off)
+                this.playing.set(cents,oscillator);
+
+                // Start playing sound
+                oscillator.start();
+            }
+            stop(cents) {
+                // If cents is playing, stop, otherwise ignore.
+                let oscillator = this.playing.get(cents);
+                if(oscillator) {
+                    oscillator.stop();
+                    this.playing.delete(cents);
+                }
+            }
+        }
+
+        function play(){ 
+            let player = new Sound();
+            let herts = document.getElementById("hz").value;
+            let cents = document.getElementById("ce").value;
+            let durta = document.getElementById("du").value;
+            player.play(cents, herts, durta);
+
+        }
+    </script>
+</head>
+<body>
+    <table>
+
+    <tr><td>Herts</td><td><input id="hz" type="number" value="440"/></td></tr>
+    <tr><td>Cents</td><td><input id="ce" type="number" value="1200"/></td></tr>
+    <tr><td>Duration (ds)</td><td><input id="du" type="number" value="10"/></td></tr>  
+    <tr><td colspan="2"><button onclick="play()">Play</button></td></tr>   
+    </table>
+</body>
+</html>
