@@ -17,7 +17,7 @@
         function run() {
             let lines = document.getElementById("code").value.split('\n');
             var labels = new Map();
-            for (let i = 0; i < lines.length; i++) {
+            for (let i=0; i<lines.length ; i++) {
                 let parts = lines[i].split(' ');
                 let firstWord = parts[0];
                 if (firstWord.endsWith(':')) {
