@@ -66,6 +66,14 @@
                             continue;
                         }
                         break;
+                    case "jumpiflargerthan":
+                        if (vars[parts[2]] > parts[3]) {
+                            index = labels[parts[1]];
+                            if (index == null) alert()
+                            console.log(lines.length, index);
+                            continue;
+                        }
+                        break;
                     case "and":
                         vars[parts[3]] = vars[parts[1]] & vars[parts[2]];
                         break;
@@ -81,10 +89,20 @@
 
 <body>
     <textarea id="code" placeholder="Put the text:" cols="40" rows="20">
-variable x 0
-variable y 0
-add x y z
-printvalue z
+variable zero 0
+variable one 1
+variable var 1
+jumpifsmallerthan four var 1
+jumpiflargerthan actualsix var 0
+four: printvalue var
+jump eight
+actualsix: variable P 10
+jump six
+six: printvalue var
+subtract P one P
+jumpifsmallerthan eight P 1
+jump six
+eight:
     </textarea>
     <br /><button onclick="run()">Run Normalized Uyjhmn n:</button>
     <h2>Output:</h2>
