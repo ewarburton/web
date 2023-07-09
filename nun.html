@@ -1,78 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Normalized Uyjhmn n Interpreter</title>
     <script>
-        function output(text){
+        function output(text) {
             console.log(text);
             let t = document.createElement("div");
-            t.innerText=text;
+            t.innerText = text;
             document.getElementById("output").appendChild(t);
         }
 
-        function run(){
-        let lines = document.getElementById("code").value.split('\n');
-        var labels = new Map();
-        for(let i in lines){
-            let parts = lines[i].split(' ');
-            let firstWord = parts[0];
-            if(firstWord.endsWith(':')){
-                labels[firstWord.slice(0,-1)] = i;
-                lines[i] = parts.slice(1).join(" ");
+        function run() {
+            let lines = document.getElementById("code").value.split('\n');
+            var labels = new Map();
+            for (let i = 0; i < lines.length; i++) {
+                let parts = lines[i].split(' ');
+                let firstWord = parts[0];
+                if (firstWord.endsWith(':')) {
+                    labels[firstWord.slice(0, -1)] = i;
+                    lines[i] = parts.slice(1).join(" ");
+                }
             }
-        }
-        var vars = new Map();
-        let index=0;
-        while(index < lines.length){
-            let parts = lines[index].split(' ');
-            let command = parts[0];
-            console.log(command);
-            switch (command) {
-                case "variable":
-                    vars[parts[1]]=parseInt(parts[2]);
-                    break;
-                case "print":
-                    output(parts[1]);
-                    break;
-                case "printvalue":
-                    output(vars[parts[1]]);
-                    break;
-                case "jump":
-                    index=labels[parts[1]];
-                    if (index==null) alert()
-                    continue;
-                case "add":
-                    vars[parts[3]] = vars[parts[1]] + vars[parts[2]];
-                    break;
-                case "subtract":
-                    vars[parts[3]] = vars[parts[1]] - vars[parts[2]];
-                    break;
-                case "notethisthingthat":
-                    break;  
-                case "variableif":
-                    if (vars[parts[3]] = parts[4]){
-                        vars[parts[1]]=parseInt(parts[2]);
-                    }
-                case "jumpifsmallerthan":
-                    if (vars[parts[2]] < parts[3]){
-                        index=labels[parts[1]];
-                        if (index==null) alert()
-                    }
-                    break;
-                case "and":
-                    vars[parts[3]] = vars[parts[1]] & vars[parts[2]];
-                    break;
+            var vars = new Map();
+            let index = 0;
+            while (index < lines.length) {
+                let parts = lines[index].split(' ');
+                let command = parts[0];
+                console.log(parts.join(" "));
+                switch (command) {
+                    case "variable":
+                        vars[parts[1]] = parseInt(parts[2]);
+                        break;
+                    case "print":
+                        output(parts[1]);
+                        break;
+                    case "printvalue":
+                        output(vars[parts[1]]);
+                        break;
+                    case "jump":
+                        index = labels[parts[1]];
+                        if (index == null) alert()
+                        continue;
+                    case "add":
+                        vars[parts[3]] = vars[parts[1]] + vars[parts[2]];
+                        break;
+                    case "subtract":
+                        vars[parts[3]] = vars[parts[1]] - vars[parts[2]];
+                        break;
+                    case "notethisthingthat":
+                        break;
+                    case "variableif":
+                        if (vars[parts[3]] = parts[4]) {
+                            vars[parts[1]] = parseInt(parts[2]);
+                        }
+                        break;
+                    case "jumpifsmallerthan":
+                        if (vars[parts[2]] < parts[3]) {
+                            index = labels[parts[1]];
+                            if (index == null) alert()
+                            console.log(lines.length, index);
+                            continue;
+                        }
+                        break;
+                    case "and":
+                        vars[parts[3]] = vars[parts[1]] & vars[parts[2]];
+                        break;
 
 
+                }
+                index += 1;
             }
-            index+=1;
+            console.log("finished");
         }
-    }
     </script>
 </head>
+
 <body>
     <textarea id="code" placeholder="Put the text:" cols="40" rows="20">
 variable x 0
@@ -80,8 +86,9 @@ variable y 0
 add x y z
 printvalue z
     </textarea>
-    <br/><button onclick="run()">Run Normalized Uyjhmn n:</button>
+    <br /><button onclick="run()">Run Normalized Uyjhmn n:</button>
     <h2>Output:</h2>
     <div id="output"></div>
 </body>
+
 </html>
