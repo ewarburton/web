@@ -50,12 +50,18 @@
                 case "subtract":
                     vars[parts[3]] = vars[parts[1]] - vars[parts[2]];
                     break;
-                case "jumpif":
-                    if (vars[parts[2]] = 1){
-                        index=labels[parts[1]];
-                        if (index==null) alert()
+                case "notethisthingthat":
+                    break;  
+                case "variableif"
+                    if (vars[parts[3]] = parts[4]){
+                        vars[parts[1]]=parseInt(parts[2]);
                     }
-                    continue;
+                    break;
+                case "and":
+                    vars[parts[3]] = vars[parts[1]] & vars[parts[2]];
+                    break;
+
+
             }
             index+=1;
         }
@@ -64,10 +70,10 @@
 </head>
 <body>
     <textarea id="code" placeholder="Put the text:" cols="40" rows="20">
-    variable x 0
-    variable y 0
-    add x y z
-    print z
+variable x 0
+variable y 0
+add x y z
+printvalue z
     </textarea>
     <br/><button onclick="run()">Run Normalized Uyjhmn n:</button>
     <h2>Output:</h2>
