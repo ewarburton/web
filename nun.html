@@ -56,6 +56,11 @@
                     if (vars[parts[3]] = parts[4]){
                         vars[parts[1]]=parseInt(parts[2]);
                     }
+                case "jumpifsmallerthan"
+                    if (vars[parts[3]] < parts[4]){
+                        index=labels[parts[1]];
+                        if (index==null) alert()
+                    }
                     break;
                 case "and":
                     vars[parts[3]] = vars[parts[1]] & vars[parts[2]];
