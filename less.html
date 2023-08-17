@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Less Interpreter</title>
+</head>
+<body>
+    <h1>Less Interpreter</h1>
+    <textarea id="lessCode" rows="10" cols="80">UFADU</textarea>
+    <br>
+    <button onclick="interpretLess()">Run</button>
+    <br>
+    <pre id="output"></pre>
+
+    <script>
+        function interpretLess() {
+            const code = document.getElementById("lessCode").value;
+            const memory = Array(1000).fill(0); // Set up an array to simulate memory
+            let pointer = 0; // Memory pointer
+
+            let output = ""; // Store the output
+
+            for (let i = 0; i < code.length; i++) {
+                const instruction = code[i];
+
+                switch (instruction) {
+                    case "F":
+                        pointer++;
+                        break;
+                    case "B":
+                        pointer--;
+                        break;
+                    case "A":
+                        memory[pointer]++;
+                        break;
+                    case "S":
+                        memory[pointer]--;
+                        break;
+                    case "Pv":
+                        output += String.fromCharCode(memory[pointer]);
+                        break;
+                    case "Pn":
+                        output += memory[pointer];
+                        break;
+                    case "U":
+                        if (memory[pointer] === 0) {
+                            // Jump past the matching "D" instruction (loop end)
+                            let loopDepth = 1;
+                            while (loopDepth > 0) {
+                                i++;
+                                if (code[i] === "U") loopDepth++;
+                                else if (code[i] === "D") loopDepth--;
+                            }
+                        }
+                        break;
+                    case "D":
+                        if (memory[pointer] !== 0) {
+                            // Jump back to the matching "U" instruction (loop beginning)
+                            let loopDepth = 1;
+                            while (loopDepth > 0) {
+                                i--;
+                                if (code[i] === "D") loopDepth++;
+                                else if (code[i] === "U") loopDepth--;
+                            }
+                        }
+                        break;
+                    default:
+                        // Ignore unrecognized characters
+                        break;
+                }
+            }
+
+            document.getElementById("output").textContent = output;
+        }
+    </script>
+</body>
+</html>
