@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Increment Base 62</title>
+</head>
+<body>
+  <script type="text/javascript">
+    var BASE = 62;
+    var TARGET = "EVO";
+
+    function base62_to_base10(number) {
+      var value = 0;
+      for (var i = 0; i < number.length; i++) {
+        value = BASE * value + parseInt(number[i], BASE);
+      }
+      return value;
+    }
+
+    function base10_to_base62(number) {
+      var digits = [];
+      while (number > 0) {
+        var remainder = number % BASE;
+        digits.push((remainder < 10) ? remainder.toString() : String.fromCharCode(remainder + 55));
+        number = Math.floor(number / BASE);
+      }
+      return digits.reverse().join('');
+    }
+
+    var current_number = "0";
+    while (current_number !== TARGET) {
+      var base10_number = base62_to_base10(current_number);
+      base10_number += 1;
+      current_number = base10_to_base62(base10_number);
+
+      console.log(current_number);
+    }
+  </script>
+</body>
+</html>

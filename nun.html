@@ -48,8 +48,14 @@
                     case "add":
                         vars[parts[3]] = vars[parts[1]] + vars[parts[2]];
                         break;
+                    case "plus":
+                        vars[parts[3]] = vars[parts[1]] + parts[2];
+                        break;
                     case "subtract":
                         vars[parts[3]] = vars[parts[1]] - vars[parts[2]];
+                        break;
+                    case "minus":
+                        vars[parts[3]] = vars[parts[1]] - parts[2];
                         break;
                     case "notethisthingthat":
                         break;
@@ -66,6 +72,14 @@
                             continue;
                         }
                         break;
+                    case "jumpiflesserthan":
+                        if (vars[parts[2]] < vars[parts[3]]) {
+                            index = labels[parts[1]];
+                            if (index == null) alert()
+                            console.log(lines.length, index);
+                            continue;
+                        }
+                        break;
                     case "jumpiflargerthan":
                         if (vars[parts[2]] > parts[3]) {
                             index = labels[parts[1]];
@@ -74,8 +88,13 @@
                             continue;
                         }
                         break;
-                    case "and":
-                        vars[parts[3]] = vars[parts[1]] & vars[parts[2]];
+                    case "jumpifgreaterthan":
+                        if (vars[parts[2]] > vars[parts[3]]) {
+                            index = labels[parts[1]];
+                            if (index == null) alert()
+                            console.log(lines.length, index);
+                            continue;
+                        }
                         break;
 
 
