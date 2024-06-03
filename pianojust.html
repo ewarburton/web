@@ -11,7 +11,7 @@
         // Code that starts when page is loaded
         window.onload = function() {
             let sound = new Sound();
-            let keys = new Keyboard(sound, "piano", 50);
+            let keys = new Keyboard(sound, "piano", 75);
             keys.whiteCents=-900;
             for(let octave = 0 ; octave < 5 ; octave++) {
                 keys.addWhiteKey(0, 'red');
