@@ -11,14 +11,15 @@
         // Code that starts when page is loaded
         window.onload = function() {
             let sound = new Sound();
-            let keys = new Keyboard(sound, "piano", 22);
+            let keys = new Keyboard(sound, "piano", 50);
             keys.whiteCents=-900;
             for(let octave = 0 ; octave < 5 ; octave++) {
                 keys.addWhiteKey(0, 'red');
-                keys.addWhiteKey(112, '#ff5800');
+                keys.addWhiteKey(111.5, '#ff5800');
                 keys.addWhiteKey(204, 'orange');
-                keys.addWhiteKey(316, '#a0a000');
-                keys.addWhiteKey(386, '#00a000');
+                keys.addWhiteKey(315.5, '#a08000');
+                keys.addWhiteKey(351, '#a0a000');
+                keys.addWhiteKey(386.5, '#00a000');
                 keys.addWhiteKey(498, '#a0ff00');
                 keys.addWhiteKey(590, 'lime');
                 keys.whiteCents += 702;
