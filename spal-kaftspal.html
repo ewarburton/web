@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spal Kaftspal</title>
+    <script>
+        const ns ="http://www.w3.org/2000/svg";
+
+        function logBase(base, number) {
+        return Math.log(number) / Math.log(base);
+        }
+
+        function ratiohz(number) {
+        return 1200*(Math.log(number) / Math.log(2));
+        }
+
+        // Code that starts when page is loaded
+        window.onload = function() {
+            let sound = new Sound();
+            let keys = new Keyboard(sound, "piano");
+            keys.whiteCents=-900;
+            keys.addWhiteKey(0, 'white', 'a');
+            keys.addWhiteKey(ratiohz(3/2), 'white', 'xi');
+            keys.addWhiteKey(ratiohz(4/3), 'white', 'fu');
+            keys.addWhiteKey(ratiohz(5/4), '#8000ff', 'lə');
+            keys.addWhiteKey(ratiohz(8/5), 'white', 'su');
+            keys.addWhiteKey(ratiohz(5/3), 'white', 'fuli');
+            keys.addWhiteKey(ratiohz(6/5), '#00ff00', 'xis');
+            keys.addWhiteKey(ratiohz(9/8), 'white', 'šə');
+            keys.addWhiteKey(ratiohz(16/9), 'white', 'šu');
+            keys.addWhiteKey(ratiohz(15/8), 'white', 'xəli');
+            keys.addWhiteKey(ratiohz(16/15), 'white', 'fus');
+        };
+
+        
+
+        // Manages drawing piano
+        class Keyboard {
+            constructor(soundController,svgID,whiteKeys) {
+                // Some contants
+                this.whiteKeyWidth = 1300;
+                this.halfKeyWidth = this.whiteKeyWidth/2;
+                this.whiteKeyHeight = 40;
+                // Store 
+                this.sound = soundController;
+                this.piano = document.getElementById(svgID);
+                // Set svg size
+                let width = this.whiteKeyWidth;
+                
+                
+                this.piano.setAttribute("width", width);
+                
+                // Set variables
+                this.whiteKeys = 0;
+                this.blackKeys = 0;
+            }
+            addWhiteKey(cents, col, text) {
+                
+                let key = document.createElementNS(ns, 'rect');
+                key.setAttribute("x",0);
+                key.setAttribute("y",this.whiteKeys*this.whiteKeyHeight);
+                key.setAttribute("fill", col);
+                key.setAttribute("stroke","black");
+                key.setAttribute("stroke-width","2");
+                key.setAttribute("width",this.whiteKeyWidth);
+                key.setAttribute("height",this.whiteKeyHeight);
+
+                
+                //key.setAttribute("text-align",this.whiteKeyHeight/2);
+                let t=this;
+                let totalCents = cents+t.whiteCents;
+
+                key.onmousedown = function() {
+                    t.sound.start(totalCents);
+                    key.setAttribute("fill","gray");
+                };
+                key.addEventListener("touchstart", key.onmousedown);
+                key.onmouseup = key.onmouseout = function() {
+                    t.sound.stop(totalCents);
+                    key.setAttribute("fill",col);
+                };
+                
+                key.addEventListener("touchend", key.onmouseup);
+                this.piano.appendChild(key);
+                let textthing = document.createElementNS(ns, 'text');
+                textthing.setAttribute("x",this.halfKeyWidth);
+                textthing.setAttribute("y",(this.whiteKeys*this.whiteKeyHeight)+this.whiteKeyHeight/2);
+                textthing.setAttribute("fill", "black");
+                textthing.setAttribute("text-anchor",'middle');
+                textthing.setAttribute("dominant-baseline",'central');
+                textthing.setAttribute("font-size",this.whiteKeyHeight*2/3)
+                let textnode = document.createTextNode(text);
+                textthing.appendChild(textnode);
+                this.piano.appendChild(textthing);
+                
+                this.whiteKeys++;
+                //this.whiteCents = cents;
+                let height = this.whiteKeys*this.whiteKeyHeight;
+                this.piano.setAttribute("height", height);
+                this.piano.setAttribute("viewBox", "0 0 "+this.whiteKeyWidth+" "+height);
+            }
+            skipWhiteKey() { this.whiteKeys++; }
+        }
+
+        // object responsible for playing sounds
+        class Sound {
+            constructor() {
+                this.playing = new Map(); // Map to track playing sounds.
+                this.audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+                this.volume = 1.0; // Volume 0-1
+                this.type = 'sine'; // sine,square,sawtooth,triangle
+                this.zeroCentsHertz = 440;
+                this.octaveCents = 1200;
+            }
+            start(cents) {
+                // If already playing, exit here, no need to recreate
+                if(this.playing.has(cents)) return;
+
+                // Setup sound
+                let oscillator = this.audioCtx.createOscillator();
+                let gainNode = this.audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioCtx.destination);
+                gainNode.gain.value = this.volume;
+                oscillator.frequency.value = this.zeroCentsHertz*Math.pow(2.0,cents/this.octaveCents);
+                oscillator.type = this.type;
+                
+                // Store sound in map (so we can switch off)
+                this.playing.set(cents,oscillator);
+
+                // Start playing sound
+                oscillator.start();
+            }
+            stop(cents) {
+                // If cents is playing, stop, otherwise ignore.
+                let oscillator = this.playing.get(cents);
+                if(oscillator) {
+                    oscillator.stop();
+                    this.playing.delete(cents);
+                }
+            }
+        }
+
+    </script>
+</head>
+<body id="body">
+    <svg id="piano" style="border:1pt black solid" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" fill="red" stroke="black" stroke-width="1" width="40" height="100"></rect>
+    </svg>
+</body>
+</html>
