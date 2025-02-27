@@ -41,6 +41,8 @@
             keys.addWhiteKey(ratiohz(7/4), 'white', 'mi');
             keys.addWhiteKey(ratiohz(8/7), 'white', 'pu');
 
+            keys.addWhiteKey(ratiohz(21/16), 'white', 'xəmi');
+            keys.addWhiteKey(ratiohz(32/21), 'white', 'fup');
             keys.addWhiteKey(ratiohz(7/6), '#ff8000', 'fumi');
             keys.addWhiteKey(ratiohz(12/7), 'white', 'xip');
 
@@ -49,9 +51,6 @@
 
             keys.addWhiteKey(ratiohz(7/5), 'white', 'sumi');
             keys.addWhiteKey(ratiohz(10/7), 'white', 'ləp');
-
-            keys.addWhiteKey(ratiohz(21/16), 'white', 'xəmi');
-            keys.addWhiteKey(ratiohz(32/21), 'white', 'fup');
             
             keys.addWhiteKey(ratiohz(11/8), 'white', 'zi');
             keys.addWhiteKey(ratiohz(16/11), 'white', 'ču');
@@ -108,6 +107,30 @@
             keys.addWhiteKey(ratiohz(256/143), 'white', 'čuğ');
             keys.addWhiteKey(ratiohz(13/11), '#ffff00', 'čuği');
             keys.addWhiteKey(ratiohz(22/13), 'white', 'ziğ');
+
+            keys.addWhiteKey(ratiohz(17/16), 'white', 'ti');
+            keys.addWhiteKey(ratiohz(32/17), 'white', 'tu');
+
+            keys.addWhiteKey(ratiohz(51/32), 'white', 'xəti');
+            keys.addWhiteKey(ratiohz(64/51), 'white', 'fut');
+            keys.addWhiteKey(ratiohz(17/12), 'white', 'futi');
+            keys.addWhiteKey(ratiohz(24/17), 'white', 'xit');
+
+            keys.addWhiteKey(ratiohz(153/128), 'white', 'šəti');
+            keys.addWhiteKey(ratiohz(256/153), 'white', 'šut');
+            keys.addWhiteKey(ratiohz(17/9), 'white', 'šuti');
+            keys.addWhiteKey(ratiohz(18/17), 'white', 'šit');
+
+            keys.addWhiteKey(ratiohz(85/64), 'white', 'ləti');
+            keys.addWhiteKey(ratiohz(128/85), 'white', 'sut');
+            keys.addWhiteKey(ratiohz(17/10), 'white', 'suti');
+            keys.addWhiteKey(ratiohz(20/17), 'white', 'lit');
+
+            keys.addWhiteKey(ratiohz(119/64), 'white', 'məti');
+            keys.addWhiteKey(ratiohz(128/119), 'white', 'put');
+            keys.addWhiteKey(ratiohz(17/14), '#00a0ff', 'puti');
+            keys.addWhiteKey(ratiohz(28/17), 'white', 'mit');
+
         };
 
         
@@ -116,14 +139,14 @@
         class Keyboard {
             constructor(soundController,svgID,whiteKeys) {
                 // Some contants
-                this.whiteKeyWidth = 1200;
+                this.whiteKeyWidth = 150;
                 this.halfKeyWidth = this.whiteKeyWidth/2;
-                this.whiteKeyHeight = 40;
+                this.whiteKeyHeight = 30;
                 // Store 
                 this.sound = soundController;
                 this.piano = document.getElementById(svgID);
                 // Set svg size
-                let width = this.whiteKeyWidth;
+                let width = this.whiteKeyWidth*7;
                 
                 
                 this.piano.setAttribute("width", width);
@@ -135,8 +158,10 @@
             addWhiteKey(cents, col, text) {
                 
                 let key = document.createElementNS(ns, 'rect');
-                key.setAttribute("x",0);
-                key.setAttribute("y",this.whiteKeys*this.whiteKeyHeight);
+                let x = (this.whiteKeys%7)*this.whiteKeyWidth;
+                console.log(x);
+                key.setAttribute("x",x);
+                key.setAttribute("y",Math.floor(this.whiteKeys/7)*this.whiteKeyHeight);
                 key.setAttribute("fill", col);
                 key.setAttribute("stroke","black");
                 key.setAttribute("stroke-width","2");
@@ -161,8 +186,8 @@
                 key.addEventListener("touchend", key.onmouseup);
                 this.piano.appendChild(key);
                 let textthing = document.createElementNS(ns, 'text');
-                textthing.setAttribute("x",this.halfKeyWidth);
-                textthing.setAttribute("y",(this.whiteKeys*this.whiteKeyHeight)+this.whiteKeyHeight/2);
+                textthing.setAttribute("x",(this.whiteKeys%7)*this.whiteKeyWidth+this.halfKeyWidth);
+                textthing.setAttribute("y",(Math.floor(this.whiteKeys/7)*this.whiteKeyHeight)+this.whiteKeyHeight/2);
                 textthing.setAttribute("fill", "black");
                 textthing.setAttribute("text-anchor",'middle');
                 textthing.setAttribute("dominant-baseline",'central');
@@ -175,7 +200,7 @@
                 //this.whiteCents = cents;
                 let height = this.whiteKeys*this.whiteKeyHeight;
                 this.piano.setAttribute("height", height);
-                this.piano.setAttribute("viewBox", "0 0 "+this.whiteKeyWidth+" "+height);
+                this.piano.setAttribute("viewBox", "0 0 "+(this.whiteKeyWidth*7)+" "+height);
             }
             skipWhiteKey() { this.whiteKeys++; }
         }
