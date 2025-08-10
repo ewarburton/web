@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PNG Store Simulator</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 900px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px #0001; }
+        h1 { text-align: center; }
+        .coins { font-size: 1.2em; margin-bottom: 20px; }
+        .store, .my-pngs, .upload-section { margin-bottom: 30px; }
+        .png-list { display: flex; flex-wrap: wrap; gap: 20px; }
+        .png-item { background: #fafafa; border: 1px solid #ddd; border-radius: 8px; padding: 10px; width: 180px; text-align: center; box-shadow: 0 1px 4px #0001; }
+        .png-item img { max-width: 100%; max-height: 120px; border-radius: 4px; background: #eee; }
+        .png-item .price { font-weight: bold; color: #2a7; margin: 8px 0; }
+        .png-item button { padding: 5px 12px; border: none; border-radius: 4px; background: #2a7; color: #fff; cursor: pointer; }
+        .png-item button:disabled { background: #aaa; cursor: not-allowed; }
+        .upload-section input[type="number"] { width: 80px; }
+        .upload-section input[type="file"] { margin-bottom: 10px; }
+        .notice { color: #c22; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PNG Store Simulator</h1>
+        <div class="coins" id="coins"></div>
+        <div class="upload-section">
+            <h2>Sell a PNG</h2>
+            <form id="uploadForm">
+                <input type="file" id="pngFile" accept="image/png" required><br>
+                <label>Price: <input type="number" id="price" min="1" max="1000000" value="100" required></label>
+                <button type="submit">List PNG for Sale</button>
+            </form>
+            <div class="notice" id="uploadNotice"></div>
+        </div>
+        <div class="store">
+            <h2>Store</h2>
+            <div class="png-list" id="storeList"></div>
+        </div>
+        <div class="my-pngs">
+            <h2>My PNGs</h2>
+            <div class="png-list" id="myPngs"></div>
+        </div>
+    </div>
+    <script>
+        // --- Persistent State ---
+        const STORAGE_KEY = 'png_store_sim_data_v1';
+        function getInitialState() {
+            return {
+                coins: 200000,
+                store: [], // {id, dataUrl, price, sellerId}
+                myPngs: [], // {id, dataUrl, price, sellerId}
+                myId: crypto.randomUUID(),
+            };
+        }
+        function loadState() {
+            let state = localStorage.getItem(STORAGE_KEY);
+            if (state) {
+                try {
+                    state = JSON.parse(state);
+                    // If myId is missing (old version), generate one
+                    if (!state.myId) state.myId = crypto.randomUUID();
+                    return state;
+                } catch (e) {}
+            }
+            const s = getInitialState();
+            saveState(s);
+            return s;
+        }
+        function saveState(state) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+        let state = loadState();
+        // --- UI Update Functions ---
+        function updateCoins() {
+            document.getElementById('coins').textContent = `Coins: ${state.coins.toLocaleString()}`;
+        }
+        function updateStore() {
+            const storeList = document.getElementById('storeList');
+            storeList.innerHTML = '';
+            if (state.store.length === 0) {
+                storeList.innerHTML = '<div>No PNGs for sale yet.</div>';
+                return;
+            }
+            for (const item of state.store) {
+                const div = document.createElement('div');
+                div.className = 'png-item';
+                div.innerHTML = `
+                    <img src="${item.dataUrl}" alt="PNG">
+                    <div class="price">${item.price} coins</div>
+                    <button ${item.sellerId === state.myId ? 'disabled' : ''} data-id="${item.id}">
+                        ${item.sellerId === state.myId ? 'Your Listing' : 'Buy'}
+                    </button>
+                `;
+                if (item.sellerId !== state.myId) {
+                    div.querySelector('button').onclick = () => buyPng(item.id);
+                }
+                storeList.appendChild(div);
+            }
+        }
+        function updateMyPngs() {
+            const myPngs = document.getElementById('myPngs');
+            myPngs.innerHTML = '';
+            const mine = state.myPngs;
+            if (mine.length === 0) {
+                myPngs.innerHTML = '<div>You have not bought any PNGs yet.</div>';
+                return;
+            }
+            for (const item of mine) {
+                const div = document.createElement('div');
+                div.className = 'png-item';
+                div.innerHTML = `
+                    <img src="${item.dataUrl}" alt="PNG">
+                    <div class="price">${item.price} coins</div>
+                    <div>Seller: Anonymous</div>
+                `;
+                myPngs.appendChild(div);
+            }
+        }
+        function showNotice(msg) {
+            document.getElementById('uploadNotice').textContent = msg;
+            setTimeout(() => {
+                document.getElementById('uploadNotice').textContent = '';
+            }, 3000);
+        }
+        // --- Store Logic ---
+        function buyPng(id) {
+            const idx = state.store.findIndex(x => x.id === id);
+            if (idx === -1) return;
+            const item = state.store[idx];
+            if (item.sellerId === state.myId) {
+                showNotice("You can't buy your own PNG.");
+                return;
+            }
+            if (state.coins < item.price) {
+                showNotice("Not enough coins!");
+                return;
+            }
+            state.coins -= item.price;
+            state.myPngs.push(item);
+            state.store.splice(idx, 1);
+            saveState(state);
+            updateCoins();
+            updateStore();
+            updateMyPngs();
+            showNotice("You bought a PNG!");
+        }
+        // --- Upload Logic ---
+        document.getElementById('uploadForm').onsubmit = function(e) {
+            e.preventDefault();
+            const file = document.getElementById('pngFile').files[0];
+            const price = parseInt(document.getElementById('price').value, 10);
+            if (!file || file.type !== 'image/png') {
+                showNotice('Please select a PNG file.');
+                return;
+            }
+            if (price < 1 || price > 1000000) {
+                showNotice('Price must be between 1 and 1,000,000 coins.');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const dataUrl = ev.target.result;
+                const id = crypto.randomUUID();
+                state.store.push({ id, dataUrl, price, sellerId: state.myId });
+                saveState(state);
+                updateStore();
+                showNotice('PNG listed for sale!');
+                document.getElementById('uploadForm').reset();
+            };
+            reader.readAsDataURL(file);
+        };
+        // --- On Load ---
+        updateCoins();
+        updateStore();
+        updateMyPngs();
+    </script>
+</body>
+</html>

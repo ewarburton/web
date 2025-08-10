@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surf and/or Turf</title>
+    <style>
+        body {
+            background: #181818;
+            color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #232323;
+            padding: 2em;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            max-width: 800px;
+        }
+        h1 {
+            margin-bottom: 1em;
+            font-size: 2em;
+            letter-spacing: 0.05em;
+        }
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            height: 540px; /* 5x standard 16:9 embed height (108px * 5) */
+            max-width: 1920px;
+            margin-bottom: 1em;
+        }
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Surf and/or Turf</h1>
+        <div class="video-wrapper">
+            <iframe src="https://www.youtube.com/embed/9Cr8O4uFcHc" allowfullscreen title="Surf and/or Turf"></iframe>
+        </div>
+    </div>
+</body>
+</html>

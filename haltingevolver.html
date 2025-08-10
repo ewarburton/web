@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Halting BF Evolver</title>
+    <style>
+        body { font-family: monospace; background: #222; color: #eee; transition: background 0.3s, color 0.3s; }
+        .log { white-space: pre; background: #111; padding: 1em; border-radius: 8px; }
+        button {
+            margin: 1em 0;
+            background: inherit;
+            border: 2px solid #eee;
+            transition: background 0.3s, color 0.3s, border-color 0.3s;
+        }
+        #bgcolor { width: 120px; }
+        .program-text {
+            padding: 0 2px;
+            border-radius: 2px;
+            color: #fff !important;
+            background: var(--program-bg, #222);
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <h1>Halting BF Evolver</h1>
+    <button id="run">Run 50 Generations</button>
+    <button id="stop">Stop</button>
+    <button id="reset">Reset</button>
+    <input type="color" id="bgcolor" value="#222222" title="Background color" />
+    <label for="bgcolor">Background</label>
+    <div class="log" id="log"></div>
+    <script>
+// --- Background color and text color logic ---
+function setBgAndTextColor(hex) {
+    document.body.style.background = hex;
+    // Parse hex to r,g,b in [0,1]
+    let r = parseInt(hex.substr(1,2),16)/255;
+    let g = parseInt(hex.substr(3,2),16)/255;
+    let b = parseInt(hex.substr(5,2),16)/255;
+    let brightness = r*0.5 + g*0.8 + b*0.2;
+    let fg = (brightness > 0.75) ? '#000' : '#fff';
+    document.body.style.color = fg;
+    let logDiv = document.getElementById('log');
+    if (logDiv) logDiv.style.color = fg;
+    // Button text matches main text, background matches page, border matches text
+    document.querySelectorAll('button').forEach(el => {
+        el.style.color = fg;
+        el.style.background = hex;
+        el.style.borderColor = fg;
+    });
+    document.querySelectorAll('label').forEach(el => el.style.color = fg);
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+    const colorInput = document.getElementById('bgcolor');
+    setBgAndTextColor(colorInput.value);
+    colorInput.addEventListener('input', e => setBgAndTextColor(e.target.value));
+});
+    </script>
+    <script>
+// --- Brainfuck Interpreter ---
+function runBF(code, maxSteps = 10000) {
+    const tape = new Uint8Array(30000);
+    let ptr = 0, ip = 0, steps = 0;
+    const stack = [];
+    let output = '';
+    while (ip < code.length && steps < maxSteps) {
+        switch (code[ip]) {
+            case '>': ptr++; break;
+            case '<': ptr--; break;
+            case '+': tape[ptr]++; break;
+            case '-': tape[ptr]--; break;
+            case '.': output += String.fromCharCode(tape[ptr]); break;
+            // case ',': break; // removed ','
+            case '[':
+                if (tape[ptr] === 0) {
+                    let open = 1;
+                    while (open && ++ip < code.length) {
+                        if (code[ip] === '[') open++;
+                        if (code[ip] === ']') open--;
+                    }
+                } else {
+                    stack.push(ip);
+                }
+                break;
+            case ']':
+                if (tape[ptr] !== 0) {
+                    ip = stack[stack.length - 1];
+                } else {
+                    stack.pop();
+                }
+                break;
+        }
+        ip++;
+        steps++;
+    }
+    return {halting: ip >= code.length, steps, output};
+}
+
+// --- Random BF Program Generator ---
+function randomBF(len) {
+    const chars = ['>', '<', '+', '-', '.', '[', ']']; // removed ','
+    let s = '';
+    for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+}
+
+// --- Mutate BF Program ---
+function mutateBF(code) {
+    const chars = ['>', '<', '+', '-', '.', '[', ']']; // removed ','
+    let arr = code.split('');
+    // random mutation: insert, delete, or change
+    const r = Math.random();
+    if (r < 0.33 && arr.length > 1) {
+        arr.splice(Math.floor(Math.random() * arr.length), 1); // delete
+    } else if (r < 0.66) {
+        arr.splice(Math.floor(Math.random() * (arr.length + 1)), 0, chars[Math.floor(Math.random() * chars.length)]); // insert
+    } else {
+        arr[Math.floor(Math.random() * arr.length)] = chars[Math.floor(Math.random() * chars.length)]; // change
+    }
+    return arr.join('');
+}
+
+// --- Evolutionary Loop ---
+let stopEvolution = false;
+let evoState = null;
+function evolve(log, gens = 50) {
+    stopEvolution = false;
+    if (!evoState) {
+        // initialize
+        let population = [];
+        for (let i = 0; i < 10; i++) population.push(randomBF(10 + Math.floor(Math.random() * 10)));
+        let evals = population.map(p => ({code: p, ...runBF(p)}));
+        let halting = evals.filter(e => e.halting);
+        let parent;
+        if (halting.length > 0) {
+            parent = halting[Math.floor(Math.random() * halting.length)].code;
+            log('Initial halting found.');
+        } else {
+            parent = evals[Math.floor(Math.random() * evals.length)].code;
+            log('No halting program found, picking random.');
+        }
+        log('Initial parent: ' + parent);
+        evoState = {parent, gen: 1};
+    }
+    let stepsLeft = gens;
+    function step() {
+        if (stopEvolution) { log('Stopped.'); return; }
+        let children = [];
+        for (let i = 0; i < 10; i++) children.push(mutateBF(evoState.parent));
+        let evals = children.map(p => ({code: p, ...runBF(p)}));
+        let halting = evals.filter(e => e.halting);
+        let next, steps = null, chosenIdx = null;
+        if (halting.length > 0) {
+            if (evoState.gen > 5) {
+                // pick the halting program with the largest steps after gen 5
+                let mostSteps = halting.reduce((a, b) => (b.steps > a.steps ? b : a), halting[0]);
+                next = mostSteps.code;
+                steps = mostSteps.steps;
+                // find index in evals
+                chosenIdx = evals.findIndex(e => e.code === next);
+                log(`Gen ${evoState.gen}: Halting found, steps ${steps}, length ${next.length}`);
+            } else {
+                // pick random halting for first 5 gens
+                let chosen = halting[Math.floor(Math.random() * halting.length)];
+                next = chosen.code;
+                steps = chosen.steps;
+                chosenIdx = evals.findIndex(e => e.code === next);
+                log(`Gen ${evoState.gen}: Halting found, steps ${steps}, length ${next.length}`);
+            }
+        } else {
+            let idx = Math.floor(Math.random() * evals.length);
+            next = evals[idx].code;
+            chosenIdx = idx;
+            log(`Gen ${evoState.gen}: No halting, picking random.`);
+        }
+        log('All programs:');
+        evals.forEach((e, i) => {
+            const progHtml = `<span class='program-text'>${e.code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`;
+            log(`  ${i+1}: ${progHtml} ${e.halting ? `(halting, steps ${e.steps}, output length ${e.output.length}, output: "${e.output.replace(/[^\x20-\x7E]/g, '?')}")` : ''}`);
+        });
+        log('Chosen program: ' + next + (chosenIdx !== null ? ` (#${chosenIdx+1})` : ''));
+
+        evoState.parent = next;
+        evoState.gen++;
+        stepsLeft--;
+        if (stepsLeft > 0) setTimeout(step, 100);
+    }
+    setTimeout(step, 100);
+}
+
+document.getElementById('run').onclick = function() {
+    const logDiv = document.getElementById('log');
+    function logFn(msg) {
+        // Always wrap the log line in a .program-text span for consistent styling
+        const html = `<span class='program-text'>${msg.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span><br>`;
+        logDiv.innerHTML += html;
+    }
+    evolve(logFn, 50);
+};
+document.getElementById('stop').onclick = function() {
+    stopEvolution = true;
+};
+document.getElementById('reset').onclick = function() {
+    const logDiv = document.getElementById('log');
+    logDiv.textContent = '';
+    evoState = null;
+};
+    </script>
+</body>
+</html>
