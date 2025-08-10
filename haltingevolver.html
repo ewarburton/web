@@ -177,8 +177,7 @@ function evolve(log, gens = 50) {
         }
         log('All programs:');
         evals.forEach((e, i) => {
-            const progHtml = `<span class='program-text'>${e.code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`;
-            log(`  ${i+1}: ${progHtml} ${e.halting ? `(halting, steps ${e.steps}, output length ${e.output.length}, output: "${e.output.replace(/[^\x20-\x7E]/g, '?')}")` : ''}`);
+            log(`  ${i+1}: ${e.code} ${e.halting ? `(halting, steps ${e.steps}, output length ${e.output.length}, output: "${e.output.replace(/[^\x20-\x7E]/g, '?')}")` : ''}`);
         });
         log('Chosen program: ' + next + (chosenIdx !== null ? ` (#${chosenIdx+1})` : ''));
 
