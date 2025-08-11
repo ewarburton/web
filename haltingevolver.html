@@ -25,12 +25,21 @@
 <body>
     <h1>Halting BF Evolver</h1>
     <button id="run">Run 50 Generations</button>
+    <button id="run-until-stop">Run Until Stop</button>
+    <label for="init-length-input" style="margin-left:1em;">Initial Program Length</label>
+    <input type="number" id="init-length-input" min="1" value="5" style="width:5em;" title="Initial program length" />
+
+    <input type="number" id="run-until-length-input" min="1" value="50" style="width:5em;" title="Target length" />
+
+        <button id="run-until-length">Run Until Length</button>
     <button id="stop">Stop</button>
     <button id="reset">Reset</button>
     <input type="color" id="bgcolor" value="#222222" title="Background color" />
     <label for="bgcolor">Background</label>
+    <div id="champion" style="margin:1em 0; padding:0.5em; border-radius:6px; font-family:monospace;"></div>
     <div class="log" id="log"></div>
     <script>
+let runUntilLengthTarget = null; // Moved variable declaration to script section
 // --- Background color and text color logic ---
 function setBgAndTextColor(hex) {
     document.body.style.background = hex;
@@ -56,11 +65,17 @@ window.addEventListener('DOMContentLoaded', function() {
     const colorInput = document.getElementById('bgcolor');
     setBgAndTextColor(colorInput.value);
     colorInput.addEventListener('input', e => setBgAndTextColor(e.target.value));
+    // Always show champion area with default message
+    const championDiv = document.getElementById('champion');
+    championDiv.innerHTML =
+        '<b>Champion:</b> <span style="color:#fff">(none yet)</span><br>' +
+        '<b>Steps:</b> <br>' +
+        '<b>Output:</b> <span style="color:#fff"></span>';
 });
     </script>
     <script>
 // --- Brainfuck Interpreter ---
-function runBF(code, maxSteps = 10000) {
+function runBF(code, maxSteps = 10000000) {
     const tape = new Uint8Array(30000);
     let ptr = 0, ip = 0, steps = 0;
     const stack = [];
@@ -145,6 +160,34 @@ function evolve(log, gens = 50) {
         evoState = {parent, gen: 1};
     }
     let stepsLeft = gens;
+    // Champion display updater
+    const championDiv = document.getElementById('champion');
+    function updateChampionDisplay(code, steps, output) {
+        // If running in Run Until Length mode, check if champion is long enough
+        if (runUntilLengthTarget && code && code.length >= runUntilLengthTarget) {
+            stopEvolution = true;
+        }
+        // Use the same showOutput as below
+        function showOutput(str) {
+            return Array.from(str, c => {
+                const code = c.charCodeAt(0);
+                if (code < 32) {
+                    // U+2400 to U+241F: Control Pictures
+                    return String.fromCharCode(0x2400 + code);
+                }
+                else if (code === 127) {
+                    return String.fromCharCode(0x247F); // U+247F: Circled Number 0
+                }
+                else {
+                    return c;
+                }
+            }).join('');
+        }
+        championDiv.innerHTML =
+            `<b>Champion:</b> <span>${code}</span><br>` +
+            `<b>Steps:</b> ${steps}<br>` +
+            `<b>Output:</b> <span>${showOutput(output)}</span>`;
+    }
     function step() {
         if (stopEvolution) { log('Stopped.'); return; }
         let children = [];
@@ -154,13 +197,17 @@ function evolve(log, gens = 50) {
         let next, steps = null, chosenIdx = null;
         if (halting.length > 0) {
             if (evoState.gen > 5) {
-                // pick the halting program with the largest steps after gen 5
-                let mostSteps = halting.reduce((a, b) => (b.steps > a.steps ? b : a), halting[0]);
-                next = mostSteps.code;
-                steps = mostSteps.steps;
+                let best = halting.reduce((a, b) => {
+                    let scoreA = a.steps - (a.code.length / 2);
+                    let scoreB = b.steps - (b.code.length / 2);
+                    return scoreB > scoreA ? b : a;
+                });
+                next = best.code;
+                steps = best.steps;
                 // find index in evals
                 chosenIdx = evals.findIndex(e => e.code === next);
                 log(`Gen ${evoState.gen}: Halting found, steps ${steps}, length ${next.length}`);
+                updateChampionDisplay(next, steps, best.output);
             } else {
                 // pick random halting for first 5 gens
                 let chosen = halting[Math.floor(Math.random() * halting.length)];
@@ -168,16 +215,34 @@ function evolve(log, gens = 50) {
                 steps = chosen.steps;
                 chosenIdx = evals.findIndex(e => e.code === next);
                 log(`Gen ${evoState.gen}: Halting found, steps ${steps}, length ${next.length}`);
+                updateChampionDisplay(next, steps, chosen.output);
             }
         } else {
             let idx = Math.floor(Math.random() * evals.length);
             next = evals[idx].code;
             chosenIdx = idx;
             log(`Gen ${evoState.gen}: No halting, picking random.`);
+            updateChampionDisplay(next, null, evals[idx].output);
         }
         log('All programs:');
         evals.forEach((e, i) => {
-            log(`  ${i+1}: ${e.code} ${e.halting ? `(halting, steps ${e.steps}, output length ${e.output.length}, output: "${e.output.replace(/[^\x20-\x7E]/g, '?')}")` : ''}`);
+            // Helper to show non-printable chars as Unicode U+24XX (circled letters/numbers)
+            function showOutput(str) {
+                return Array.from(str, c => {
+                    const code = c.charCodeAt(0);
+                    if (code < 32) {
+                        // U+2400 to U+241F: Control Pictures
+                        return String.fromCharCode(0x2400 + code);
+                    }
+                    else if (code === 127) {
+                        return String.fromCharCode(0x247F); // U+247F: Circled Number 0
+                    }
+                    else {
+                        return c;
+                    }
+                }).join('');
+            }
+            log(`  ${i+1}: ${e.code} ${e.halting ? `(halting, steps ${e.steps}, output length ${e.output.length}, output: "${showOutput(e.output)}")` : ''}`);
         });
         log('Chosen program: ' + next + (chosenIdx !== null ? ` (#${chosenIdx+1})` : ''));
 
@@ -198,13 +263,36 @@ document.getElementById('run').onclick = function() {
     }
     evolve(logFn, 50);
 };
+
+document.getElementById('run-until-stop').onclick = function() {
+    const logDiv = document.getElementById('log');
+    function logFn(msg) {
+        const html = `<span class='program-text'>${msg.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span><br>`;
+        logDiv.innerHTML += html;
+    }
+    // Use a very large number for generations to simulate 'infinite' run
+    evolve(logFn, 1000000000);
+};
+document.getElementById('run-until-length').onclick = function() {
+    const logDiv = document.getElementById('log');
+    const input = document.getElementById('run-until-length-input');
+    runUntilLengthTarget = parseInt(input.value, 10) || 1;
+    function logFn(msg) {
+        const html = `<span class='program-text'>${msg.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span><br>`;
+        logDiv.innerHTML += html;
+    }
+    evolve(logFn, 1000000000);
+};
+
 document.getElementById('stop').onclick = function() {
     stopEvolution = true;
+    runUntilLengthTarget = null;
 };
 document.getElementById('reset').onclick = function() {
     const logDiv = document.getElementById('log');
     logDiv.textContent = '';
     evoState = null;
+    runUntilLengthTarget = null;
 };
     </script>
 </body>
