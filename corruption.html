@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>PNG Corruption Maker</title>
+	<style>
+		body { font-family: sans-serif; margin: 2em; background: #222; color: #eee; }
+		.container { max-width: 500px; margin: auto; background: #333; padding: 2em; border-radius: 1em; box-shadow: 0 0 20px #0008; }
+		input[type="file"], input[type="number"] { margin: 1em 0; }
+		button { padding: 0.5em 1em; font-size: 1em; }
+		img { max-width: 100%; margin-top: 1em; border: 1px solid #444; border-radius: 0.5em; }
+	</style>
+</head>
+<body>
+	<div class="container">
+		<h1>PNG Corruption Maker</h1>
+		<p>Upload a PNG, audio, or video file:</p>
+		<input type="file" id="fileInput" accept="image/png,audio/*,video/*"><br>
+		   <label for="imgMode">Image corruption mode:</label>
+		   <select id="imgMode">
+			   <option value="vhs">VHS simulation</option>
+			   <option value="bitflip">Bit-flip corruption</option>
+		   </select><br>
+		   <div id="vhsControls">
+			   <label for="vhsInput">VHS generation (images only):</label>
+			   <input type="range" id="vhsInput" min="1" max="30" value="1" style="width:200px;">
+			   <input type="number" id="vhsInputNum" min="1" max="100" value="1" style="width:60px;">
+			   <span id="vhsLabel">1</span><br>
+		   </div>
+
+		<div id="bitflipControls" style="display:none; margin-top:0.5em;">
+				<label for="percentInput">Bit-flip percent:</label>
+				<input type="number" id="percentInput" min="0" max="100" value="1" style="width:80px; margin-left:0.5em;">
+			</div>
+
+			<div style="margin-top:1em;">
+				<button id="corruptBtn">Corrupt</button>
+			</div>
+
+		<div id="output"></div>
+		</div>
+
+		<script>
+		// --- JS: controls, applyVHS, flipBits, and handlers ---
+		// Setup controls immediately (script is at end of body so DOM elements exist).
+		function init() {
+			const imgMode = document.getElementById('imgMode');
+			const vhsControls = document.getElementById('vhsControls');
+			const bitflipControls = document.getElementById('bitflipControls');
+			const vhsInput = document.getElementById('vhsInput');
+			const vhsInputNum = document.getElementById('vhsInputNum');
+			const vhsLabel = document.getElementById('vhsLabel');
+
+			// Ensure the number input's max matches the slider's max to avoid surprises
+			try { vhsInputNum.max = vhsInput.max; } catch (e) {}
+
+			imgMode.onchange = function() {
+				if (imgMode.value === 'vhs') {
+					vhsControls.style.display = '';
+					bitflipControls.style.display = 'none';
+				} else {
+					vhsControls.style.display = 'none';
+					bitflipControls.style.display = '';
+				}
+			};
+
+			vhsInput.oninput = function() {
+				vhsInputNum.value = vhsInput.value;
+				vhsLabel.textContent = vhsInput.value;
+				console.debug('vhsInput changed to', vhsInput.value);
+			};
+
+			vhsInputNum.oninput = function() {
+				let val = Math.max(1, Math.min(parseInt(vhsInput.max)||30, parseInt(vhsInputNum.value)||1));
+				vhsInput.value = val;
+				vhsLabel.textContent = val;
+				console.debug('vhsInputNum changed to', val);
+			};
+
+			// Attach corrupt button handler here too (defensive: ensure single hookup)
+			const corruptBtn = document.getElementById('corruptBtn');
+			if (corruptBtn && !corruptBtn._hasHandler) {
+				corruptBtn._hasHandler = true;
+				// leave the main handler defined later; add a tiny log so clicks aren't swallowed
+				corruptBtn.addEventListener('click', function(){ console.debug('Corrupt button clicked'); });
+			}
+		}
+
+		init();
+
+			function applyVHS(canvas, ctx, gen) {
+				const w = canvas.width, h = canvas.height;
+				let imgData = ctx.getImageData(0, 0, w, h);
+				let data = imgData.data;
+				const clamp = v => Math.min(255, Math.max(0, Math.round(v)));
+
+				// 1-3: subtle noise
+				if (gen <= 3) {
+					for (let i = 0; i < data.length; i += 4) {
+						data[i] = clamp(data[i] + (Math.random() - 0.5) * gen * 0.6);
+						data[i+1] = clamp(data[i+1] + (Math.random() - 0.5) * gen * 0.6);
+						data[i+2] = clamp(data[i+2] + (Math.random() - 0.5) * gen * 0.6);
+					}
+				}
+
+				// 4-9: progressive smear and colour instability
+				if (gen >= 4 && gen < 10) {
+					// smear intensity
+					const smearFactor = gen < 6 ? 0.85 : (gen < 8 ? 0.7 : 0.6);
+					for (let y = 0; y < h; y++) {
+						for (let x = 1; x < w; x++) {
+							let i = (y * w + x) * 4;
+							let prev = (y * w + x - 1) * 4;
+							data[i] = clamp(data[i] * smearFactor + data[prev] * (1 - smearFactor));
+							data[i+1] = clamp(data[i+1] * smearFactor + data[prev+1] * (1 - smearFactor));
+							data[i+2] = clamp(data[i+2] * smearFactor + data[prev+2] * (1 - smearFactor));
+						}
+					}
+
+					// source snapshot
+					const src = new Uint8ClampedArray(data.length);
+					src.set(data);
+
+					// generation-tuned params
+					let maxShift = 0, noiseScale = 6;
+					if (gen === 4 || gen === 5) { maxShift = 1; noiseScale = 6; }
+					if (gen === 6) { maxShift = 2; noiseScale = 8; }
+					if (gen === 7) { maxShift = 3; noiseScale = 12; }
+					if (gen === 8) { maxShift = Math.max(4, Math.min(14, Math.floor(w/40))); noiseScale = 20; }
+					if (gen === 9) { maxShift = Math.max(8, Math.min(28, Math.floor(w/30))); noiseScale = 30; }
+
+					for (let y = 0; y < h; y++) {
+						// smooth base per-line to create streaking
+						const base = Math.sin(y * 0.08 + gen * 0.3) * 0.5;
+						const offR = Math.round(base * maxShift + (Math.random() - 0.5) * (maxShift * 0.6));
+						const offG = Math.round(base * maxShift * 0.85 + (Math.random() - 0.5) * (maxShift * 0.7));
+						const offB = Math.round(base * maxShift * 0.6 + (Math.random() - 0.5) * (maxShift * 0.8));
+						for (let x = 0; x < w; x++) {
+							let i = (y * w + x) * 4;
+							let sxR = Math.min(w-1, Math.max(0, x + offR));
+							let sxG = Math.min(w-1, Math.max(0, x + offG));
+							let sxB = Math.min(w-1, Math.max(0, x + offB));
+							let iR = (y * w + sxR) * 4;
+							let iG = (y * w + sxG) * 4;
+							let iB = (y * w + sxB) * 4;
+							let noise = (Math.random() - 0.5) * noiseScale;
+							data[i] = clamp(src[iR] + noise);
+							data[i+1] = clamp(src[iG+1] + noise * 0.9);
+							data[i+2] = clamp(src[iB+2] + noise * 0.8);
+
+							// higher gens get occasional stronger glitches
+							if (gen >= 8 && Math.random() < 0.01) {
+								// swap channels for a short burst
+								let t = data[i]; data[i] = data[i+2]; data[i+2] = t;
+							}
+
+							// gens 7/8/9: if pixel is very different from its neighbours (spatial radius R),
+							// fall back to grayscale. Radius: gen7=3, gen8=10, gen9=20.
+							if (gen === 7 || gen === 8 || gen === 9) {
+								let R = gen === 7 ? 3 : (gen === 8 ? 10 : 20);
+								// performance guard: reduce R for very large images
+								if (w * h > 1000000) R = Math.max(1, Math.floor(R * 0.5));
+								let minY = Math.max(0, y - R), maxY = Math.min(h - 1, y + R);
+								let minX = Math.max(0, x - R), maxX = Math.min(w - 1, x + R);
+								let sumR = 0, sumG = 0, sumB = 0, count = 0;
+								for (let yy = minY; yy <= maxY; yy++) {
+									for (let xx = minX; xx <= maxX; xx++) {
+										if (yy === y && xx === x) continue;
+										let j = (yy * w + xx) * 4;
+										sumR += src[j];
+										sumG += src[j+1];
+										sumB += src[j+2];
+										count++;
+									}
+								}
+								if (count > 0) {
+									let avgR = sumR / count, avgG = sumG / count, avgB = sumB / count;
+									// color distance
+									let dr = data[i] - avgR, dg = data[i+1] - avgG, db = data[i+2] - avgB;
+									let dist = Math.sqrt(dr*dr + dg*dg + db*db);
+									// threshold scales with R
+									let threshold = 30 + R * 2.5; // gen7 ~37.5, gen8 ~55, gen9 ~80
+									if (dist > threshold) {
+										// convert this pixel to grayscale (use luminance of current pixel)
+										let lum = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+										data[i] = data[i+1] = data[i+2] = clamp(lum);
+									}
+								}
+							}
+						}
+					}
+				}
+
+				// 10+: full mono + noise + blur
+				if (gen >= 10) {
+					for (let i = 0; i < data.length; i += 4) {
+						let avg = (data[i] + data[i+1] + data[i+2]) / 3;
+						data[i] = data[i+1] = data[i+2] = clamp(avg + (Math.random()-0.5) * Math.pow((gen-9), 2) * 4);
+					}
+					for (let y = 1; y < h-1; y++) {
+						for (let x = 1; x < w-1; x++) {
+							let i = (y * w + x) * 4;
+							for (let c = 0; c < 3; c++) {
+								let sum = data[i+c] + data[i+c-4] + data[i+c+4] + data[i+c-w*4] + data[i+c+w*4];
+								data[i+c] = clamp(sum / 5);
+							}
+						}
+					}
+				}
+
+				// finish
+				ctx.putImageData(imgData, 0, 0);
+			}
+
+		function flipBits(buffer, percent) {
+			const totalBits = buffer.byteLength * 8;
+			const bitsToFlip = Math.floor(totalBits * (percent / 100));
+			const view = new Uint8Array(buffer);
+			const flipped = new Set();
+			while (flipped.size < bitsToFlip) {
+				const bitIndex = Math.floor(Math.random() * totalBits);
+				if (flipped.has(bitIndex)) continue;
+				flipped.add(bitIndex);
+				const byteIndex = Math.floor(bitIndex / 8);
+				const bitInByte = bitIndex % 8;
+				view[byteIndex] ^= (1 << bitInByte);
+			}
+			return buffer;
+		}
+
+		document.getElementById('corruptBtn').onclick = async function() {
+			const fileInput = document.getElementById('fileInput');
+			const percent = parseFloat(document.getElementById('percentInput').value);
+			const vhsGen = parseInt(document.getElementById('vhsInput').value);
+			const output = document.getElementById('output');
+			output.innerHTML = '';
+
+			let file = fileInput.files[0];
+			let corruptedBuffer, blob, url, ext, type;
+
+			if (file) {
+				const name = file.name.toLowerCase();
+				if (name.match(/\.(png|jpg|jpeg)$/)) {
+					const imgMode = document.getElementById('imgMode').value;
+					if (imgMode === 'vhs') {
+						const img = new Image();
+						img.onload = function() {
+							const canvas = document.createElement('canvas');
+							canvas.width = img.width;
+							canvas.height = img.height;
+							const ctx = canvas.getContext('2d');
+							ctx.drawImage(img, 0, 0);
+							applyVHS(canvas, ctx, vhsGen);
+							canvas.toBlob(function(blob) {
+								const url = URL.createObjectURL(blob);
+								const outImg = document.createElement('img');
+								outImg.src = url;
+								outImg.alt = 'VHS simulated image';
+								output.appendChild(outImg);
+								const dl = document.createElement('a');
+								dl.href = url;
+								dl.download = 'vhs_' + file.name;
+								dl.textContent = 'Download VHS simulated image';
+								dl.style.display = 'block';
+								dl.style.marginTop = '1em';
+								output.appendChild(dl);
+							}, file.type || 'image/png');
+						};
+						img.onerror = function() { output.textContent = 'Could not load image.'; };
+						img.src = URL.createObjectURL(file);
+						return;
+					} else {
+						const reader = new FileReader();
+						reader.onload = function(e) {
+							const arrayBuffer = e.target.result;
+							const percent = parseFloat(document.getElementById('percentInput').value);
+							const corruptedBuffer = flipBits(arrayBuffer.slice(0), percent);
+							const blob = new Blob([corruptedBuffer], {type: file.type || 'image/png'});
+							const url = URL.createObjectURL(blob);
+							const outImg = document.createElement('img');
+							outImg.src = url;
+							outImg.alt = 'Bit-flip corrupted image';
+							output.appendChild(outImg);
+							const dl = document.createElement('a');
+							dl.href = url;
+							dl.download = 'bitflip_' + file.name;
+							dl.textContent = 'Download bit-flip corrupted image';
+							dl.style.display = 'block';
+							dl.style.marginTop = '1em';
+							output.appendChild(dl);
+						};
+						reader.onerror = function() { output.textContent = 'Could not read image.'; };
+						reader.readAsArrayBuffer(file);
+						return;
+					}
+				} else if (name.match(/\.(mp3|wav|ogg|flac|aac)$/)) {
+					const arrayBuffer = await file.arrayBuffer();
+					corruptedBuffer = flipBits(arrayBuffer.slice(0), percent);
+					blob = new Blob([corruptedBuffer], {type: file.type || 'audio/mpeg'});
+					url = URL.createObjectURL(blob);
+					type = 'audio';
+					ext = name.split('.').pop();
+				} else if (name.match(/\.(mp4|webm|ogg|avi|mov|mkv)$/)) {
+					const arrayBuffer = await file.arrayBuffer();
+					corruptedBuffer = flipBits(arrayBuffer.slice(0), percent);
+					blob = new Blob([corruptedBuffer], {type: file.type || 'video/mp4'});
+					url = URL.createObjectURL(blob);
+					type = 'video';
+					ext = name.split('.').pop();
+				} else {
+					output.textContent = 'File must be an image, audio, or video file.';
+					return;
+				}
+			} else {
+				output.textContent = 'Please select an image, audio, or video file.';
+				return;
+			}
+
+			if (type === 'image') {
+				const img = document.createElement('img');
+				img.src = url;
+				img.alt = 'Corrupted PNG';
+				output.appendChild(img);
+				const dl = document.createElement('a');
+				dl.href = url;
+				dl.download = 'corrupted.' + ext;
+				dl.textContent = 'Download corrupted PNG';
+				dl.style.display = 'block';
+				dl.style.marginTop = '1em';
+				output.appendChild(dl);
+			} else if (type === 'audio') {
+				const audio = document.createElement('audio');
+				audio.controls = true;
+				audio.src = url;
+				output.appendChild(audio);
+				const dl = document.createElement('a');
+				dl.href = url;
+				dl.download = 'corrupted.' + ext;
+				dl.textContent = 'Download corrupted audio';
+				dl.style.display = 'block';
+				dl.style.marginTop = '1em';
+				output.appendChild(dl);
+			} else if (type === 'video') {
+				const video = document.createElement('video');
+				video.controls = true;
+				video.src = url;
+				video.style.maxWidth = '100%';
+				output.appendChild(video);
+				const dl = document.createElement('a');
+				dl.href = url;
+				dl.download = 'corrupted.' + ext;
+				dl.textContent = 'Download corrupted video';
+				dl.style.display = 'block';
+				dl.style.marginTop = '1em';
+				output.appendChild(dl);
+			}
+		};
+		</script>

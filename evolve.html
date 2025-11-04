@@ -1,0 +1,253 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Primordial Evolution Simulation</title>
+  <style>
+    body { background: #222; color: #eee; font-family: sans-serif; }
+    canvas { background: #111; display: block; margin: 0 auto; border: 1px solid #444; }
+    #info { text-align: center; margin: 10px; }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <h2>Primordial Evolution Simulation</h2>
+    <span id="stats"></span>
+  </div>
+  <canvas id="sim" width="800" height="600"></canvas>
+  <script>
+// --- Parameters ---
+const WIDTH = 800, HEIGHT = 600;
+const NUM_INITIAL_CREATURES = 100;
+const NUM_PLANTS = 60;
+const PLANT_ENERGY = 400;
+const MEAT_ENERGY = 800;
+const EGG_COST = 600;
+const MUTATION_RATE = 0.1;
+const MAX_NEURONS = 6;
+
+// --- Utility ---
+let frameCount = 0;
+function rand(a, b) { return Math.random() * (b - a) + a; }
+function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+function dist(a, b) { let dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx*dx + dy*dy); }
+function randomColor() {
+  // HSL color for variety
+  return `hsl(${Math.floor(rand(0,360))},80%,60%)`;
+}
+
+// --- Genes ---
+function randomGenes() {
+  return {
+    eatPlant: rand(0.1, 1), // 0=never, 1=always
+    eatMeat: rand(0.1, 1),
+    eggLength: Math.floor(rand(100, 400)), // frames to lay egg
+    color: randomColor(),
+    lifespan: Math.floor(rand(800, 2000)), // default longevity
+    brain: Array.from({length: MAX_NEURONS}, () => rand(-1,1)),
+  };
+}
+function mutateGenes(genes) {
+  let g = JSON.parse(JSON.stringify(genes));
+  if (Math.random() < MUTATION_RATE) g.eatPlant = clamp(g.eatPlant + rand(-0.2,0.2), 0.1, 1);
+  if (Math.random() < MUTATION_RATE) g.eatMeat = clamp(g.eatMeat + rand(-0.2,0.2), 0.1, 1);
+  if (Math.random() < MUTATION_RATE) g.eggLength = clamp(g.eggLength + Math.floor(rand(-30,30)), 50, 600);
+  if (Math.random() < MUTATION_RATE) g.color = randomColor();
+  if (Math.random() < MUTATION_RATE) g.lifespan = clamp(g.lifespan + Math.floor(rand(-200,200)), 400, 3000);
+  g.brain = g.brain.map(w => (Math.random()<MUTATION_RATE) ? clamp(w+rand(-0.2,0.2),-1,1) : w);
+  return g;
+}
+
+// --- Species comparison ---
+function isSameSpecies(genesA, genesB) {
+  const brainA = genesA.brain, brainB = genesB.brain;
+  if (brainA.length !== brainB.length) return false;
+  const n = brainA.length;
+  let sumAbsDiff = 0, sumAbs = 0;
+  for (let i = 0; i < n; ++i) {
+    sumAbsDiff += Math.abs(brainA[i] - brainB[i]);
+    sumAbs += Math.abs(brainA[i]) + Math.abs(brainB[i]);
+  }
+  if (n < 30) {
+    return sumAbsDiff <= 3;
+  } else {
+    let percentDiff = sumAbs ? (sumAbsDiff / sumAbs) : 0;
+    return percentDiff <= 0.10;
+  }
+}
+
+// --- Population Cap ---
+const CREATURE_CAP = 1000;
+// --- Entities ---
+class Plant {
+  constructor(x, y) { this.x = x; this.y = y; this.energy = PLANT_ENERGY; }
+  draw(ctx) {
+    ctx.fillStyle = '#3f3';
+    ctx.beginPath(); ctx.arc(this.x, this.y, 6, 0, 2*Math.PI); ctx.fill();
+  }
+}
+
+class Creature {
+  constructor(x, y, genes) {
+    this.x = x; this.y = y;
+    this.dir = rand(0, 2*Math.PI);
+    this.energy = 1000;
+    this.age = 0;
+    // Deep copy genes to ensure per-individual
+    this.genes = JSON.parse(JSON.stringify(genes));
+    this.eggTimer = 0;
+    this.fitness = 0;
+    this.dead = false;
+  }
+  update(plants, creatures, eggs) {
+    // --- Brain: simple weighted sum of inputs ---
+    // Inputs: [energy, age, nearest plant dist, nearest meat dist]
+    let nearestPlant = plants.reduce((a,b) => dist(this,b)<dist(this,a)?b:a, plants[0]||{x:this.x,y:this.y});
+    let nearestMeat = creatures.filter(c=>c!==this&&!c.dead).reduce((a,b) => dist(this,b)<dist(this,a)?b:a, creatures[0]||{x:this.x,y:this.y});
+    let inputs = [this.energy/200, this.age/1000, dist(this,nearestPlant)/WIDTH, dist(this,nearestMeat)/WIDTH];
+    let sum = 0;
+    for (let i=0; i<Math.min(inputs.length, this.genes.brain.length); ++i) sum += inputs[i]*this.genes.brain[i];
+    // Output: turn and move
+    this.dir += sum*0.2 + rand(-0.1,0.1);
+    let speed = clamp(0.8 + sum*0.5, 0.2, 2);
+    this.x += Math.cos(this.dir)*speed;
+    this.y += Math.sin(this.dir)*speed;
+    this.x = clamp(this.x, 0, WIDTH);
+    this.y = clamp(this.y, 0, HEIGHT);
+    this.energy -= 0.2 + 0.01*this.age;
+    this.age++;
+    // --- Eat plant ---
+    for (let i=0; i<plants.length; ++i) {
+      if (dist(this, plants[i]) < 12 && Math.random() < this.genes.eatPlant) {
+        this.energy += plants[i].energy;
+        this.fitness += plants[i].energy;
+        plants.splice(i,1); break;
+      }
+    }
+    // --- Eat meat (only other species by neural diff) ---
+    for (let i=0; i<creatures.length; ++i) {
+      let c = creatures[i];
+      if (
+        c!==this && !c.dead && dist(this,c)<12 && Math.random()<this.genes.eatMeat &&
+        !isSameSpecies(this.genes, c.genes)
+      ) {
+        this.energy += MEAT_ENERGY;
+        this.fitness += MEAT_ENERGY;
+        c.dead = true;
+        break;
+      }
+    }
+    // --- Fight on touch (different species) ---
+    for (let i=0; i<creatures.length; ++i) {
+      let c = creatures[i];
+      if (
+        c!==this && !c.dead && dist(this,c)<12 && !isSameSpecies(this.genes, c.genes)
+      ) {
+        if (Math.random() < 0.5) {
+          c.dead = true;
+        } else {
+          this.dead = true;
+        }
+        break;
+      }
+    }
+    // --- Lay egg ---
+    this.eggTimer++;
+    if (this.energy > EGG_COST && this.eggTimer > this.genes.eggLength) {
+      eggs.push({x:this.x, y:this.y, genes:mutateGenes(this.genes)});
+      this.energy -= EGG_COST;
+      this.eggTimer = 0;
+    }
+    // --- Death ---
+    if (this.energy <= 0 || this.age > (this.genes.lifespan || 20000)) this.dead = true;
+  }
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.dir);
+    ctx.fillStyle = this.genes.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, 10, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = '#fff2';
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(14,0); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// --- Simulation ---
+let canvas = document.getElementById('sim');
+let ctx = canvas.getContext('2d');
+let plants = [], creatures = [], eggs = [];
+
+function spawnPlant() {
+  plants.push(new Plant(rand(20,WIDTH-20), rand(20,HEIGHT-20)));
+}
+function spawnCreature(genes) {
+  creatures.push(new Creature(rand(40,WIDTH-40), rand(40,HEIGHT-40), genes||randomGenes()));
+}
+
+for (let i=0; i<NUM_PLANTS; ++i) spawnPlant();
+// Only allow initial spawn if frameCount < 120 (first 2 seconds)
+if (frameCount < 120) {
+  for (let i=0; i<NUM_INITIAL_CREATURES; ++i) spawnCreature();
+}
+
+function step() {
+  frameCount++;
+  // Plants regrow
+  if (plants.length < NUM_PLANTS) spawnPlant();
+  // Update creatures
+  for (let c of creatures) if (!c.dead) c.update(plants, creatures, eggs);
+  // Remove dead
+  creatures = creatures.filter(c => !c.dead);
+  // Cap population to reduce lag
+  if (creatures.length > CREATURE_CAP) {
+    creatures = creatures.slice(0, CREATURE_CAP);
+  }
+  // Hatch eggs
+  for (let i=eggs.length-1; i>=0; --i) {
+    if (Math.random() < 0.01) { // hatch chance
+      spawnCreature(eggs[i].genes);
+      eggs.splice(i,1);
+    }
+  }
+  // Natural selection: repopulate if extinct
+  if (creatures.length === 0 && eggs.length === 0) {
+    // Select top 3 by fitness, clone with mutation
+    let top = creatures.sort((a,b)=>b.fitness-a.fitness).slice(0,3);
+    for (let i=0; i<NUM_INITIAL_CREATURES; ++i) {
+      let parent = top[Math.floor(rand(0,top.length))] || randomGenes();
+      spawnCreature(mutateGenes(parent.genes||parent));
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0,0,WIDTH,HEIGHT);
+  for (let p of plants) p.draw(ctx);
+  for (let c of creatures) c.draw(ctx);
+  for (let e of eggs) {
+    ctx.fillStyle = '#fffa';
+    ctx.beginPath(); ctx.arc(e.x, e.y, 6, 0, 2*Math.PI); ctx.fill();
+  }
+}
+
+function updateStats() {
+  let avg = (arr, f) => arr.length ? arr.reduce((a,b)=>a+f(b),0)/arr.length : 0;
+  let stat = `Creatures: ${creatures.length} | Plants: ${plants.length} | Eggs: ${eggs.length} | Avg PlantGene: ${avg(creatures,c=>c.genes.eatPlant).toFixed(2)} | Avg MeatGene: ${avg(creatures,c=>c.genes.eatMeat).toFixed(2)} | Avg EggLen: ${avg(creatures,c=>c.genes.eggLength).toFixed(0)} | Avg Lifespan: ${avg(creatures,c=>c.genes.lifespan||0).toFixed(0)}`;
+  document.getElementById('stats').textContent = stat;
+}
+
+function loop() {
+  for (let i=0; i<3; ++i) step(); // speed up sim
+  draw();
+  updateStats();
+  requestAnimationFrame(loop);
+}
+loop();
+
+  </script>
+</body>
+</html>
