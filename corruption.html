@@ -38,12 +38,30 @@
 				<button id="corruptBtn">Corrupt</button>
 			</div>
 
+			<div id="editGreyArea" style="margin-top:1em;">
+				<button id="editGreyBtn">Edit Grey</button>
+				<div id="editGreyPanel" style="display:none; margin-top:0.5em;">
+					<label>R: <input type="number" id="greyR" min="112" max="144" value="128" style="width:64px;"></label>
+					<label>G: <input type="number" id="greyG" min="112" max="144" value="128" style="width:64px;"></label>
+					<label>B: <input type="number" id="greyB" min="112" max="144" value="128" style="width:64px;"></label>
+					<span id="greyPreview" style="display:inline-block;width:40px;height:24px;border:1px solid #666;margin-left:8px;vertical-align:middle;background:#808080"></span>
+					<span id="greyHex" style="margin-left:8px;color:#ccc">#808080</span>
+				</div>
+			</div>
+
 		<div id="output"></div>
 		</div>
 
 		<script>
 		// --- JS: controls, applyVHS, flipBits, and handlers ---
 		// Setup controls immediately (script is at end of body so DOM elements exist).
+		// custom grey used for gens >= 10 (default #808080)
+		let customGrey = { r: 128, g: 128, b: 128 };
+
+		function rgbToHex(r,g,b) {
+			const toHex = v => (Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0'));
+			return '#' + toHex(r) + toHex(g) + toHex(b);
+		}
 		function init() {
 			const imgMode = document.getElementById('imgMode');
 			const vhsControls = document.getElementById('vhsControls');
@@ -63,12 +81,14 @@
 					vhsControls.style.display = 'none';
 					bitflipControls.style.display = '';
 				}
+				updateEditGreyVisibility();
 			};
 
 			vhsInput.oninput = function() {
 				vhsInputNum.value = vhsInput.value;
 				vhsLabel.textContent = vhsInput.value;
 				console.debug('vhsInput changed to', vhsInput.value);
+				updateEditGreyVisibility();
 			};
 
 			vhsInputNum.oninput = function() {
@@ -76,6 +96,7 @@
 				vhsInput.value = val;
 				vhsLabel.textContent = val;
 				console.debug('vhsInputNum changed to', val);
+				updateEditGreyVisibility();
 			};
 
 			// Attach corrupt button handler here too (defensive: ensure single hookup)
@@ -85,6 +106,47 @@
 				// leave the main handler defined later; add a tiny log so clicks aren't swallowed
 				corruptBtn.addEventListener('click', function(){ console.debug('Corrupt button clicked'); });
 			}
+
+			// Edit Grey UI
+			const editGreyBtn = document.getElementById('editGreyBtn');
+			const editGreyPanel = document.getElementById('editGreyPanel');
+			const greyR = document.getElementById('greyR');
+			const greyG = document.getElementById('greyG');
+			const greyB = document.getElementById('greyB');
+			const greyPreview = document.getElementById('greyPreview');
+			const greyHex = document.getElementById('greyHex');
+			const editGreyArea = document.getElementById('editGreyArea');
+
+			function updateEditGreyVisibility() {
+				try {
+					const show = (imgMode.value === 'vhs') && (parseInt(vhsInput.value) >= 10);
+					if (editGreyArea) {
+						editGreyArea.style.display = show ? '' : 'none';
+					}
+					if (!show && editGreyPanel) editGreyPanel.style.display = 'none';
+				} catch (e) { /* ignore during init */ }
+			}
+
+			function updateGreyFromInputs() {
+				customGrey.r = Math.max(112, Math.min(144, parseInt(greyR.value) || 128));
+				customGrey.g = Math.max(112, Math.min(144, parseInt(greyG.value) || 128));
+				customGrey.b = Math.max(112, Math.min(144, parseInt(greyB.value) || 128));
+				greyPreview.style.background = rgbToHex(customGrey.r, customGrey.g, customGrey.b);
+				greyHex.textContent = rgbToHex(customGrey.r, customGrey.g, customGrey.b);
+			}
+
+			if (editGreyBtn) {
+				editGreyBtn.addEventListener('click', function() {
+					// only toggle panel when the whole area is visible
+					if (editGreyArea && editGreyArea.style.display === 'none') return;
+					editGreyPanel.style.display = (editGreyPanel.style.display === 'none') ? '' : 'none';
+				});
+			}
+			[greyR, greyG, greyB].forEach(el => {
+				if (el) el.addEventListener('input', updateGreyFromInputs);
+			});
+			updateGreyFromInputs();
+			updateEditGreyVisibility();
 		}
 
 		init();
@@ -180,7 +242,7 @@
 									let dr = data[i] - avgR, dg = data[i+1] - avgG, db = data[i+2] - avgB;
 									let dist = Math.sqrt(dr*dr + dg*dg + db*db);
 									// threshold scales with R
-									let threshold = 30 - R * 0.5; // gen7 ~37.5, gen8 ~55, gen9 ~80
+									let threshold = 30 + R * 2.5; // gen7 ~37.5, gen8 ~55, gen9 ~80
 									if (dist > threshold) {
 										// convert this pixel to grayscale (use luminance of current pixel)
 										let lum = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
@@ -245,9 +307,29 @@
 
 					// after swivels, fall through to the mono+noise+blur below
 					for (let i = 0; i < data.length; i += 4) {
-						// use luminance (same weights used for earlier grayscale fall) for full mono
-						let lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-						data[i] = data[i+1] = data[i+2] = clamp(lum + (Math.random()-0.5) * Math.pow((gen-9), 2) * 4);
+						// compute luminance and normalized L
+						let r = data[i], g = data[i+1], b = data[i+2];
+						let lum = 0.299 * r + 0.587 * g + 0.114 * b;
+						let L = lum / 255;
+						let noise = (Math.random()-0.5) * Math.pow((gen-9), 2) * 4;
+						let rf, gf, bf;
+						if (L <= 0.5) {
+							// dark pixels: blend between black and custom grey
+							let wGrey = 2 * L; // 0 -> fully black, 1 -> fully grey
+							rf = wGrey * customGrey.r;
+							gf = wGrey * customGrey.g;
+							bf = wGrey * customGrey.b;
+						} else {
+							// light pixels: blend between white and custom grey
+							let wWhite = 2 * L - 1; // 0 -> fully grey, 1 -> fully white
+							let wGrey = 1 - wWhite;
+							rf = wWhite * 255 + wGrey * customGrey.r;
+							gf = wWhite * 255 + wGrey * customGrey.g;
+							bf = wWhite * 255 + wGrey * customGrey.b;
+						}
+						data[i] = clamp(rf + noise);
+						data[i+1] = clamp(gf + noise);
+						data[i+2] = clamp(bf + noise);
 					}
 					for (let y = 1; y < h-1; y++) {
 						for (let x = 1; x < w-1; x++) {
