@@ -47,10 +47,12 @@
 					<span id="greyPreview" style="display:inline-block;width:40px;height:24px;border:1px solid #666;margin-left:8px;vertical-align:middle;background:#808080"></span>
 					<span id="greyHex" style="margin-left:8px;color:#ccc">#808080</span>
 				</div>
+
 			</div>
 
-		<div id="output"></div>
 		</div>
+
+		<div id="output" style="max-width:800px;margin:1.5em auto;text-align:center"></div>
 
 		<script>
 		// --- JS: controls, applyVHS, flipBits, and handlers ---
@@ -62,7 +64,7 @@
 			const toHex = v => (Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0'));
 			return '#' + toHex(r) + toHex(g) + toHex(b);
 		}
-		function init() {
+	function init() {
 			const imgMode = document.getElementById('imgMode');
 			const vhsControls = document.getElementById('vhsControls');
 			const bitflipControls = document.getElementById('bitflipControls');
@@ -123,7 +125,14 @@
 					if (editGreyArea) {
 						editGreyArea.style.display = show ? '' : 'none';
 					}
-					if (!show && editGreyPanel) editGreyPanel.style.display = 'none';
+					if (!show && editGreyPanel) {
+						editGreyPanel.style.display = 'none';
+						// reset to default grey and button text when area hidden
+						customGrey = { r:128, g:128, b:128 };
+						if (greyR && greyG && greyB) { greyR.value = 128; greyG.value = 128; greyB.value = 128; }
+						if (typeof updateGreyFromInputs === 'function') updateGreyFromInputs();
+						if (editGreyBtn) editGreyBtn.textContent = 'Edit Grey';
+					}
 				} catch (e) { /* ignore during init */ }
 			}
 
@@ -139,7 +148,19 @@
 				editGreyBtn.addEventListener('click', function() {
 					// only toggle panel when the whole area is visible
 					if (editGreyArea && editGreyArea.style.display === 'none') return;
-					editGreyPanel.style.display = (editGreyPanel.style.display === 'none') ? '' : 'none';
+					// toggle panel
+					const nowShown = (editGreyPanel.style.display === 'none');
+					editGreyPanel.style.display = nowShown ? '' : 'none';
+					// update button text and reset to default when panel hidden
+					if (nowShown) {
+						editGreyBtn.textContent = 'Unedit Grey';
+					} else {
+						editGreyBtn.textContent = 'Edit Grey';
+						// reset to default grey when not shown
+						customGrey = { r:128, g:128, b:128 };
+						greyR.value = 128; greyG.value = 128; greyB.value = 128;
+						updateGreyFromInputs();
+					}
 				});
 			}
 			[greyR, greyG, greyB].forEach(el => {
@@ -147,11 +168,13 @@
 			});
 			updateGreyFromInputs();
 			updateEditGreyVisibility();
+
+            
 		}
 
 		init();
 
-			function applyVHS(canvas, ctx, gen) {
+			function applyVHS(canvas, ctx, gen, options = {}) {
 				const w = canvas.width, h = canvas.height;
 				let imgData = ctx.getImageData(0, 0, w, h);
 				let data = imgData.data;
@@ -242,7 +265,7 @@
 									let dr = data[i] - avgR, dg = data[i+1] - avgG, db = data[i+2] - avgB;
 									let dist = Math.sqrt(dr*dr + dg*dg + db*db);
 									// threshold scales with R
-									let threshold = 30 + R * 2.5; // gen7 ~37.5, gen8 ~55, gen9 ~80
+									let threshold = 30 - R * 0.5; // gen7 ~37.5, gen8 ~55, gen9 ~80
 									if (dist > threshold) {
 										// convert this pixel to grayscale (use luminance of current pixel)
 										let lum = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
@@ -301,11 +324,7 @@
 						swivels8 = 0;
 					}
 
-					// apply the swivels sequentially (each pass mutates `data`)
-					for (let i = 0; i < swivels9; i++) doSwivel(9);
-					for (let i = 0; i < swivels8; i++) doSwivel(8);
-
-					// after swivels, fall through to the mono+noise+blur below
+					// defer applying swivels until after the mono/noise/blur pass
 					for (let i = 0; i < data.length; i += 4) {
 						// compute luminance and normalized L
 						let r = data[i], g = data[i+1], b = data[i+2];
@@ -340,6 +359,10 @@
 							}
 						}
 					}
+
+					// finally, apply swivels to the final image so they remain visible after mono/blur
+					for (let i = 0; i < swivels9; i++) doSwivel(9);
+					for (let i = 0; i < swivels8; i++) doSwivel(8);
 				}
 
 				// finish
@@ -408,20 +431,49 @@
 						reader.onload = function(e) {
 							const arrayBuffer = e.target.result;
 							const percent = parseFloat(document.getElementById('percentInput').value);
-							const corruptedBuffer = flipBits(arrayBuffer.slice(0), percent);
-							const blob = new Blob([corruptedBuffer], {type: file.type || 'image/png'});
-							const url = URL.createObjectURL(blob);
-							const outImg = document.createElement('img');
-							outImg.src = url;
-							outImg.alt = 'Bit-flip corrupted image';
-							output.appendChild(outImg);
-							const dl = document.createElement('a');
-							dl.href = url;
-							dl.download = 'bitflip_' + file.name;
-							dl.textContent = 'Download bit-flip corrupted image';
-							dl.style.display = 'block';
-							dl.style.marginTop = '1em';
-							output.appendChild(dl);
+							let attempts = 0;
+							let lastUrl = null;
+
+							function tryOnce() {
+								attempts++;
+								// create a fresh corrupted copy for each attempt
+								const corruptedBuffer = flipBits(arrayBuffer.slice(0), percent);
+								const blob = new Blob([corruptedBuffer], {type: file.type || 'image/png'});
+								const url = URL.createObjectURL(blob);
+
+								const testImg = new Image();
+								testImg.onload = function() {
+									// success: revoke previous failed URL, keep current for download/preview
+									if (lastUrl && lastUrl !== url) try { URL.revokeObjectURL(lastUrl); } catch (err) {}
+									const outImg = document.createElement('img');
+									outImg.src = url;
+									outImg.alt = 'Bit-flip corrupted image';
+									output.appendChild(outImg);
+									const dl = document.createElement('a');
+									dl.href = url;
+									dl.download = 'bitflip_' + file.name;
+									dl.textContent = 'Download bit-flip corrupted image';
+									dl.style.display = 'block';
+									dl.style.marginTop = '1em';
+									output.appendChild(dl);
+								};
+								testImg.onerror = function() {
+									// failed to load as image; revoke this url and retry up to 100 times
+									try { URL.revokeObjectURL(url); } catch (err) {}
+									if (attempts < 100) {
+										// small delay to avoid locking event loop
+										setTimeout(tryOnce, 0);
+									} else {
+										output.textContent = 'Could not produce a valid image after 100 attempts.';
+									}
+								};
+
+								lastUrl = url;
+								// trigger load attempt
+								testImg.src = url;
+							}
+
+							tryOnce();
 						};
 						reader.onerror = function() { output.textContent = 'Could not read image.'; };
 						reader.readAsArrayBuffer(file);
