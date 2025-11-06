@@ -26,7 +26,7 @@
 			   <label for="vhsInput">VHS generation (images only):</label>
 			   <input type="range" id="vhsInput" min="1" max="30" value="1" style="width:200px;">
 			   <input type="number" id="vhsInputNum" min="1" max="100" value="1" style="width:60px;">
-			   <span id="vhsLabel">1</span><br>
+			   <span id="vhsLabel" style="margin-left:8px;color:#ccc;min-width:40px;display:inline-block;">1</span>
 		   </div>
 
 		<div id="bitflipControls" style="display:none; margin-top:0.5em;">
@@ -94,8 +94,8 @@
 			const vhsInputNum = document.getElementById('vhsInputNum');
 			const vhsLabel = document.getElementById('vhsLabel');
 
-			// Ensure the number input's max matches the slider's max to avoid surprises
-			try { vhsInputNum.max = vhsInput.max; } catch (e) {}
+			// Keep numeric input independent so it can exceed the slider's max;
+			// do not force vhsInputNum.max = vhsInput.max here.
 
 			imgMode.onchange = function() {
 				if (imgMode.value === 'vhs') {
@@ -109,16 +109,22 @@
 			};
 
 			vhsInput.oninput = function() {
+				// When the slider is moved, update the numeric input to the slider value
 				vhsInputNum.value = vhsInput.value;
-				vhsLabel.textContent = vhsInput.value;
+				// show the authoritative numeric value in the label
+				vhsLabel.textContent = vhsInputNum.value;
 				console.debug('vhsInput changed to', vhsInput.value);
 				updateEditGreyVisibility();
 			};
 
 			vhsInputNum.oninput = function() {
-				let val = Math.max(1, Math.min(parseInt(vhsInput.max)||30, parseInt(vhsInputNum.value)||1));
-				vhsInput.value = val;
-				vhsLabel.textContent = val;
+				// Numeric input is authoritative and may exceed the slider max.
+				let raw = parseInt(vhsInputNum.value, 10) || 1;
+				let val = Math.max(1, raw);
+				// update slider to the closest representable value (clamped to slider max)
+				try { vhsInput.value = Math.min(val, parseInt(vhsInput.max, 10) || 30); } catch (e) {}
+				// label displays the numeric (authoritative) value even when > slider max
+				vhsLabel.textContent = '' + val;
 				console.debug('vhsInputNum changed to', val);
 				updateEditGreyVisibility();
 			};
@@ -157,7 +163,7 @@
 			function updateEditGreyVisibility() {
 				try {
 					// Show Edit Grey panel only for VHS mode when generation is 10 through 19 (turn off at 20+)
-					const genVal = parseInt(vhsInput.value, 10) || 0;
+					const genVal = parseInt(vhsInputNum.value, 10) || 0;
 					const show = (imgMode.value === 'vhs') && (genVal >= 10 && genVal < 20);
 					if (editGreyArea) editGreyArea.style.display = show ? '' : 'none';
 					if (!show && editGreyPanel) {
@@ -445,7 +451,7 @@
 		document.getElementById('corruptBtn').onclick = async function() {
 			const fileInput = document.getElementById('fileInput');
 			const percent = parseFloat(document.getElementById('percentInput').value);
-			const vhsGen = parseInt(document.getElementById('vhsInput').value);
+			const vhsGen = parseInt(document.getElementById('vhsInputNum').value, 10) || 1;
 			const output = document.getElementById('output');
 			output.innerHTML = '';
 
