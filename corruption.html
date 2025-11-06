@@ -41,6 +41,19 @@
 			<div id="editGreyArea" style="margin-top:1em;">
 				<button id="editGreyBtn">Edit Grey</button>
 				<div id="editGreyPanel" style="display:none; margin-top:0.5em;">
+					<div id="greyPresets" style="margin-top:0.5em; display:none; gap:8px; flex-wrap:wrap;">
+						<button class="presetBtn" data-hex="#808080" style="background:#808080;color:#fff;border:none;padding:6px 8px;border-radius:4px;">Default</button>
+						<button class="presetBtn" data-hex="#8c8074" style="background:#8c8074;color:#fff;border:none;padding:6px 8px;border-radius:4px;">Western</button>
+						<button class="presetBtn" data-hex="#74808c" style="background:#74808c;color:#fff;border:none;padding:6px 8px;border-radius:4px;">Cool</button>
+						<button class="presetBtn" data-hex="#748c77" style="background:#748c77;color:#fff;border:none;padding:6px 8px;border-radius:4px;">Forest</button>
+						<!-- newline break disabled: was <div style="flex-basis:100%;height:0"></div> -->
+						<button class="presetBtn" data-hex="#8c7480" style="background:#8c7480;color:#fff;border:none;padding:6px 8px;border-radius:4px;">Writrose</button>
+						<button class="presetBtn" data-hex="#8c8874" style="background:#8c8874;color:#fff;border:none;padding:6px 8px;border-radius:4px;">Leastdaisy</button>
+						<button class="presetBtn" data-hex="#8c7474" style="background:#8c7474;color:#fff;border:none;padding:6px 8px;border-radius:4px;">Springparsley</button>
+						<button class="presetBtn" data-hex="#74748c" style="background:#74748c;color:#fff;border:none;padding:6px 8px;border-radius:4px;">Blueberry</button>
+						<button class="presetBtn" data-hex="#88748c" style="background:#88748c;color:#fff;border:none;padding:6px 8px;border-radius:4px;">Tiffany</button>
+						<button class="presetBtn" data-hex="#878c74" style="background:#878c74;color:#fff;border:none;padding:6px 8px;border-radius:4px;">Grass</button>
+					</div>
 					<label style="display:flex;align-items:center;gap:8px;">R:
 						<input type="range" id="greyR" min="116" max="140" value="128" step="1" style="width:180px;">
 						<span id="greyRVal" style="min-width:30px;text-align:center;color:#ccc">128</span>
@@ -129,17 +142,27 @@
 			const greyRVal = document.getElementById('greyRVal');
 			const greyGVal = document.getElementById('greyGVal');
 			const greyBVal = document.getElementById('greyBVal');
+			const greyPresets = document.getElementById('greyPresets');
+
+			function hexToRgb(hex) {
+				hex = hex.replace('#','');
+				if (hex.length === 3) {
+					hex = hex.split('').map(h=>h+h).join('');
+				}
+				const intval = parseInt(hex,16);
+				return { r: (intval >> 16) & 255, g: (intval >> 8) & 255, b: intval & 255 };
+			}
 			const editGreyArea = document.getElementById('editGreyArea');
 
 			function updateEditGreyVisibility() {
 				try {
-					const show = (imgMode.value === 'vhs') && (parseInt(vhsInput.value) >= 10);
-					if (editGreyArea) {
-						editGreyArea.style.display = show ? '' : 'none';
-					}
+					// Show Edit Grey panel only for VHS mode when generation is 10 through 19 (turn off at 20+)
+					const genVal = parseInt(vhsInput.value, 10) || 0;
+					const show = (imgMode.value === 'vhs') && (genVal >= 10 && genVal < 20);
+					if (editGreyArea) editGreyArea.style.display = show ? '' : 'none';
 					if (!show && editGreyPanel) {
+						// hide panel and reset to default grey when Edit Grey is not applicable
 						editGreyPanel.style.display = 'none';
-						// reset to default grey and button text when area hidden
 						customGrey = { r:128, g:128, b:128 };
 						if (greyR && greyG && greyB) { greyR.value = 128; greyG.value = 128; greyB.value = 128; }
 						if (typeof updateGreyFromInputs === 'function') updateGreyFromInputs();
@@ -181,6 +204,25 @@
 			[greyR, greyG, greyB].forEach(el => {
 				if (el) el.addEventListener('input', updateGreyFromInputs);
 			});
+
+				// wire preset buttons
+				if (greyPresets) {
+					greyPresets.querySelectorAll('.presetBtn').forEach(btn => {
+						btn.addEventListener('click', function() {
+							const hex = btn.getAttribute('data-hex');
+							const rgb = hexToRgb(hex);
+							// clamp to specified range 112-144 by scaling toward 128
+							const clampToRange = v => Math.max(112, Math.min(144, Math.round(v)));
+							greyR.value = clampToRange(rgb.r);
+							greyG.value = clampToRange(rgb.g);
+							greyB.value = clampToRange(rgb.b);
+							updateGreyFromInputs();
+							// ensure panel is shown and button shows Unedit
+							if (editGreyPanel) editGreyPanel.style.display = '';
+							if (editGreyBtn) editGreyBtn.textContent = 'Unedit Grey';
+						});
+					});
+				}
 			updateGreyFromInputs();
 			updateEditGreyVisibility();
 
