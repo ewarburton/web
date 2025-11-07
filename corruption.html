@@ -55,15 +55,15 @@
 						<button class="presetBtn" data-hex="#878c74" style="background:#878c74;color:#fff;border:none;padding:6px 8px;border-radius:4px;">Grass</button>
 					</div>
 					<label style="display:flex;align-items:center;gap:8px;">R:
-						<input type="range" id="greyR" min="116" max="140" value="128" step="1" style="width:180px;">
+						<input type="range" id="greyR" min="120" max="136" value="128" step="1" style="width:180px;">
 						<span id="greyRVal" style="min-width:30px;text-align:center;color:#ccc">128</span>
 					</label>
 					<label style="display:flex;align-items:center;gap:8px;">G:
-						<input type="range" id="greyG" min="116" max="140" value="128" step="1" style="width:180px;">
+						<input type="range" id="greyG" min="120" max="136" value="128" step="1" style="width:180px;">
 						<span id="greyGVal" style="min-width:30px;text-align:center;color:#ccc">128</span>
 					</label>
 					<label style="display:flex;align-items:center;gap:8px;">B:
-						<input type="range" id="greyB" min="116" max="140" value="128" step="1" style="width:180px;">
+						<input type="range" id="greyB" min="120" max="136" value="128" step="1" style="width:180px;">
 						<span id="greyBVal" style="min-width:30px;text-align:center;color:#ccc">128</span>
 					</label>
 					<span id="greyPreview" style="display:inline-block;width:40px;height:24px;border:1px solid #666;margin-left:8px;vertical-align:middle;background:#808080"></span>
@@ -178,9 +178,10 @@
 			}
 
 			function updateGreyFromInputs() {
-				customGrey.r = Math.max(112, Math.min(144, parseInt(greyR.value) || 128));
-				customGrey.g = Math.max(112, Math.min(144, parseInt(greyG.value) || 128));
-				customGrey.b = Math.max(112, Math.min(144, parseInt(greyB.value) || 128));
+				// clamp grey components to the requested 120-136 range
+				customGrey.r = Math.max(120, Math.min(136, parseInt(greyR.value) || 128));
+				customGrey.g = Math.max(120, Math.min(136, parseInt(greyG.value) || 128));
+				customGrey.b = Math.max(120, Math.min(136, parseInt(greyB.value) || 128));
 				greyPreview.style.background = rgbToHex(customGrey.r, customGrey.g, customGrey.b);
 				greyHex.textContent = rgbToHex(customGrey.r, customGrey.g, customGrey.b);
 				if (greyRVal) greyRVal.textContent = '' + customGrey.r;
@@ -218,7 +219,8 @@
 							const hex = btn.getAttribute('data-hex');
 							const rgb = hexToRgb(hex);
 							// clamp to specified range 112-144 by scaling toward 128
-							const clampToRange = v => Math.max(112, Math.min(144, Math.round(v)));
+							// clamp preset-derived RGB into the 120-136 grey range
+							const clampToRange = v => Math.max(120, Math.min(136, Math.round(v)));
 							greyR.value = clampToRange(rgb.r);
 							greyG.value = clampToRange(rgb.g);
 							greyB.value = clampToRange(rgb.b);
