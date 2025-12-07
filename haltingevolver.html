@@ -196,11 +196,17 @@ function evolve(log, gens = 50) {
         let halting = evals.filter(e => e.halting);
         let next, steps = null, chosenIdx = null;
         if (halting.length > 0) {
-            if (evoState.gen > 5) {
+                if (evoState.gen > 5) {
+                // Prefer programs that take fewer steps. If steps are equal,
+                // prefer the shorter program (fewer characters). This implements
+                // the rule: if a program is x chars and takes y steps, but a
+                // longer program is x+z chars and takes y+z steps, keep the
+                // former (fewer steps / shorter when tied).
                 let best = halting.reduce((a, b) => {
-                    let scoreA = a.steps - (a.code.length / 2);
-                    let scoreB = b.steps - (b.code.length / 2);
-                    return scoreB > scoreA ? b : a;
+                    if (a.steps < b.steps) return a;
+                    if (a.steps > b.steps) return b;
+                    // steps equal -> prefer shorter code
+                    return (a.code.length <= b.code.length) ? a : b;
                 });
                 next = best.code;
                 steps = best.steps;
