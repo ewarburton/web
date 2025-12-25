@@ -79,7 +79,7 @@
 			if (distanceInput && delayDisplay) {
 				distanceInput.addEventListener('input', function() {
 					const distance = parseFloat(distanceInput.value) || 0;
-					const delay = distance / 343; // speed of sound ~343 m/s
+					const delay = Math.abs( (distance / 343) * 1.00020297329 ); // speed of sound ~343 m/s
 					delayDisplay.textContent = delay.toFixed(3) + 's delay';
 				});
 			}
@@ -304,11 +304,11 @@
 						videoBlob = new Blob([arrayBuffer], {type: file.type || 'video/mp4'});
 					}
 					
-			// Apply distance loss if in distance mode
-			if (corruptionMode === 'distance') {
-				const distance = parseFloat(document.getElementById('distanceInput').value) || 0;
-				if (distance > 0) {
-					const delay = distance / 343; // speed of sound ~343 m/s
+		// Apply distance loss if in distance mode
+		if (corruptionMode === 'distance') {
+			const distance = Math.abs(parseFloat(document.getElementById('distanceInput').value) || 0);
+			if (distance > 0) {
+				const delay = (distance / 343) * 1.00020297329; // speed of sound ~343 m/s
 					try {
 					output.innerHTML = '<p>Processing distance loss (' + delay.toFixed(3) + 's delay)...</p>';
 					videoBlob = await applyDistanceLoss(videoBlob, delay, rotationMode);

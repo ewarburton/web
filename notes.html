@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes App</title>
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIk5vdGVzIEFwcCB3aXRoIEp1c3QgSW50b25hdGlvbiIsCiAgInNob3J0X25hbWUiOiAiTm90ZXMgQXBwIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmNWY1ZjUiLAogICJ0aGVtZV9jb2xvciI6ICIjNENBRjUwIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sLCUzQ3N2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJyUzRSUzQ3RleHQgeT0nLjllbScgZm9udC1zaXplPSc5MCclM0UlRjAlOUYlOTMlOUQlM0MvdGV4dCUzRSUzQy9zdmclM0UiLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiCiAgICB9CiAgXQp9">
+    <meta name="theme-color" content="#4CAF50">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h1 {
+            color: #333;
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .save-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:active {
+            background-color: #3d8b40;
+        }
+        
+        #notesList {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 3px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .note-item {
+            padding: 5px 10px;
+            margin: 5px 0;
+            background-color: white;
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .note-item:hover {
+            background-color: #e8f5e9;
+        }
+        
+        .note-item button {
+            padding: 4px 8px;
+            font-size: 12px;
+            background-color: #f44336;
+        }
+        
+        .note-item button:hover {
+            background-color: #da190b;
+        }
+        
+        #editor {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            line-height: 1.6;
+            box-sizing: border-box;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        #preview {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            min-height: 100px;
+        }
+        
+        .music-button {
+            display: inline-block;
+            margin: 2px;
+            padding: 6px 12px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        
+        .music-button:hover {
+            background-color: #0b7dda;
+        }
+        
+        .music-button:active {
+            background-color: #0968b8;
+            transform: translateY(1px);
+        }
+        
+        h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        
+        .info {
+            background-color: #e3f2fd;
+            padding: 10px;
+            border-radius: 3px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <h1>📝 Notes App</h1>
+
+    <div class="controls">
+        <div class="save-controls">
+            <input type="text" id="noteName" placeholder="Note name...">
+            <button onclick="saveNote()">💾 Save Note</button>
+        </div>
+        <div id="notesList"></div>
+    </div>
+    
+    <textarea id="editor" placeholder="Type your notes here..."></textarea>
+    
+    <div id="preview">
+        <h2>Preview</h2>
+        <div id="previewContent"></div>
+    </div> 
+
+    <script>
+        // Register service worker for offline support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    const CACHE_NAME = 'notes-app-v1';
+                    
+                    self.addEventListener('install', (event) => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME).then((cache) => {
+                                return cache.addAll(['./']).catch(() => {});
+                            })
+                        );
+                    });
+                    
+                    self.addEventListener('fetch', (event) => {
+                        event.respondWith(
+                            caches.match(event.request).then((response) => {
+                                return response || fetch(event.request);
+                            })
+                        );
+                    });
+                `;
+                
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swURL = URL.createObjectURL(blob);
+                
+                navigator.serviceWorker.register(swURL).then(() => {
+                    console.log('Service Worker registered for offline support');
+                }).catch((error) => {
+                    console.log('Service Worker registration failed:', error);
+                });
+            });
+        }
+        
+        // Audio context for playing notes
+        let audioContext = null;
+        
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        // Play an interval (ratio or cents)
+        function playInterval(cents) {
+            initAudio();
+            
+            const baseFreq = 261.63; // C4
+            const ratio = Math.pow(2, cents / 1200);
+            const frequencies = [baseFreq, baseFreq * ratio];
+            const now = audioContext.currentTime;
+            const duration = 1.5;
+            
+            frequencies.forEach((freq, index) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = freq;
+                oscillator.type = 'sine';
+                
+                // Envelope
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                
+                oscillator.start(now);
+                oscillator.stop(now + duration);
+            });
+        }
+        // Parse ratio from string and convert to cents
+        function ratioToCents(ratioStr) {
+            const parts = ratioStr.split('/');
+            if (parts.length === 2) {
+                const numerator = parseFloat(parts[0]);
+                const denominator = parseFloat(parts[1]);
+                if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
+                    return 1200 * Math.log2(numerator / denominator);
+                }
+            }
+            return null;
+        }
+        
+        // Parse color from rgb:R,G,B format
+        function parseColor(colorStr) {
+            const match = colorStr.match(/rgb:(\d+),(\d+),(\d+)/);
+            if (match) {
+                const r = parseInt(match[1]);
+                const g = parseInt(match[2]);
+                const b = parseInt(match[3]);
+                if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+                    return `rgb(${r},${g},${b})`;
+                }
+            }
+            return null;
+        }
+        
+        // Convert text with music codes to HTML with buttons
+        function renderText(text) {
+            let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html = html.replace(/\n/g, '<br>');
+            
+            // Match [m:X/Y,rgb:R,G,B] or [m:X/Y]
+            const justRegex = /\[m:([\d.]+\/[\d.]+)(?:,rgb:([\d,]+))?\]/g;
+            html = html.replace(justRegex, (match, ratio, rgb) => {
+                const cents = ratioToCents(ratio);
+                if (cents !== null) {
+                    let style = '';
+                    if (rgb) {
+                        const color = parseColor('rgb:' + rgb);
+                        if (color) {
+                            style = ` style="background-color: ${color};"`;
+                        }
+                    }
+                    return `<button class="music-button"${style} onclick="playInterval(${cents})" title="Play interval ${ratio} (${cents.toFixed(2)} cents)">[m:${ratio}]</button>`;
+                }
+                return match;
+            });
+            
+            // Match [t:X,rgb:R,G,B] or [t:X] (semitones)
+            const semitonesRegex = /\[t:([\d.]+)(?:,rgb:([\d,]+))?\]/g;
+            html = html.replace(semitonesRegex, (match, semitones, rgb) => {
+                const st = parseFloat(semitones);
+                if (!isNaN(st)) {
+                    const cents = st * 100;
+                    let style = '';
+                    if (rgb) {
+                        const color = parseColor('rgb:' + rgb);
+                        if (color) {
+                            style = ` style="background-color: ${color};"`;
+                        }
+                    }
+                    return `<button class="music-button"${style} onclick="playInterval(${cents})" title="Play ${st} semitones (${cents} cents)">[t:${st}]</button>`;
+                }
+                return match;
+            });
+            
+            // Match [t:X\Y,rgb:R,G,B] or [t:X\Y] (EDO steps)
+            const edoRegex = /\[t:([\d.]+)\\([\d.]+)(?:,rgb:([\d,]+))?\]/g;
+            html = html.replace(edoRegex, (match, steps, edo, rgb) => {
+                const s = parseFloat(steps);
+                const e = parseFloat(edo);
+                if (!isNaN(s) && !isNaN(e) && e !== 0) {
+                    const cents = (s / e) * 1200;
+                    let style = '';
+                    if (rgb) {
+                        const color = parseColor('rgb:' + rgb);
+                        if (color) {
+                            style = ` style="background-color: ${color};"`;
+                        }
+                    }
+                    return `<button class="music-button"${style} onclick="playInterval(${cents})" title="Play ${s} steps of ${e}EDO (${cents.toFixed(2)} cents)">[t:${s}\\${e}]</button>`;
+                }
+                return match;
+            });
+            
+            return html;
+        }
+        
+        // Update preview
+        function updatePreview() {
+            const text = document.getElementById('editor').value;
+            const preview = document.getElementById('previewContent');
+            preview.innerHTML = renderText(text);
+        }
+        
+        // Save note to localStorage
+        function saveNote() {
+            const name = document.getElementById('noteName').value.trim();
+            const content = document.getElementById('editor').value;
+            
+            if (!name) {
+                alert('Please enter a name for your note!');
+                return;
+            }
+            
+            const notes = getNotes();
+            notes[name] = content;
+            localStorage.setItem('notes', JSON.stringify(notes));
+            
+            document.getElementById('noteName').value = '';
+            updateNotesList();
+            alert(`Note "${name}" saved!`);
+        }
+        
+        // Get all notes from localStorage
+        function getNotes() {
+            const notesStr = localStorage.getItem('notes');
+            return notesStr ? JSON.parse(notesStr) : {};
+        }
+        
+        // Load a note
+        function loadNote(name) {
+            const notes = getNotes();
+            if (notes[name]) {
+                document.getElementById('editor').value = notes[name];
+                document.getElementById('noteName').value = name;
+                updatePreview();
+            }
+        }
+        
+        // Delete a note
+        function deleteNote(name, event) {
+            event.stopPropagation();
+            
+            if (!confirm(`Delete note "${name}"?`)) {
+                return;
+            }
+            const notes = getNotes();
+            delete notes[name];
+            localStorage.setItem('notes', JSON.stringify(notes));
+            updateNotesList();
+            
+            // Clear editor if this was the loaded note
+            if (document.getElementById('noteName').value === name) {
+                document.getElementById('editor').value = '';
+                document.getElementById('noteName').value = '';
+                updatePreview();
+            }
+        }
+        
+        // Update the list of saved notes
+        function updateNotesList() {
+            const notes = getNotes();
+            const notesList = document.getElementById('notesList');
+            
+            if (Object.keys(notes).length === 0) {
+                notesList.innerHTML = '<em style="color: #999;">No saved notes yet</em>';
+                return;
+            }
+            
+            let html = '<strong>Saved Notes:</strong><br>';
+            for (const name in notes) {
+                html += `<div class="note-item" onclick="loadNote('${name.replace(/'/g, "\\'")}')">
+                    <span>${name}</span>
+                    <button onclick="deleteNote('${name.replace(/'/g, "\\'")}', event)">🗑️ Delete</button>
+                </div>`;
+            }
+            
+            notesList.innerHTML = html;
+        }
+        
+        // Initialize
+        updateNotesList();
+        updatePreview();
+        
+        // Example note on first load
+        if (Object.keys(getNotes()).length === 0) {
+            document.getElementById('editor').value = `Welcome to the Notes App!
+
+Music Button Codes:
+
+Just Intonation - [m:X/Y]:
+- [m:5/4] - Major third (~386 cents, 14 cents flat)
+- [m:6/5] - Minor third (~316 cents, 16 cents sharp)
+- [m:3/2] - Perfect fifth
+- [m:4/3] - Perfect fourth
+- [m:7/4] - Harmonic seventh
+
+Equal Temperament - [t:X]:
+- [t:3] - Minor third (3 semitones, 300 cents)
+- [t:4] - Major third (4 semitones, 400 cents)
+- [t:5] - Perfect fourth (5 semitones, 500 cents)
+- [t:7] - Perfect fifth (7 semitones, 700 cents)
+
+EDO Steps - [t:X\\Y]:
+- [t:7\\12] - Perfect fifth in 12EDO (700 cents)
+- [t:13\\24] - G 50 cents flat in 24EDO (650 cents)
+- [t:9\\15] - Neutral third in 15EDO (720 cents)
+
+Custom Colors - add ,rgb:R,G,B:
+- [m:5/4,rgb:255,100,100] - Red button
+- [t:7,rgb:100,255,100] - Green button
+- [t:13\\24,rgb:255,0,0] - Red 24EDO button
+
+Try clicking them!`;
+            updatePreview();
+        }
+    </script>
+</body>
+</html>

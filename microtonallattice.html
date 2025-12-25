@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microtonal Lattice</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: #111;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #controls {
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            width: 90%;
+            max-width: 800px;
+        }
+        
+        .control-group {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        label {
+            min-width: 120px;
+            font-weight: bold;
+        }
+        
+        input[type="number"],
+        input[type="text"] {
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            width: 120px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        input[type="number"]:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #0af;
+        }
+        
+        button {
+            background: #0af;
+            border: none;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        button:hover {
+            background: #0cf;
+        }
+        
+        canvas {
+            border: 2px solid #333;
+            background: #000;
+            cursor: crosshair;
+        }
+        
+        #info {
+            margin-top: 15px;
+            padding: 15px;
+            background: #222;
+            border-radius: 8px;
+            min-height: 60px;
+            width: 90%;
+            max-width: 800px;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .preset-buttons button {
+            background: #555;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+        
+        .preset-buttons button:hover {
+            background: #777;
+        }
+    </style>
+</head>
+<body>
+    <h1>Microtonal Lattice Explorer</h1>
+    
+    <div id="controls">
+        <div class="control-group">
+            <label for="xCents">X-Axis:</label>
+            <input type="text" id="xCents" value="3/2F" placeholder="cents or X/YF">
+            <span class="note-name">Perfect Fifth</span>
+        </div>
+        
+        <div class="control-group">
+            <label for="yCents">Y-Axis:</label>
+            <input type="text" id="yCents" value="5/4F" placeholder="cents or X/YF">
+            <span class="note-name">Major Third</span>
+        </div>
+        
+        <div class="control-group">
+            <button onclick="updateLattice()">Update Lattice</button>
+            <button onclick="resetToDefaults()">Reset to 5-limit JI</button>
+        </div>
+        
+        <div class="preset-buttons">
+            <button onclick="setPreset('5limit')">5-limit JI</button>
+            <button onclick="setPreset('pythagorean')">Pythagorean</button>
+            <button onclick="setPreset('7limit')">7-limit JI</button>
+            <button onclick="setPreset('12edo')">12-EDO</button>
+            <button onclick="setPreset('31edo')">31-EDO</button>
+            <button onclick="setPreset('53edo')">53-EDO</button>
+        </div>
+    </div>
+    
+    <canvas id="lattice" width="900" height="900"></canvas>
+    
+    <div id="info">
+        Hover over nodes to see pitch information. Click to hear the tone.
+    </div>
+
+    <script>
+        const canvas = document.getElementById('lattice');
+        const ctx = canvas.getContext('2d');
+        const gridSize = 9; // 9 units from center in each direction
+        const nodeRadius = 8;
+        const spacing = 45;
+        
+        let xCents = 701.955; // Perfect fifth (3/2)
+        let yCents = 386.314; // Major third (5/4)
+        let xRatio = 3/2; // Store exact ratio
+        let yRatio = 5/4; // Store exact ratio
+        let hoveredNode = null;
+        let audioContext = null;
+        
+        // Presets
+        const presets = {
+            '5limit': { x: '3/2F', y: '5/4F', name: '5-limit JI (3/2, 5/4)' },
+            'pythagorean': { x: '3/2F', y: '3/2F', name: 'Pythagorean (3/2, 3/2)' },
+            '7limit': { x: '3/2F', y: '7/4F', name: '7-limit JI (3/2, 7/4)' },
+            '12edo': { x: '700', y: '400', name: '12-EDO approx' },
+            '31edo': { x: '696.774', y: '387.097', name: '31-EDO' },
+            '53edo': { x: '701.887', y: '384.906', name: '53-EDO' }
+        };
+        
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        function centsToRatio(cents) {
+            return Math.pow(2, cents / 1200);
+        }
+        
+        function getPrimeFactors(n) {
+            const factors = [];
+            let num = n;
+            for (let i = 2; i <= num; i++) {
+                while (num % i === 0) {
+                    factors.push(i);
+                    num /= i;
+                }
+            }
+            return factors;
+        }
+        
+        function getUsedPrimes() {
+            // Get prime factors from the current axis ratios
+            const primes = new Set([2]); // Always include 2 for octaves
+            
+            // Add primes from xRatio
+            const xFrac = ratioToSimpleFraction(xRatio);
+            if (xFrac) {
+                getPrimeFactors(xFrac.numer).forEach(p => primes.add(p));
+                getPrimeFactors(xFrac.denom).forEach(p => primes.add(p));
+            }
+            
+            // Add primes from yRatio
+            const yFrac = ratioToSimpleFraction(yRatio);
+            if (yFrac) {
+                getPrimeFactors(yFrac.numer).forEach(p => primes.add(p));
+                getPrimeFactors(yFrac.denom).forEach(p => primes.add(p));
+            }
+            
+            return primes;
+        }
+        
+        function ratioToSimpleFraction(ratio, maxDenom = 1000) {
+            // Find simple fraction for a ratio
+            for (let denom = 1; denom <= maxDenom; denom++) {
+                const numer = Math.round(ratio * denom);
+                if (Math.abs(numer / denom - ratio) < 1e-10) {
+                    return { numer, denom };
+                }
+            }
+            return null;
+        }
+        
+        function onlyUsesAllowedPrimes(numer, denom, allowedPrimes) {
+            const numerPrimes = getPrimeFactors(numer);
+            const denomPrimes = getPrimeFactors(denom);
+            const allPrimes = [...numerPrimes, ...denomPrimes];
+            
+            return allPrimes.every(p => allowedPrimes.has(p));
+        }
+        
+        function ratioToFraction(ratio, maxDenom = 1000) {
+            const allowedPrimes = getUsedPrimes();
+            
+            // Try to find a fraction using only the allowed primes
+            for (let denom = 1; denom <= maxDenom; denom++) {
+                const numer = Math.round(ratio * denom);
+                if (Math.abs(numer / denom - ratio) < 1e-10) {
+                    if (onlyUsesAllowedPrimes(numer, denom, allowedPrimes)) {
+                        return { numer, denom };
+                    }
+                }
+            }
+            return null;
+        }
+        
+        function parseInput(input) {
+            // Check if input is in X/YF format
+            const ratioMatch = input.trim().match(/^(\d+)\/(\d+)F$/i);
+            if (ratioMatch) {
+                const ratio = parseInt(ratioMatch[1]) / parseInt(ratioMatch[2]);
+                const cents = 1200 * Math.log2(ratio);
+                return { ratio, cents };
+            }
+            
+            // Check if input is in XF format (whole number ratio)
+            const wholeMatch = input.trim().match(/^(\d+\.?\d*)F$/i);
+            if (wholeMatch) {
+                const ratio = parseFloat(wholeMatch[1]);
+                const cents = 1200 * Math.log2(ratio);
+                return { ratio, cents };
+            }
+            
+            // Otherwise treat as cents
+            const cents = parseFloat(input);
+            const ratio = centsToRatio(cents);
+            return { ratio, cents };
+        }
+        
+        function playTone(cents, duration = 0.5) {
+            initAudioContext();
+            
+            const baseFreq = 261.63; // Middle C
+            const frequency = baseFreq * centsToRatio(cents);
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+        
+        function getCentsForNode(x, y) {
+            // Calculate exact ratio first, then convert to cents
+            const ratio = Math.pow(xRatio, x) * Math.pow(yRatio, y);
+            return 1200 * Math.log2(ratio);
+        }
+        
+        function getScreenPos(x, y) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            return {
+                x: centerX + x * spacing,
+                y: centerY - y * spacing // Invert Y for screen coordinates
+            };
+        }
+        
+        function drawLattice() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid lines
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            
+            for (let x = -gridSize; x <= gridSize; x++) {
+                for (let y = -gridSize; y <= gridSize; y++) {
+                    const pos = getScreenPos(x, y);
+                    
+                    // Draw connections
+                    if (x < gridSize) {
+                        const rightPos = getScreenPos(x + 1, y);
+                        ctx.beginPath();
+                        ctx.moveTo(pos.x, pos.y);
+                        ctx.lineTo(rightPos.x, rightPos.y);
+                        ctx.stroke();
+                    }
+                    
+                    if (y < gridSize) {
+                        const upPos = getScreenPos(x, y + 1);
+                        ctx.beginPath();
+                        ctx.moveTo(pos.x, pos.y);
+                        ctx.lineTo(upPos.x, upPos.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // Draw nodes
+            for (let x = -gridSize; x <= gridSize; x++) {
+                for (let y = -gridSize; y <= gridSize; y++) {
+                    const pos = getScreenPos(x, y);
+                    const cents = getCentsForNode(x, y);
+                    const octaveReduced = ((cents % 1200) + 1200) % 1200;
+                    const ratio = centsToRatio(cents);
+                    
+                    // Color based on position
+                    let hue = octaveReduced / 1200 * 360;
+                    let saturation = 70;
+                    let lightness = 50;
+                    
+                    const squareSize = 32;
+                    
+                    // Highlight origin
+                    if (x === 0 && y === 0) {
+                        ctx.fillStyle = '#fff';
+                        ctx.strokeStyle = '#0af';
+                        ctx.lineWidth = 3;
+                    } else if (hoveredNode && hoveredNode.x === x && hoveredNode.y === y) {
+                        ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness + 20}%)`;
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2;
+                    } else {
+                        ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                        ctx.strokeStyle = `hsl(${hue}, ${saturation}%, ${lightness - 20}%)`;
+                        ctx.lineWidth = 1;
+                    }
+                    
+                    // Draw square
+                    ctx.beginPath();
+                    ctx.rect(pos.x - squareSize/2, pos.y - squareSize/2, squareSize, squareSize);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Draw text
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 9px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    // Format ratio
+                    let ratioText;
+                    const frac = ratioToFraction(ratio);
+                    if (frac && frac.denom === 1) {
+                        ratioText = `${frac.numer}F`;
+                    } else if (frac) {
+                        ratioText = `${frac.numer}/${frac.denom}F`;
+                    } else {
+                        ratioText = `${ratio.toFixed(2)}F`;
+                    }
+                    
+                    // Draw ratio on top line
+                    ctx.fillText(ratioText, pos.x, pos.y - 6);
+                    
+                    // Draw cents on bottom line
+                    ctx.font = '8px Courier New';
+                    ctx.fillText(`${Math.round(octaveReduced)}¢`, pos.x, pos.y + 6);
+                }
+            }
+        }
+        
+        function getNodeAtPosition(mouseX, mouseY) {
+            for (let x = -gridSize; x <= gridSize; x++) {
+                for (let y = -gridSize; y <= gridSize; y++) {
+                    const pos = getScreenPos(x, y);
+                    const dx = mouseX - pos.x;
+                    const dy = mouseY - pos.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance <= nodeRadius + 5) {
+                        return { x, y, cents: getCentsForNode(x, y) };
+                    }
+                }
+            }
+            return null;
+        }
+        
+        function updateInfo(node) {
+            const info = document.getElementById('info');
+            if (node) {
+                const octaveReduced = ((node.cents % 1200) + 1200) % 1200;
+                const octave = Math.floor(node.cents / 1200);
+                const ratio = centsToRatio(node.cents);
+                
+                info.innerHTML = `
+                    <strong>Position:</strong> (${node.x}, ${node.y})<br>
+                    <strong>Cents:</strong> ${node.cents.toFixed(3)}¢ 
+                    (${octaveReduced.toFixed(3)}¢ + ${octave} octaves)<br>
+                    <strong>Ratio from C:</strong> ${ratio.toFixed(6)}:1
+                `;
+            } else {
+                info.innerHTML = 'Hover over nodes to see pitch information. Click to hear the tone.';
+            }
+        }
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            hoveredNode = getNodeAtPosition(mouseX, mouseY);
+            updateInfo(hoveredNode);
+            drawLattice();
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            if (hoveredNode) {
+                playTone(hoveredNode.cents);
+            }
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            hoveredNode = null;
+            updateInfo(null);
+            drawLattice();
+        });
+        
+        function updateLattice() {
+            const xInput = parseInput(document.getElementById('xCents').value);
+            const yInput = parseInput(document.getElementById('yCents').value);
+            
+            xCents = xInput.cents;
+            yCents = yInput.cents;
+            xRatio = xInput.ratio;
+            yRatio = yInput.ratio;
+            
+            drawLattice();
+        }
+        
+        function resetToDefaults() {
+            document.getElementById('xCents').value = '3/2F';
+            document.getElementById('yCents').value = '5/4F';
+            updateLattice();
+        }
+        
+        function setPreset(presetName) {
+            const preset = presets[presetName];
+            document.getElementById('xCents').value = preset.x;
+            document.getElementById('yCents').value = preset.y;
+            updateLattice();
+            
+            const info = document.getElementById('info');
+            info.innerHTML = `Preset loaded: <strong>${preset.name}</strong>`;
+            setTimeout(() => updateInfo(hoveredNode), 2000);
+        }
+        
+        // Initialize
+        drawLattice();
+    </script>
+</body>
+</html>

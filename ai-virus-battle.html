@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Virus Battle Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        #visualization {
+            flex: 2;
+            background: #111;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #timeline-container {
+            background: #1a1a1a;
+            border-bottom: 1px solid #00ff00;
+            padding: 10px;
+            position: relative;
+            z-index: 5;
+        }
+
+        #timeline-title {
+            color: #00ff00;
+            font-size: 14px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        #timeline {
+            width: 100%;
+            height: 40px;
+            background: #000;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .timeline-event {
+            position: absolute;
+            height: 100%;
+            top: 0;
+            transition: opacity 0.2s;
+            cursor: pointer;
+        }
+
+        .timeline-event:hover {
+            opacity: 0.8;
+        }
+
+        .timeline-event.virus {
+            background: #ff0000;
+        }
+
+        .timeline-event.defender {
+            background: #00aaff;
+        }
+
+        .timeline-event.both {
+            background: linear-gradient(to bottom, #ff0000 0%, #ff0000 50%, #00aaff 50%, #00aaff 100%);
+        }
+
+        .timeline-event.purple {
+            background: #aa00ff;
+        }
+
+        #timeline-tooltip {
+            position: absolute;
+            bottom: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a1a;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            padding: 8px 12px;
+            color: #00ff00;
+            font-size: 11px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            max-width: 400px;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+
+        #event-details {
+            background: #0a0a0a;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            min-height: 60px;
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+
+        #event-details-title {
+            color: #00ff00;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+
+        .event-detail-item {
+            margin: 3px 0;
+            padding-left: 5px;
+        }
+
+        #sidebar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: #111;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .panel h2 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 18px;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 5px;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+
+        .stat-label {
+            color: #888;
+        }
+
+        .stat-value {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .virus-stat .stat-value {
+            color: #ff0000;
+        }
+
+        .defender-stat .stat-value {
+            color: #00aaff;
+        }
+
+        #controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #222;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .virus-progress {
+            background: linear-gradient(90deg, #ff0000, #ff6666);
+        }
+
+        .defender-progress {
+            background: linear-gradient(90deg, #00aaff, #66ddff);
+        }
+
+        button {
+            flex: 1;
+            padding: 10px;
+            background: #00ff00;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        button:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #status {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 10px currentColor;
+            z-index: 10;
+        }
+
+        .status-running {
+            color: #ffff00;
+        }
+
+        .status-defender-wins {
+            color: #00aaff;
+        }
+
+        .status-virus-wins {
+            color: #ff0000;
+        }
+
+        .ability {
+            background: #1a1a1a;
+            padding: 5px;
+            margin: 5px 0;
+            border-left: 3px solid #00ff00;
+            font-size: 11px;
+        }
+
+        #status-panels {
+            display: flex;
+            gap: 20px;
+        }
+
+        #status-panels .panel {
+            flex: 1;
+        }
+
+        .virus-ability {
+            border-left-color: #ff0000;
+        }
+
+        .defender-ability {
+            border-left-color: #00aaff;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="visualization">
+            <div id="timeline-container">
+                <div id="timeline-title">EVENT TIMELINE</div>
+                <div id="timeline">
+                    <div id="timeline-tooltip"></div>
+                </div>
+                <div id="event-details">
+                    <div id="event-details-title">Live Events - Current Second</div>
+                    <div id="event-details-content"></div>
+                </div>
+            </div>
+            
+            <div id="canvas-container">
+                <div id="status" class="status-running">INITIALIZING...</div>
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+        
+        <div id="sidebar">
+            <div id="controls">
+                <button id="startBtn">START SIMULATION</button>
+                <button id="resetBtn">RESET</button>
+            </div>
+
+            <div class="panel">
+                <h2>BATTLE METRICS</h2>
+                <div class="stat">
+                    <span class="stat-label">Round:</span>
+                    <span class="stat-value" id="round">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Duration:</span>
+                    <span class="stat-value" id="duration">0s</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">System Integrity:</span>
+                    <span class="stat-value" id="system-health">100%</span>
+                </div>
+            </div>
+
+            <div id="status-panels">
+                <div class="panel">
+                    <h2>VIRUS STATUS</h2>
+                    <div class="stat virus-stat">
+                        <span class="stat-label">Strength:</span>
+                        <span class="stat-value" id="virus-strength">0</span>
+                    </div>
+                    <div class="stat virus-stat">
+                        <span class="stat-label">Evolution:</span>
+                        <span class="stat-value" id="virus-evolution">0</span>
+                    </div>
+                    <div class="stat virus-stat">
+                        <span class="stat-label">Evasion:</span>
+                        <span class="stat-value" id="virus-evasion">0</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill virus-progress" id="virus-health" style="width: 100%"></div>
+                    </div>
+                    <div id="virus-abilities"></div>
+                </div>
+
+                <div class="panel">
+                    <h2>DEFENDER STATUS</h2>
+                    <div class="stat defender-stat">
+                        <span class="stat-label">Strength:</span>
+                        <span class="stat-value" id="defender-strength">0</span>
+                    </div>
+                    <div class="stat defender-stat">
+                        <span class="stat-label">Evolution:</span>
+                        <span class="stat-value" id="defender-evolution">0</span>
+                    </div>
+                    <div class="stat defender-stat">
+                        <span class="stat-label">Detection:</span>
+                        <span class="stat-value" id="defender-detection">0</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill defender-progress" id="defender-health" style="width: 100%"></div>
+                    </div>
+                    <div id="defender-abilities"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            if (container) {
+                const rect = container.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Simulation state
+        let simulation = {
+            running: false,
+            round: 0,
+            startTime: null,
+            lastDuplicationTime: 0,
+            nextVirusDuplicationTime: 0,
+            lastDefenderDuplicationTime: 0,
+            nextDefenderDuplicationTime: 0,
+            timelineManuallySelected: false,
+            virus: {
+                health: 100,
+                strength: 10,
+                evolution: 0,
+                evasion: 5,
+                abilities: ['Polymorphic Code', 'Memory Injection'],
+                particles: [],
+                slowdownLevel: 0
+            },
+            virusDuplicates: [],
+            defender: {
+                health: 100,
+                strength: 12,
+                evolution: 0,
+                detection: 8,
+                abilities: ['Pattern Matching', 'Quarantine'],
+                particles: [],
+                slowdownLevel: 0
+            },
+            defenderDuplicates: [],
+            systemHealth: 100,
+            particles: [],
+            logs: [],
+            timelineEvents: []
+        };
+
+        // Ability pools for evolution
+        const virusAbilityPool = [
+            'Polymorphic Code', 'Memory Injection', 'Rootkit Access', 'Encryption Shield',
+            'Clone Spawning', 'Stealth Mode', 'Buffer Overflow', 'Zero-Day Exploit',
+            'Network Spreading', 'Anti-Analysis', 'Metamorphic Engine', 'Kernel Hijack',
+            'DDoS Module', 'Trojan Payload', 'Backdoor Access', 'Keylogger', 'Ransomware Core',
+            'Slowdown I', 'Slowdown II', 'Slowdown III'
+        ];
+
+        // Color palette for virus duplicates
+        const virusColors = [];
+        let nextVirusColorIndex = 1;
+        
+        // Generate virus color with r: 128-255, g: 0-128, b: 0-128
+        function generateVirusColor() {
+            const r = Math.floor(Math.random() * 128) + 128; // 128-255
+            const g = Math.floor(Math.random() * 129); // 0-128
+            const b = Math.floor(Math.random() * 129); // 0-128
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        // Color palette for defender duplicates
+        const defenderColors = ['#00aaff', '#0088ff', '#00ccff', '#00ddff', '#0099ff', '#00bbff', '#00eeff'];
+        let nextDefenderColorIndex = 1;
+
+        // Generate random duplication times
+        function getVirusDuplicationInterval() {
+            return (Math.random() * 4000 + 8000); // 8-12 seconds
+        }
+
+        function getDefenderDuplicationInterval() {
+            return (Math.random() * 6000 + 12000); // 12-18 seconds
+        }
+
+        const defenderAbilityPool = [
+            'Pattern Matching', 'Quarantine', 'Heuristic Analysis', 'Sandbox Isolation',
+            'Signature Database', 'Behavioral Monitor', 'Memory Scanner', 'Deep Learning',
+            'Threat Intelligence', 'Auto-Immunization', 'Code Verification', 'Neural Defense',
+            'Slowdown I', 'Slowdown II', 'Slowdown III'
+        ];
+
+        // Particle system
+        class Particle {
+            constructor(x, y, color, type, vx = 0, vy = 0) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx || (Math.random() - 0.5) * 2;
+                this.vy = vy || (Math.random() - 0.5) * 2;
+                this.color = color;
+                this.type = type; // 'virus', 'defender', 'collision'
+                this.life = 100;
+                this.maxLife = 100;
+                this.size = Math.random() * 3 + 2;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+                
+                // Bounce off walls
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+                
+                return this.life > 0;
+            }
+
+            draw() {
+                const alpha = this.life / this.maxLife;
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (this.type !== 'collision') {
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size + 2, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // Create initial particles
+        function createParticles() {
+            for (let i = 0; i < 30; i++) {
+                simulation.virus.particles.push(
+                    new Particle(
+                        Math.random() * canvas.width,
+                        Math.random() * canvas.height,
+                        'rgb(255, 0, 0)',
+                        'virus'
+                    )
+                );
+                simulation.defender.particles.push(
+                    new Particle(
+                        Math.random() * canvas.width,
+                        Math.random() * canvas.height,
+                        '#00aaff',
+                        'defender'
+                    )
+                );
+            }
+        }
+
+        // Log system
+        function addLog(message, type = 'system') {
+            // Logs are now only stored for timeline, not displayed in a log panel
+            
+            // Add to timeline
+            if (simulation.running && simulation.startTime) {
+                addTimelineEvent(message, type);
+            }
+        }
+
+        // Timeline event tracking
+        function addTimelineEvent(message, type) {
+            const timestamp = Date.now() - simulation.startTime;
+            simulation.timelineEvents.push({
+                timestamp: timestamp,
+                message: message,
+                type: type
+            });
+            updateTimeline();
+        }
+
+        // Update timeline visualization
+        function updateTimeline() {
+            const timeline = document.getElementById('timeline');
+            const timelineWidth = timeline.offsetWidth;
+            const currentTime = Date.now() - simulation.startTime;
+            const maxTime = Math.max(currentTime, 1000);
+            
+            // Clear existing events
+            const existingEvents = timeline.querySelectorAll('.timeline-event');
+            existingEvents.forEach(el => el.remove());
+            
+            // Group events by second
+            const eventsBySecond = {};
+            simulation.timelineEvents.forEach(event => {
+                const second = Math.floor(event.timestamp / 1000);
+                if (!eventsBySecond[second]) {
+                    eventsBySecond[second] = [];
+                }
+                eventsBySecond[second].push(event);
+            });
+            
+            // Create visual elements for each second
+            Object.keys(eventsBySecond).forEach(second => {
+                const events = eventsBySecond[second];
+                const nextSecond = parseInt(second) + 1;
+                
+                const startPos = (second * 1000 / maxTime) * timelineWidth;
+                const endPos = (nextSecond * 1000 / maxTime) * timelineWidth;
+                const width = endPos - startPos;
+                
+                // Determine color based on event types
+                const hasVirus = events.some(e => e.type === 'virus');
+                const hasDefender = events.some(e => e.type === 'defender');
+                const hasCritical = events.some(e => e.type === 'critical');
+                
+                let colorClass = 'virus';
+                if (hasCritical || (hasVirus && hasDefender)) {
+                    colorClass = 'purple';
+                } else if (hasDefender) {
+                    colorClass = 'defender';
+                }
+                
+                const eventEl = document.createElement('div');
+                eventEl.className = `timeline-event ${colorClass}`;
+                eventEl.style.left = startPos + 'px';
+                eventEl.style.width = Math.max(width, 2) + 'px';
+                
+                // Store event data for tooltip
+                eventEl.dataset.events = JSON.stringify(events);
+                eventEl.dataset.second = second;
+                
+                // Add click and hover handlers
+                eventEl.addEventListener('click', showTimelineTooltip);
+                eventEl.addEventListener('mouseenter', showTimelineTooltip);
+                eventEl.addEventListener('mouseleave', hideTimelineTooltip);
+                
+                timeline.appendChild(eventEl);
+            });
+        }
+
+        // Show timeline tooltip
+        function showTimelineTooltip(e) {
+            const tooltip = document.getElementById('timeline-tooltip');
+            const events = JSON.parse(e.target.dataset.events);
+            const second = e.target.dataset.second;
+            
+            let tooltipHTML = `<strong>Time: ${second}s</strong><br>`;
+            events.forEach(event => {
+                const typeColor = event.type === 'virus' ? '#ff0000' : 
+                                 event.type === 'defender' ? '#00aaff' : 
+                                 event.type === 'critical' ? '#ff00ff' : '#ffff00';
+                tooltipHTML += `<span style="color: ${typeColor};">• ${event.message}</span><br>`;
+            });
+            
+            tooltip.innerHTML = tooltipHTML;
+            tooltip.style.display = 'block';
+            
+            // Position tooltip
+            const rect = e.target.getBoundingClientRect();
+            const timelineRect = document.getElementById('timeline').getBoundingClientRect();
+            const tooltipLeft = rect.left - timelineRect.left + (rect.width / 2);
+            tooltip.style.left = tooltipLeft + 'px';
+            
+            // Update event details panel
+            if (e.type === 'click') {
+                simulation.timelineManuallySelected = true;
+                updateEventDetails(events, second);
+            }
+        }
+
+        // Update event details panel
+        function updateEventDetails(events, second) {
+            const detailsTitle = document.getElementById('event-details-title');
+            const detailsContent = document.getElementById('event-details-content');
+            
+            detailsTitle.textContent = `Events at ${second}s:`;
+            
+            let detailsHTML = '';
+            events.forEach(event => {
+                const typeColor = event.type === 'virus' ? '#ff0000' : 
+                                 event.type === 'defender' ? '#00aaff' : 
+                                 event.type === 'critical' ? '#ff00ff' : '#ffff00';
+                detailsHTML += `<div class="event-detail-item" style="color: ${typeColor};">• ${event.message}</div>`;
+            });
+            
+            detailsContent.innerHTML = detailsHTML;
+        }
+
+        // Update live events display (shows most recent second unless manually selected)
+        function updateLiveEvents() {
+            if (simulation.timelineManuallySelected || simulation.timelineEvents.length === 0) {
+                return;
+            }
+            
+            const currentTime = Date.now() - simulation.startTime;
+            const currentSecond = Math.floor(currentTime / 1000);
+            
+            // Get events from the current second
+            const currentEvents = simulation.timelineEvents.filter(event => {
+                const eventSecond = Math.floor(event.timestamp / 1000);
+                return eventSecond === currentSecond;
+            });
+            
+            if (currentEvents.length > 0) {
+                const detailsTitle = document.getElementById('event-details-title');
+                const detailsContent = document.getElementById('event-details-content');
+                
+                detailsTitle.textContent = `Live Events - Second ${currentSecond}:`;
+                
+                let detailsHTML = '';
+                currentEvents.forEach(event => {
+                    const typeColor = event.type === 'virus' ? '#ff0000' : 
+                                     event.type === 'defender' ? '#00aaff' : 
+                                     event.type === 'critical' ? '#ff00ff' : '#ffff00';
+                    detailsHTML += `<div class="event-detail-item" style="color: ${typeColor};">• ${event.message}</div>`;
+                });
+                
+                detailsContent.innerHTML = detailsHTML;
+            }
+        }
+
+        // Hide timeline tooltip
+        function hideTimelineTooltip() {
+            const tooltip = document.getElementById('timeline-tooltip');
+            tooltip.style.display = 'none';
+        }
+
+        // Update UI
+        function updateUI() {
+            const totalVirusStrength = simulation.virus.strength + 
+                simulation.virusDuplicates.reduce((sum, v) => sum + v.strength, 0);
+            const totalVirusEvolution = simulation.virus.evolution + simulation.virusDuplicates.length;
+            
+            document.getElementById('virus-strength').textContent = totalVirusStrength + 
+                (simulation.virusDuplicates.length > 0 ? ` (${simulation.virusDuplicates.length + 1} instances)` : '');
+            document.getElementById('virus-evolution').textContent = totalVirusEvolution;
+            document.getElementById('virus-evasion').textContent = simulation.virus.evasion;
+            
+            // Show virus slowdown effect on defender
+            const virusSlowdownEffect = simulation.virus.slowdownLevel > 0 ? 
+                ` (-${(simulation.virus.slowdownLevel * 5)}% defender evolution)` : '';
+            document.getElementById('virus-health').style.width = Math.max(0, simulation.virus.health) + '%';
+
+            const totalDefenderStrength = simulation.defender.strength + 
+                simulation.defenderDuplicates.reduce((sum, d) => sum + d.strength, 0);
+            const totalDefenderEvolution = simulation.defender.evolution + simulation.defenderDuplicates.length;
+            
+            document.getElementById('defender-strength').textContent = totalDefenderStrength + 
+                (simulation.defenderDuplicates.length > 0 ? ` (${simulation.defenderDuplicates.length + 1} instances)` : '');
+            document.getElementById('defender-evolution').textContent = totalDefenderEvolution;
+            document.getElementById('defender-detection').textContent = simulation.defender.detection;
+            
+            // Show slowdown effect
+            const defenderSlowdownEffect = simulation.defender.slowdownLevel > 0 ? 
+                ` (-${(simulation.defender.slowdownLevel * 10)}% virus evolution)` : '';
+            document.getElementById('defender-health').style.width = Math.max(0, simulation.defender.health) + '%';
+
+            document.getElementById('round').textContent = simulation.round;
+            document.getElementById('system-health').textContent = Math.max(0, Math.round(simulation.systemHealth)) + '%';
+
+            if (simulation.startTime) {
+                const duration = Math.floor((Date.now() - simulation.startTime) / 1000);
+                document.getElementById('duration').textContent = duration + 's';
+            }
+
+            // Update abilities - show original virus abilities
+            const virusAbilitiesDiv = document.getElementById('virus-abilities');
+            let virusAbilityHTML = '<div style="font-size: 10px; color: #888; margin-bottom: 3px;">Original:</div>';
+            virusAbilityHTML += simulation.virus.abilities.map(a => {
+                const isSlowdown = a.startsWith('Slowdown');
+                const style = isSlowdown ? 'border-left-color: #ffaa00; background: #2a1a00;' : '';
+                return `<div class="ability virus-ability" style="${style}">${a}</div>`;
+            }).join('');
+            
+            // Show duplicate abilities
+            simulation.virusDuplicates.forEach((dup, idx) => {
+                virusAbilityHTML += `<div style="font-size: 10px; color: ${dup.color}; margin: 5px 0 3px 0;">Clone ${idx + 1}:</div>`;
+                virusAbilityHTML += dup.abilities.map(a => {
+                    const isSlowdown = a.startsWith('Slowdown');
+                    const baseStyle = `border-left-color: ${dup.color};`;
+                    const extraStyle = isSlowdown ? ' background: #2a1a00;' : '';
+                    return `<div class="ability virus-ability" style="${baseStyle}${extraStyle}">${a}</div>`;
+                }).join('');
+            });
+            virusAbilitiesDiv.innerHTML = virusAbilityHTML;
+
+            const defenderAbilitiesDiv = document.getElementById('defender-abilities');
+            let defenderAbilityHTML = '<div style="font-size: 10px; color: #888; margin-bottom: 3px;">Original:</div>';
+            defenderAbilityHTML += simulation.defender.abilities.map(a => {
+                const isSlowdown = a.startsWith('Slowdown');
+                const style = isSlowdown ? 'border-left-color: #00ffaa; background: #002a1a;' : '';
+                return `<div class="ability defender-ability" style="${style}">${a}</div>`;
+            }).join('');
+            
+            // Show defender duplicate abilities
+            simulation.defenderDuplicates.forEach((dup, idx) => {
+                defenderAbilityHTML += `<div style="font-size: 10px; color: ${dup.color}; margin: 5px 0 3px 0;">Clone ${idx + 1}:</div>`;
+                defenderAbilityHTML += dup.abilities.map(a => {
+                    const isSlowdown = a.startsWith('Slowdown');
+                    const baseStyle = `border-left-color: ${dup.color};`;
+                    const extraStyle = isSlowdown ? ' background: #002a1a;' : '';
+                    return `<div class="ability defender-ability" style="${baseStyle}${extraStyle}">${a}</div>`;
+                }).join('');
+            });
+            defenderAbilitiesDiv.innerHTML = defenderAbilityHTML;
+        }
+
+        // Evolution system
+        function evolve(entity, isVirus, entityName = null) {
+            entity.evolution++;
+            const abilityPool = isVirus ? virusAbilityPool : defenderAbilityPool;
+            const availableAbilities = abilityPool.filter(a => !entity.abilities.includes(a));
+            
+            // Calculate evolution chance with slowdown effects
+            let evolutionChance = isVirus ? 0.6 : 0.72; // Defender gets 1.2x faster evolution (0.6 * 1.2 = 0.72)
+            
+            if (isVirus) {
+                // Virus evolution is slowed by defender's slowdown abilities
+                const slowdownMultiplier = Math.pow(0.9, simulation.defender.slowdownLevel);
+                evolutionChance *= slowdownMultiplier;
+            } else {
+                // Defender evolution is slowed by virus's slowdown abilities
+                const slowdownMultiplier = Math.pow(0.95, simulation.virus.slowdownLevel);
+                evolutionChance *= slowdownMultiplier;
+            }
+            
+            if (availableAbilities.length > 0 && Math.random() < evolutionChance) {
+                const newAbility = availableAbilities[Math.floor(Math.random() * availableAbilities.length)];
+                entity.abilities.push(newAbility);
+                const name = entityName || (isVirus ? 'VIRUS' : 'DEFENDER');
+                addLog(`${name} evolved: ${newAbility}`, isVirus ? 'virus' : 'defender');
+                
+                // Check if the new ability is a slowdown
+                if (!isVirus && newAbility.startsWith('Slowdown')) {
+                    simulation.defender.slowdownLevel++;
+                    addLog(`Defender activated ${newAbility}! Virus evolution speed reduced to ${Math.round(Math.pow(0.9, simulation.defender.slowdownLevel) * 1000) / 10}%`, 'defender');
+                } else if (isVirus && newAbility.startsWith('Slowdown')) {
+                    simulation.virus.slowdownLevel++;
+                    addLog(`Virus activated ${newAbility}! Defender evolution speed reduced to ${Math.round(Math.pow(0.95, simulation.virus.slowdownLevel) * 1000) / 10}%`, 'virus');
+                }
+                
+                // Grant stat boost
+                entity.strength += Math.floor(Math.random() * 5) + 2;
+                if (isVirus) {
+                    entity.evasion += Math.floor(Math.random() * 3) + 1;
+                } else {
+                    entity.detection += Math.floor(Math.random() * 3) + 1;
+                }
+            }
+        }
+
+        // Virus duplication system
+        function duplicateVirus(source = null) {
+            const sourceVirus = source || simulation.virus;
+            const color = generateVirusColor();
+            
+            // Create duplicate with some inherited traits but new abilities
+            const duplicate = {
+                health: 100,
+                strength: sourceVirus.strength * 0.7,
+                evolution: 0,
+                evasion: sourceVirus.evasion * 0.8,
+                abilities: [],
+                particles: [],
+                color: color,
+                id: simulation.virusDuplicates.length + 1,
+                lastDuplicationTime: Date.now(),
+                nextDuplicationTime: Date.now() + getVirusDuplicationInterval()
+            };
+            
+            // Give the duplicate 1-2 random abilities different from the original
+            const availableAbilities = virusAbilityPool.filter(a => !simulation.virus.abilities.includes(a));
+            const numAbilities = Math.floor(Math.random() * 2) + 1;
+            for (let i = 0; i < numAbilities && availableAbilities.length > 0; i++) {
+                const idx = Math.floor(Math.random() * availableAbilities.length);
+                duplicate.abilities.push(availableAbilities[idx]);
+                availableAbilities.splice(idx, 1);
+            }
+            
+            // Create particles for the duplicate
+            for (let i = 0; i < 20; i++) {
+                duplicate.particles.push(new Particle(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height,
+                    color,
+                    'virus'
+                ));
+            }
+            
+            simulation.virusDuplicates.push(duplicate);
+            
+            addLog(`VIRUS DUPLICATED! Clone ${duplicate.id} spawned with abilities: ${duplicate.abilities.join(', ')}`, 'virus');
+            
+            // Defender responds to duplication
+            defenderRespondToDuplication(duplicate);
+        }
+
+        // Defender response to virus duplication
+        function defenderRespondToDuplication(duplicate) {
+            addLog(`DEFENDER detected virus duplication! Analyzing clone ${duplicate.id}...`, 'defender');
+            
+            // Defender uses current skills to respond
+            simulation.defender.abilities.forEach(ability => {
+                addLog(`Deploying ${ability} against clone ${duplicate.id}`, 'defender');
+            });
+            
+            // Calculate damage based on defender's current abilities
+            const responseDamage = simulation.defender.abilities.length * 5;
+            duplicate.health -= responseDamage;
+            
+            if (duplicate.health <= 0) {
+                addLog(`Clone ${duplicate.id} neutralized during spawn!`, 'defender');
+            } else {
+                addLog(`Clone ${duplicate.id} survived with ${Math.round(duplicate.health * 10) / 10}% health`, 'virus');
+            }
+            
+            // Defender may evolve in response
+            if (Math.random() < 0.5) {
+                evolve(simulation.defender, false);
+            }
+        }
+
+        // Defender duplication system
+        function duplicateDefender(source = null) {
+            const sourceDefender = source || simulation.defender;
+            const color = defenderColors[nextDefenderColorIndex % defenderColors.length];
+            nextDefenderColorIndex++;
+            
+            // Create duplicate with some inherited traits but new abilities
+            const duplicate = {
+                health: 100,
+                strength: sourceDefender.strength * 0.7,
+                evolution: 0,
+                detection: sourceDefender.detection * 0.8,
+                abilities: [],
+                particles: [],
+                color: color,
+                id: simulation.defenderDuplicates.length + 1,
+                lastDuplicationTime: Date.now(),
+                nextDuplicationTime: Date.now() + getDefenderDuplicationInterval()
+            };
+            
+            // Give the duplicate 1-2 random abilities different from the original
+            const availableAbilities = defenderAbilityPool.filter(a => !simulation.defender.abilities.includes(a));
+            const numAbilities = Math.floor(Math.random() * 2) + 1;
+            for (let i = 0; i < numAbilities && availableAbilities.length > 0; i++) {
+                const idx = Math.floor(Math.random() * availableAbilities.length);
+                duplicate.abilities.push(availableAbilities[idx]);
+                availableAbilities.splice(idx, 1);
+            }
+            
+            // Create particles for the duplicate
+            for (let i = 0; i < 20; i++) {
+                duplicate.particles.push(new Particle(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height,
+                    color,
+                    'defender'
+                ));
+            }
+            
+            simulation.defenderDuplicates.push(duplicate);
+            
+            addLog(`DEFENDER DUPLICATED! Clone ${duplicate.id} deployed with abilities: ${duplicate.abilities.join(', ')}`, 'defender');
+        }
+
+        // Battle logic
+        function performBattle() {
+            simulation.round++;
+            
+            // Calculate effectiveness (including duplicates)
+            const totalVirusEvasion = simulation.virus.evasion + (simulation.virus.abilities.length * 2) +
+                simulation.virusDuplicates.reduce((sum, v) => sum + (v.evasion + v.abilities.length * 2), 0);
+            const totalDefenderDetection = simulation.defender.detection + (simulation.defender.abilities.length * 2) +
+                simulation.defenderDuplicates.reduce((sum, d) => sum + (d.detection + d.abilities.length * 2), 0);
+            
+            const totalVirusStrength = simulation.virus.strength + 
+                simulation.virusDuplicates.reduce((sum, v) => sum + v.strength, 0);
+            const totalDefenderStrength = simulation.defender.strength + 
+                simulation.defenderDuplicates.reduce((sum, d) => sum + d.strength, 0);
+            const virusAttackPower = totalVirusStrength * (1 + totalVirusEvasion / 100);
+            const defenderDefensePower = totalDefenderStrength * (1 + totalDefenderDetection / 100);
+            
+            // Virus attacks system (original + duplicates)
+            const virusSuccess = Math.random() < (totalVirusEvasion / (totalVirusEvasion + totalDefenderDetection));
+            if (virusSuccess) {
+                const systemDamage = (Math.random() * 5 + 2) * (1 + simulation.virusDuplicates.length * 0.3);
+                simulation.systemHealth -= systemDamage;
+                addLog(`Virus swarm bypassed defenses! System integrity: ${Math.round(simulation.systemHealth * 10) / 10}%`, 'virus');
+                
+                // Create collision particles
+                for (let i = 0; i < 10; i++) {
+                    simulation.particles.push(new Particle(
+                        canvas.width * 0.5,
+                        canvas.height * 0.5,
+                        '#ffff00',
+                        'collision'
+                    ));
+                }
+            }
+            
+            // Defender attacks virus (targets random virus or duplicate)
+            const defenderHit = Math.random() < (totalDefenderDetection / (totalVirusEvasion + totalDefenderDetection));
+            if (defenderHit) {
+                const virusDamage = defenderDefensePower * (Math.random() * 0.3 + 0.2);
+                
+                // Randomly target original or a duplicate
+                const allTargets = [simulation.virus, ...simulation.virusDuplicates.filter(v => v.health > 0)];
+                if (allTargets.length > 0) {
+                    const target = allTargets[Math.floor(Math.random() * allTargets.length)];
+                    target.health -= virusDamage;
+                    
+                    const targetName = target === simulation.virus ? 'original virus' : `clone ${target.id}`;
+                    addLog(`Defender hit ${targetName}! Health: ${Math.round(target.health * 10) / 10}%`, 'defender');
+                    
+                    // Remove dead duplicates
+                    simulation.virusDuplicates = simulation.virusDuplicates.filter(v => v.health > 0);
+                }
+                
+                // Create collision particles
+                for (let i = 0; i < 10; i++) {
+                    simulation.particles.push(new Particle(
+                        canvas.width * 0.3,
+                        canvas.height * 0.3,
+                        '#00ff00',
+                        'collision'
+                    ));
+                }
+            }
+            
+            // Virus counter-attack (duplicates make it more likely)
+            const counterChance = 0.4 + (simulation.virusDuplicates.length * 0.1);
+            if (!defenderHit && Math.random() < counterChance) {
+                // Randomly target original defender or a duplicate
+                const allDefenderTargets = [simulation.defender, ...simulation.defenderDuplicates.filter(d => d.health > 0)];
+                if (allDefenderTargets.length > 0) {
+                    const target = allDefenderTargets[Math.floor(Math.random() * allDefenderTargets.length)];
+                    const defenderDamage = virusAttackPower * (Math.random() * 0.2 + 0.1);
+                    target.health -= defenderDamage;
+                    
+                    const targetName = target === simulation.defender ? 'original defender' : `defender clone ${target.id}`;
+                    addLog(`Virus counter-attacked ${targetName}! Health: ${Math.round(target.health * 10) / 10}%`, 'virus');
+                    
+                    // Remove dead defender duplicates
+                    simulation.defenderDuplicates = simulation.defenderDuplicates.filter(d => d.health > 0);
+                }
+            }
+            
+            // Duplicates may evolve independently
+            simulation.virusDuplicates.forEach((dup, idx) => {
+                if (simulation.round % 7 === idx && dup.health > 20 && Math.random() < 0.5) {
+                    evolve(dup, true, `CLONE ${dup.id}`);
+                }
+            });
+            
+            simulation.defenderDuplicates.forEach((dup, idx) => {
+                if (simulation.round % 7 === idx && dup.health > 20 && Math.random() < 0.5) {
+                    evolve(dup, false, `DEFENDER CLONE ${dup.id}`);
+                }
+            });
+            
+            // Evolution chances
+            if (simulation.round % 5 === 0) {
+                if (simulation.virus.health > 30 && Math.random() < 0.7) {
+                    evolve(simulation.virus, true);
+                }
+                if (simulation.defender.health > 30 && Math.random() < 0.7) {
+                    evolve(simulation.defender, false);
+                }
+            }
+            
+            // Special events
+            if (simulation.round % 10 === 0) {
+                const event = Math.random();
+                if (event < 0.3) {
+                    addLog('CRITICAL: Virus attempting kernel exploit!', 'critical');
+                    simulation.systemHealth -= 10;
+                } else if (event < 0.6) {
+                    addLog('CRITICAL: Defender deployed emergency countermeasures!', 'critical');
+                    simulation.defender.health = Math.min(100, simulation.defender.health + 15);
+                }
+            }
+            
+            // Check win conditions
+            if (simulation.virus.health <= 0 && simulation.virusDuplicates.length === 0) {
+                endSimulation('defender');
+            } else if ((simulation.defender.health <= 0 && simulation.defenderDuplicates.length === 0) || simulation.systemHealth <= 0) {
+                endSimulation('virus');
+            }
+        }
+
+        // End simulation
+        function endSimulation(winner) {
+            simulation.running = false;
+            const statusDiv = document.getElementById('status');
+            
+            if (winner === 'defender') {
+                statusDiv.textContent = 'DEFENDER WINS - SYSTEM SECURED';
+                statusDiv.className = 'status-defender-wins';
+                addLog('SIMULATION COMPLETE: Defender neutralized the virus!', 'critical');
+            } else {
+                statusDiv.textContent = 'VIRUS WINS - SYSTEM COMPROMISED';
+                statusDiv.className = 'status-virus-wins';
+                addLog('SIMULATION COMPLETE: Virus overwhelmed defenses!', 'critical');
+            }
+            
+            document.getElementById('startBtn').disabled = false;
+        }
+
+        // Draw function
+        function draw() {
+            // Clear canvas with fade effect
+            ctx.fillStyle = 'rgba(17, 17, 17, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#00ff0022';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Update and draw all particles (including duplicates)
+            const allParticles = [
+                ...simulation.virus.particles,
+                ...simulation.defender.particles,
+                ...simulation.particles
+            ];
+            
+            // Add duplicate virus particles
+            simulation.virusDuplicates.forEach(dup => {
+                allParticles.push(...dup.particles);
+            });
+            
+            // Add duplicate defender particles
+            simulation.defenderDuplicates.forEach(dup => {
+                allParticles.push(...dup.particles);
+            });
+            
+            for (let i = allParticles.length - 1; i >= 0; i--) {
+                if (!allParticles[i].update()) {
+                    allParticles.splice(i, 1);
+                } else {
+                    allParticles[i].draw();
+                }
+            }
+            
+            // Draw connections between nearby particles
+            ctx.globalAlpha = 0.3;
+            for (let i = 0; i < allParticles.length; i++) {
+                for (let j = i + 1; j < allParticles.length; j++) {
+                    const dx = allParticles[i].x - allParticles[j].x;
+                    const dy = allParticles[i].y - allParticles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < 100) {
+                        ctx.strokeStyle = allParticles[i].type === allParticles[j].type ? 
+                            allParticles[i].color : '#ffffff';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(allParticles[i].x, allParticles[i].y);
+                        ctx.lineTo(allParticles[j].x, allParticles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            ctx.globalAlpha = 1;
+            
+            // Replenish particles
+            if (simulation.running) {
+                if (simulation.virus.particles.length < 25) {
+                    simulation.virus.particles.push(new Particle(
+                        Math.random() * canvas.width,
+                        Math.random() * canvas.height,
+                        'rgb(255, 0, 0)',
+                        'virus'
+                    ));
+                }
+                
+                // Replenish duplicate virus particles
+                simulation.virusDuplicates.forEach(dup => {
+                    if (dup.particles.length < 15) {
+                        dup.particles.push(new Particle(
+                            Math.random() * canvas.width,
+                            Math.random() * canvas.height,
+                            dup.color,
+                            'virus'
+                        ));
+                    }
+                });
+                
+                // Replenish duplicate defender particles
+                simulation.defenderDuplicates.forEach(dup => {
+                    if (dup.particles.length < 15) {
+                        dup.particles.push(new Particle(
+                            Math.random() * canvas.width,
+                            Math.random() * canvas.height,
+                            dup.color,
+                            'defender'
+                        ));
+                    }
+                });
+                
+                if (simulation.defender.particles.length < 25) {
+                    simulation.defender.particles.push(new Particle(
+                        Math.random() * canvas.width,
+                        Math.random() * canvas.height,
+                        '#00aaff',
+                        'defender'
+                    ));
+                }
+            }
+        }
+
+        // Main loop
+        let lastBattleTime = 0;
+        function gameLoop(timestamp) {
+            draw();
+            
+            if (simulation.running) {
+                const currentTime = Date.now();
+                
+                // Check for virus duplication with random interval (8-12 seconds)
+                if (currentTime >= simulation.nextVirusDuplicationTime) {
+                    if (simulation.virus.health > 0) {
+                        duplicateVirus();
+                        simulation.lastDuplicationTime = currentTime;
+                        simulation.nextVirusDuplicationTime = currentTime + getVirusDuplicationInterval();
+                    }
+                }
+                
+                // Check for virus clone duplications
+                simulation.virusDuplicates.forEach(clone => {
+                    if (clone.health > 0 && currentTime >= clone.nextDuplicationTime) {
+                        duplicateVirus(clone);
+                        clone.lastDuplicationTime = currentTime;
+                        clone.nextDuplicationTime = currentTime + getVirusDuplicationInterval();
+                    }
+                });
+                
+                // Check for defender duplication with random interval (16-24 seconds)
+                if (currentTime >= simulation.nextDefenderDuplicationTime) {
+                    if (simulation.defender.health > 0) {
+                        duplicateDefender();
+                        simulation.lastDefenderDuplicationTime = currentTime;
+                        simulation.nextDefenderDuplicationTime = currentTime + getDefenderDuplicationInterval();
+                    }
+                }
+                
+                // Check for defender clone duplications
+                simulation.defenderDuplicates.forEach(clone => {
+                    if (clone.health > 0 && currentTime >= clone.nextDuplicationTime) {
+                        duplicateDefender(clone);
+                        clone.lastDuplicationTime = currentTime;
+                        clone.nextDuplicationTime = currentTime + getDefenderDuplicationInterval();
+                    }
+                });
+                
+                if (timestamp - lastBattleTime > 1000) { // Battle every second
+                    performBattle();
+                    updateUI();
+                    updateTimeline();
+                    updateLiveEvents();
+                    lastBattleTime = timestamp;
+                }
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start simulation
+        function startSimulation() {
+            simulation.running = true;
+            simulation.round = 0;
+            simulation.startTime = Date.now();
+            simulation.lastDuplicationTime = Date.now();
+            simulation.nextVirusDuplicationTime = Date.now() + getVirusDuplicationInterval();
+            simulation.lastDefenderDuplicationTime = Date.now();
+            simulation.nextDefenderDuplicationTime = Date.now() + getDefenderDuplicationInterval();
+            
+            document.getElementById('status').textContent = 'BATTLE IN PROGRESS';
+            document.getElementById('status').className = 'status-running';
+            document.getElementById('startBtn').disabled = true;
+            
+            addLog('Simulation started - AI entities initializing...', 'system');
+            addLog('Virus detected in system memory!', 'virus');
+            addLog('Defender AI activated!', 'defender');
+            addLog('WARNING: Virus has duplication capability - duplicates every 8-12 seconds!', 'system');
+            addLog('INFO: Defender has duplication capability - duplicates every 12-18 seconds!', 'system');
+        }
+
+        // Reset simulation
+        function resetSimulation() {
+            nextVirusColorIndex = 1;
+            nextDefenderColorIndex = 1;
+            simulation = {
+                running: false,
+                round: 0,
+                startTime: null,
+                lastDuplicationTime: 0,
+                nextVirusDuplicationTime: 0,
+                lastDefenderDuplicationTime: 0,
+                nextDefenderDuplicationTime: 0,
+                timelineManuallySelected: false,
+                virus: {
+                    health: 100,
+                    strength: 10,
+                    evolution: 0,
+                    evasion: 5,
+                    abilities: ['Polymorphic Code', 'Memory Injection'],
+                    particles: [],
+                    slowdownLevel: 0
+                },
+                virusDuplicates: [],
+                defender: {
+                    health: 100,
+                    strength: 12,
+                    evolution: 0,
+                    detection: 8,
+                    abilities: ['Pattern Matching', 'Quarantine'],
+                    particles: [],
+                    slowdownLevel: 0
+                },
+                defenderDuplicates: [],
+                systemHealth: 100,
+                particles: [],
+                logs: [],
+                timelineEvents: []
+            };
+            
+            createParticles();
+            updateUI();
+            const timeline = document.getElementById('timeline');
+            timeline.querySelectorAll('.timeline-event').forEach(el => el.remove());
+            simulation.timelineManuallySelected = false;
+            document.getElementById('event-details-title').textContent = 'Live Events - Current Second';
+            document.getElementById('event-details-content').innerHTML = '';
+            document.getElementById('status').textContent = 'READY TO START';
+            document.getElementById('status').className = 'status-running';
+            document.getElementById('startBtn').disabled = false;
+            addLog('System reset - Ready for new simulation', 'system');
+        }
+
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', startSimulation);
+        document.getElementById('resetBtn').addEventListener('click', resetSimulation);
+
+        // Initialize
+        createParticles();
+        updateUI();
+        addLog('System initialized - Ready to begin', 'system');
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
