@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notes App</title>
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIk5vdGVzIEFwcCB3aXRoIEp1c3QgSW50b25hdGlvbiIsCiAgInNob3J0X25hbWUiOiAiTm90ZXMgQXBwIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmNWY1ZjUiLAogICJ0aGVtZV9jb2xvciI6ICIjNENBRjUwIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sLCUzQ3N2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJyUzRSUzQ3RleHQgeT0nLjllbScgZm9udC1zaXplPSc5MCclM0UlRjAlOUYlOTMlOUQlM0MvdGV4dCUzRSUzQy9zdmclM0UiLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiCiAgICB9CiAgXQp9">
-    <meta name="theme-color" content="#4CAF50">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -168,43 +166,17 @@
     <div id="preview">
         <h2>Preview</h2>
         <div id="previewContent"></div>
+    </div>
+    
+    <div class="info">
+        <strong>[c:Hz]</strong> sets base frequency (261 by default, e.g., <strong>[c:440]</strong> for A4)
+        <strong>[m:X/Y]</strong> plays just intonation interval (e.g., <strong>[m:5/4]</strong> for major third)
+        <strong>[t:X]</strong> plays equal temperament interval in semitones (e.g., <strong>[t:7]</strong> for perfect fifth)
+        <strong>[t:X\Y]</strong> plays interval in EDO steps (e.g., <strong>[t:7\12]</strong> for perfect fifth in 12EDO)
+        <strong>,rgb:R,G,B</strong> can be added to any code to set button color (e.g., <strong>[m:5/4,rgb:255,100,100]</strong>)
     </div> 
 
     <script>
-        // Register service worker for offline support
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                const swCode = `
-                    const CACHE_NAME = 'notes-app-v1';
-                    
-                    self.addEventListener('install', (event) => {
-                        event.waitUntil(
-                            caches.open(CACHE_NAME).then((cache) => {
-                                return cache.addAll(['./']).catch(() => {});
-                            })
-                        );
-                    });
-                    
-                    self.addEventListener('fetch', (event) => {
-                        event.respondWith(
-                            caches.match(event.request).then((response) => {
-                                return response || fetch(event.request);
-                            })
-                        );
-                    });
-                `;
-                
-                const blob = new Blob([swCode], { type: 'application/javascript' });
-                const swURL = URL.createObjectURL(blob);
-                
-                navigator.serviceWorker.register(swURL).then(() => {
-                    console.log('Service Worker registered for offline support');
-                }).catch((error) => {
-                    console.log('Service Worker registration failed:', error);
-                });
-            });
-        }
-        
         // Audio context for playing notes
         let audioContext = null;
         
@@ -214,13 +186,25 @@
             }
         }
         
-        // Play an interval (ratio or cents)
-        function playInterval(cents) {
+        // Play an interval (ratio or cents) - accepts single value or array for chords
+        function playInterval(cents, baseFreq = 261.63, muteBase = false) {
             initAudio();
             
-            const baseFreq = 261.63; // C4
-            const ratio = Math.pow(2, cents / 1200);
-            const frequencies = [baseFreq, baseFreq * ratio];
+            // Support both single cents value and array of cents values
+            const centsArray = Array.isArray(cents) ? cents : [cents];
+            const frequencies = [];
+            
+            // Add base frequency only if not muted
+            if (!muteBase) {
+                frequencies.push(baseFreq);
+            }
+            
+            // Add all intervals to frequencies array
+            centsArray.forEach(c => {
+                const ratio = Math.pow(2, c / 1200);
+                frequencies.push(baseFreq * ratio);
+            });
+            
             const now = audioContext.currentTime;
             const duration = 1.5;
             
@@ -256,6 +240,34 @@
             return null;
         }
         
+        // Parse multiple ratios separated by + (for chords)
+        // Supports: 7/4+5/4 or 7+5/4 (assumes /4 for numbers without /)
+        function parseRatios(ratiosStr) {
+            const parts = ratiosStr.split('+');
+            const centsArray = [];
+            let lastDenominator = null;
+            
+            for (const part of parts) {
+                const trimmed = part.trim();
+                if (trimmed.includes('/')) {
+                    const cents = ratioToCents(trimmed);
+                    if (cents === null) return null;
+                    centsArray.push(cents);
+                    // Extract denominator for next iteration
+                    const slashParts = trimmed.split('/');
+                    lastDenominator = parseFloat(slashParts[1]);
+                } else {
+                    // Number without /, use last denominator
+                    const numerator = parseFloat(trimmed);
+                    if (isNaN(numerator) || lastDenominator === null) return null;
+                    const cents = 1200 * Math.log2(numerator / lastDenominator);
+                    centsArray.push(cents);
+                }
+            }
+            
+            return centsArray.length > 0 ? centsArray : null;
+        }
+        
         // Parse color from rgb:R,G,B format
         function parseColor(colorStr) {
             const match = colorStr.match(/rgb:(\d+),(\d+),(\d+)/);
@@ -273,13 +285,77 @@
         // Convert text with music codes to HTML with buttons
         function renderText(text) {
             let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            html = html.replace(/\n/g, '<br>');
+            let currentBaseFreq = 261.63; // Default C4
             
-            // Match [m:X/Y,rgb:R,G,B] or [m:X/Y]
-            const justRegex = /\[m:([\d.]+\/[\d.]+)(?:,rgb:([\d,]+))?\]/g;
-            html = html.replace(justRegex, (match, ratio, rgb) => {
-                const cents = ratioToCents(ratio);
-                if (cents !== null) {
+            // Process line by line to track base frequency changes
+            const lines = text.split('\n');
+            const processedLines = lines.map(line => {
+                let processedLine = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                
+                // Check for [c:Hz] command to change base frequency
+                const baseFreqMatch = line.match(/\[c:([\d.]+)\]/);
+                if (baseFreqMatch) {
+                    const newFreq = parseFloat(baseFreqMatch[1]);
+                    if (!isNaN(newFreq) && newFreq > 0) {
+                        currentBaseFreq = newFreq;
+                        processedLine = processedLine.replace(/\[c:([\d.]+)\]/, `<span style="color: #666; font-style: italic;">[Base: ${newFreq} Hz]</span>`);
+                    }
+                }
+                
+                // Match [m:X/Y+...,!,rgb:R,G,B] or [m:X/Y] (supports chords with + and mute base with !)
+                const justRegex = /\[m:([\d.\/+]+)(?:,(!))?,?(?:rgb:([\d,]+))?\]/g;
+                processedLine = processedLine.replace(justRegex, (match, ratio, muteFlag, rgb) => {
+                    // Check if it's a chord (contains +)
+                    let centsValue;
+                    let isChord = false;
+                    const muteBase = muteFlag === '!';
+                    
+                    if (ratio.includes('+')) {
+                        centsValue = parseRatios(ratio);
+                        isChord = true;
+                    } else {
+                        centsValue = ratioToCents(ratio);
+                    }
+                    
+                    if (centsValue !== null) {
+                        let style = '';
+                        if (rgb) {
+                            const color = parseColor('rgb:' + rgb);
+                            if (color) {
+                                style = ` style="background-color: ${color};"`;
+                            }
+                        }
+                        const centsJson = isChord ? JSON.stringify(centsValue) : centsValue;
+                        const tooltip = isChord ? `Play chord ${ratio} at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}` : `Play interval ${ratio} (${centsValue.toFixed(2)} cents) at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}`;
+                        return `<button class="music-button"${style} onclick="playInterval(${centsJson}, ${currentBaseFreq}, ${muteBase})" title="${tooltip}">[m:${ratio}${muteBase ? ',!' : ''}]</button>`;
+                    }
+                    return match;
+                });
+                
+                // Match [t:X+Y...,!,rgb:R,G,B] or [t:X] (semitones, supports chords with + and mute base with !)
+                const semitonesRegex = /\[t:([\d.+]+)(?:,(!))?,?(?:rgb:([\d,]+))?\]/g;
+                processedLine = processedLine.replace(semitonesRegex, (match, semitones, muteFlag, rgb) => {
+                    // Check if it's a chord (contains +)
+                    let centsValue;
+                    let isChord = false;
+                    const muteBase = muteFlag === '!';
+                    
+                    if (semitones.includes('+')) {
+                        const parts = semitones.split('+');
+                        const centsArray = [];
+                        for (const part of parts) {
+                            const st = parseFloat(part.trim());
+                            if (isNaN(st)) return match;
+                            centsArray.push(st * 100);
+                        }
+                        centsValue = centsArray;
+                        isChord = true;
+                    } else {
+                        const st = parseFloat(semitones);
+                        if (isNaN(st)) return match;
+                        centsValue = st * 100;
+                    }
+                    
                     let style = '';
                     if (rgb) {
                         const color = parseColor('rgb:' + rgb);
@@ -287,17 +363,38 @@
                             style = ` style="background-color: ${color};"`;
                         }
                     }
-                    return `<button class="music-button"${style} onclick="playInterval(${cents})" title="Play interval ${ratio} (${cents.toFixed(2)} cents)">[m:${ratio}]</button>`;
-                }
-                return match;
-            });
-            
-            // Match [t:X,rgb:R,G,B] or [t:X] (semitones)
-            const semitonesRegex = /\[t:([\d.]+)(?:,rgb:([\d,]+))?\]/g;
-            html = html.replace(semitonesRegex, (match, semitones, rgb) => {
-                const st = parseFloat(semitones);
-                if (!isNaN(st)) {
-                    const cents = st * 100;
+                    const centsJson = isChord ? JSON.stringify(centsValue) : centsValue;
+                    const tooltip = isChord ? `Play chord ${semitones} semitones at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}` : `Play ${semitones} semitones (${centsValue} cents) at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}`;
+                    return `<button class="music-button"${style} onclick="playInterval(${centsJson}, ${currentBaseFreq}, ${muteBase})" title="${tooltip}">[t:${semitones}${muteBase ? ',!' : ''}]</button>`;
+                });
+                
+                // Match [t:X+Y...\Z,!,rgb:R,G,B] or [t:X\Y] (EDO steps, supports chords with + and mute base with !)
+                const edoRegex = /\[t:([\d.+]+)\\([\d.]+)(?:,(!))?,?(?:rgb:([\d,]+))?\]/g;
+                processedLine = processedLine.replace(edoRegex, (match, steps, edo, muteFlag, rgb) => {
+                    const e = parseFloat(edo);
+                    if (isNaN(e) || e === 0) return match;
+                    const muteBase = muteFlag === '!';
+                    
+                    // Check if it's a chord (contains +)
+                    let centsValue;
+                    let isChord = false;
+                    
+                    if (steps.includes('+')) {
+                        const parts = steps.split('+');
+                        const centsArray = [];
+                        for (const part of parts) {
+                            const s = parseFloat(part.trim());
+                            if (isNaN(s)) return match;
+                            centsArray.push((s / e) * 1200);
+                        }
+                        centsValue = centsArray;
+                        isChord = true;
+                    } else {
+                        const s = parseFloat(steps);
+                        if (isNaN(s)) return match;
+                        centsValue = (s / e) * 1200;
+                    }
+                    
                     let style = '';
                     if (rgb) {
                         const color = parseColor('rgb:' + rgb);
@@ -305,30 +402,15 @@
                             style = ` style="background-color: ${color};"`;
                         }
                     }
-                    return `<button class="music-button"${style} onclick="playInterval(${cents})" title="Play ${st} semitones (${cents} cents)">[t:${st}]</button>`;
-                }
-                return match;
+                    const centsJson = isChord ? JSON.stringify(centsValue) : centsValue;
+                    const tooltip = isChord ? `Play chord ${steps} steps of ${e}EDO at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}` : `Play ${steps} steps of ${e}EDO (${centsValue.toFixed(2)} cents) at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}`;
+                    return `<button class="music-button"${style} onclick="playInterval(${centsJson}, ${currentBaseFreq}, ${muteBase})" title="${tooltip}">[t:${steps}\\${e}${muteBase ? ',!' : ''}]</button>`;
+                });
+                
+                return processedLine;
             });
             
-            // Match [t:X\Y,rgb:R,G,B] or [t:X\Y] (EDO steps)
-            const edoRegex = /\[t:([\d.]+)\\([\d.]+)(?:,rgb:([\d,]+))?\]/g;
-            html = html.replace(edoRegex, (match, steps, edo, rgb) => {
-                const s = parseFloat(steps);
-                const e = parseFloat(edo);
-                if (!isNaN(s) && !isNaN(e) && e !== 0) {
-                    const cents = (s / e) * 1200;
-                    let style = '';
-                    if (rgb) {
-                        const color = parseColor('rgb:' + rgb);
-                        if (color) {
-                            style = ` style="background-color: ${color};"`;
-                        }
-                    }
-                    return `<button class="music-button"${style} onclick="playInterval(${cents})" title="Play ${s} steps of ${e}EDO (${cents.toFixed(2)} cents)">[t:${s}\\${e}]</button>`;
-                }
-                return match;
-            });
-            
+            html = processedLines.join('<br>');
             return html;
         }
         
@@ -415,6 +497,9 @@
             notesList.innerHTML = html;
         }
         
+        // Event listeners
+        document.getElementById('editor').addEventListener('input', updatePreview);
+        
         // Initialize
         updateNotesList();
         updatePreview();
@@ -447,6 +532,33 @@ Custom Colors - add ,rgb:R,G,B:
 - [m:5/4,rgb:255,100,100] - Red button
 - [t:7,rgb:100,255,100] - Green button
 - [t:13\\24,rgb:255,0,0] - Red 24EDO button
+
+Stacked Just Intervals:
+- [m:7/4+5/4] - Play both harmonic seventh and major third together
+- [m:3/2+5/4+6/5] - Play perfect fifth, major third, and minor third together
+- [m:5/3+4] - Play major sixth and perfect fourth together
+
+Stacked Equal Temperament:
+- [t:4+7] - Play major third and perfect fifth together
+- [t:3+4+7] - Play minor third, major third, and perfect fifth together
+- [t:5+12] - Play perfect fourth and octave together
+- [t:4+8\\14] - Play neutral third and fifth in 14EDO together
+
+Mute Base Note:
+- [m:5/4,!] - Play major third only, no base note
+- [t:7,!] - Play perfect fifth only, no base note
+- [t:9\\15,!] - Play perfect fifth in 15EDO only, no base note
+
+
+Setting Base Frequency - [c:Hz]:
+- [c:440] - Set base frequency to 440 Hz (A4)
+- [t:4] - Play major third at 440 Hz
+- [c:261.63] - Set base frequency to 261.63 Hz (C4)
+- [t:7] - Play perfect fifth at 261.63 Hz
+- [c:660] - Set base frequency to 660 Hz (E5)
+- [m:5/4] - Play major third at 660 Hz
+- [c:329.63] - Set base frequency to 329.63 Hz (E4)
+- [t:9\\15] - Play perfect fifth in 15EDO at 329.63 Hz
 
 Try clicking them!`;
             updatePreview();
