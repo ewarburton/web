@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TET Audio Converter (Alpha 1.0)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        h1 {
+            text-align: center;
+            color: #4a9eff;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .input-group {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #b0b0b0;
+        }
+        input[type="file"],
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #444;
+            border-radius: 5px;
+            font-size: 16px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            box-sizing: border-box;
+        }
+        input[type="number"]:focus,
+        input[type="file"]:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+        .tet-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #4a9eff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #3a7ecf;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        video {
+            width: 100%;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        video.active {
+            display: block;
+        }
+        .spectrogram-container {
+            margin: 20px 0;
+            display: none;
+        }
+        .spectrogram-container.active {
+            display: block;
+        }
+        .spectrogram-label {
+            font-weight: 600;
+            color: #4a9eff;
+            margin-bottom: 5px;
+        }
+        canvas {
+            width: 100%;
+            height: 200px;
+            background: #000;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            image-rendering: pixelated;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 5px;
+            display: none;
+        }
+        .status.active {
+            display: block;
+        }
+        .status.processing {
+            border-left: 4px solid #ff9800;
+        }
+        .status.success {
+            border-left: 4px solid #4caf50;
+        }
+        .status.error {
+            border-left: 4px solid #f44336;
+        }
+        .info {
+            margin-top: 30px;
+            padding: 15px;
+            background: #333;
+            border-radius: 5px;
+            border-left: 4px solid #4a9eff;
+        }
+        .info h3 {
+            margin-top: 0;
+            color: #4a9eff;
+        }
+        .info p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <h1>TET Audio Converter (Alpha 1.0)</h1>
+    
+    <div class="container">
+        <div class="input-group">
+            <label for="videoInput">Select Video File:</label>
+            <input type="file" id="videoInput" accept="video/*">
+        </div>
+
+        <video id="videoPlayer" controls></video>
+
+        <div class="spectrogram-container" id="spectrogramContainer">
+            <div class="spectrogram-label">Original Spectrogram:</div>
+            <canvas id="originalSpectrogram"></canvas>
+            <div class="spectrogram-label">Converted Spectrogram:</div>
+            <canvas id="convertedSpectrogram"></canvas>
+        </div>
+
+        <div class="input-group">
+            <label for="initialHz">Initial Hz (Reference Frequency):</label>
+            <input type="number" id="initialHz" value="440" step="0.1" min="1">
+        </div>
+
+        <div class="tet-inputs">
+            <div class="input-group">
+                <label for="fromTet">Change from (TET):</label>
+                <input type="number" id="fromTet" value="12" min="1" step="1">
+            </div>
+            <div class="input-group">
+                <label for="toTet">To (TET):</label>
+                <input type="number" id="toTet" value="19" min="1" step="1">
+            </div>
+        </div>
+
+        <button id="processBtn" disabled>Process Audio</button>
+
+        <div id="status" class="status"></div>
+
+        <div class="info">
+            <h3>About This Tool</h3>
+            <p><strong>How it works:</strong> This tool uses FFT with logarithmic frequency scaling to better match musical perception. It detects clusters of nearby frequencies (within 20 cents) using exponential weighting, then approximates to the nearest pitch in the target TET system.</p>
+            <p><strong>Initial Hz:</strong> The reference frequency (typically A4 = 440 Hz).</p>
+            <p><strong>From TET:</strong> Source equal temperament - mostly ignored since real audio is rarely perfectly in tune!</p>
+            <p><strong>To TET:</strong> Target equal temperament (e.g., 19-TET, 24-TET, 31-TET, etc.).</p>
+            <p><strong>Process:</strong> The spectrum is converted to logarithmic scale (matching how we hear pitch). Clusters within 20 cents are detected with exponential magnitude weighting (stronger signals dominate). Each cluster is amplified logarithmically (+10dB for 10 frequencies, +20dB for 100) and rounded to the nearest pitch in the target TET.</p>
+        </div>
+    </div>
+
+    <script>
+        const videoInput = document.getElementById('videoInput');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const initialHzInput = document.getElementById('initialHz');
+        const fromTetInput = document.getElementById('fromTet');
+        const toTetInput = document.getElementById('toTet');
+        const processBtn = document.getElementById('processBtn');
+        const statusDiv = document.getElementById('status');
+        const spectrogramContainer = document.getElementById('spectrogramContainer');
+        const originalCanvas = document.getElementById('originalSpectrogram');
+        const convertedCanvas = document.getElementById('convertedSpectrogram');
+
+        let audioContext;
+        let videoFile;
+
+        // Initialize Audio Context
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Handle video file selection
+        videoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                videoFile = file;
+                const url = URL.createObjectURL(file);
+                videoPlayer.src = url;
+                videoPlayer.classList.add('active');
+                processBtn.disabled = false;
+                showStatus('Video loaded. Ready to process.', 'success');
+            }
+        });
+
+        // Show status message
+        function showStatus(message, type = 'processing') {
+            statusDiv.textContent = message;
+            statusDiv.className = `status active ${type}`;
+        }
+
+        // Convert frequency to nearest pitch in a TET system
+        function freqToTetStep(freq, referenceHz, tet) {
+            const ratio = freq / referenceHz;
+            const steps = Math.log2(ratio) * tet;
+            return Math.round(steps);
+        }
+
+        // Convert TET step back to frequency
+        function tetStepToFreq(step, referenceHz, tet) {
+            return referenceHz * Math.pow(2, step / tet);
+        }
+
+        // Draw spectrogram
+        function drawSpectrogram(ctx, specData, width, height) {
+            if (specData.length === 0) return;
+            
+            const timeSteps = specData.length;
+            const freqBins = specData[0].length;
+            
+            // Find max magnitude for normalization
+            let maxMag = 0;
+            for (let t = 0; t < timeSteps; t++) {
+                for (let f = 0; f < freqBins; f++) {
+                    maxMag = Math.max(maxMag, specData[t][f]);
+                }
+            }
+            
+            // Draw spectrogram
+            const pixelWidth = Math.max(1, width / timeSteps);
+            const pixelHeight = Math.max(1, height / freqBins);
+            
+            for (let t = 0; t < timeSteps; t++) {
+                for (let f = 0; f < freqBins; f++) {
+                    const magnitude = specData[t][f];
+                    const normalized = magnitude / (maxMag || 1);
+                    
+                    // Use log scale for better visibility
+                    const intensity = Math.pow(normalized, 0.3) * 255;
+                    
+                    // Color mapping: blue (low) -> cyan -> yellow -> red (high)
+                    let r, g, b;
+                    if (intensity < 64) {
+                        r = 0;
+                        g = 0;
+                        b = intensity * 4;
+                    } else if (intensity < 128) {
+                        r = 0;
+                        g = (intensity - 64) * 4;
+                        b = 255;
+                    } else if (intensity < 192) {
+                        r = (intensity - 128) * 4;
+                        g = 255;
+                        b = 255 - (intensity - 128) * 4;
+                    } else {
+                        r = 255;
+                        g = 255 - (intensity - 192) * 4;
+                        b = 0;
+                    }
+                    
+                    ctx.fillStyle = `rgb(${r},${g},${b})`;
+                    const x = (t / timeSteps) * width;
+                    const y = height - ((f / freqBins) * height); // Flip Y axis
+                    ctx.fillRect(x, y, Math.ceil(pixelWidth) + 1, Math.ceil(pixelHeight) + 1);
+                }
+            }
+        }
+
+        // Process audio with frequency separation and approximation
+        async function processAudio() {
+            try {
+                initAudioContext();
+                
+                const fromTet = parseInt(fromTetInput.value);
+                const toTet = parseInt(toTetInput.value);
+                const initialHz = parseFloat(initialHzInput.value);
+
+                showStatus('Extracting audio from video...', 'processing');
+                processBtn.disabled = true;
+
+                // Decode video audio
+                const arrayBuffer = await videoFile.arrayBuffer();
+                const audioBuffer = await decodeAudioFromVideo(arrayBuffer);
+
+                if (!audioBuffer) {
+                    throw new Error('Could not extract audio from video');
+                }
+
+                showStatus('Analyzing frequencies...', 'processing');
+
+                // Setup spectrograms
+                spectrogramContainer.classList.add('active');
+                const spectrogramWidth = 800;
+                const spectrogramHeight = 200;
+                originalCanvas.width = spectrogramWidth;
+                originalCanvas.height = spectrogramHeight;
+                convertedCanvas.width = spectrogramWidth;
+                convertedCanvas.height = spectrogramHeight;
+                
+                const origCtx = originalCanvas.getContext('2d');
+                const convCtx = convertedCanvas.getContext('2d');
+                
+                // Clear canvases
+                origCtx.fillStyle = '#000';
+                origCtx.fillRect(0, 0, spectrogramWidth, spectrogramHeight);
+                convCtx.fillStyle = '#000';
+                convCtx.fillRect(0, 0, spectrogramWidth, spectrogramHeight);
+
+                // Process each channel
+                const numChannels = audioBuffer.numberOfChannels;
+                const sampleRate = audioBuffer.sampleRate;
+                const length = audioBuffer.length;
+                const outputChannels = [];
+                
+                // Store spectrogram data
+                const originalSpecData = [];
+                const convertedSpecData = [];
+
+                for (let channel = 0; channel < numChannels; channel++) {
+                    const channelData = audioBuffer.getChannelData(channel);
+                    const outputData = new Float32Array(length);
+                    
+                    // Process in chunks using FFT
+                    const fftSize = 4096;
+                    const hopSize = fftSize / 4; // 75% overlap for better time resolution
+                    const maxFreqDisplay = 8000; // Display up to 8kHz in spectrogram
+                    
+                    showStatus(`Processing channel ${channel + 1}/${numChannels}...`, 'processing');
+                    
+                    let frameIndex = 0;
+                    const totalFrames = Math.floor(length / hopSize);
+                    const framesPerPixel = Math.max(1, Math.floor(totalFrames / spectrogramWidth));
+                    
+                    for (let i = 0; i < length; i += hopSize) {
+                        const chunk = new Float32Array(fftSize);
+                        
+                        // Extract chunk with Hann window
+                        for (let j = 0; j < fftSize; j++) {
+                            const idx = i + j;
+                            if (idx < length) {
+                                // Apply Hann window
+                                const window = 0.5 * (1 - Math.cos(2 * Math.PI * j / fftSize));
+                                chunk[j] = channelData[idx] * window;
+                            }
+                        }
+                        
+                        // Perform FFT
+                        const fft = performFFT(chunk);
+                        
+                        // Store original spectrogram data (only for first channel and at sampling intervals)
+                        if (channel === 0 && frameIndex % framesPerPixel === 0) {
+                            const specColumn = [];
+                            for (let bin = 0; bin < fftSize / 2; bin++) {
+                                const freq = bin * sampleRate / fftSize;
+                                if (freq > maxFreqDisplay) break;
+                                
+                                const real = fft[bin * 2];
+                                const imag = fft[bin * 2 + 1];
+                                const magnitude = Math.sqrt(real * real + imag * imag);
+                                specColumn.push(magnitude);
+                            }
+                            originalSpecData.push(specColumn);
+                        }
+                        
+                        // Create a copy for converted spectrogram
+                        const convertedFFT = new Float32Array(fft.length);
+                        for (let j = 0; j < fft.length; j++) {
+                            convertedFFT[j] = 0; // Start with silence
+                        }
+                        
+                        // Convert linear spectrum to logarithmic frequency bins
+                        const minFreq = 20; // Minimum frequency (Hz)
+                        const maxFreq = sampleRate / 2; // Nyquist frequency
+                        const numLogBins = 200; // Number of logarithmic bins
+                        const logBins = [];
+                        
+                        // Create logarithmic frequency bins
+                        for (let i = 0; i < numLogBins; i++) {
+                            const logFreq = minFreq * Math.pow(maxFreq / minFreq, i / (numLogBins - 1));
+                            const bin = Math.round(logFreq * fftSize / sampleRate);
+                            
+                            if (bin < fftSize / 2) {
+                                const real = fft[bin * 2];
+                                const imag = fft[bin * 2 + 1];
+                                const magnitude = Math.sqrt(real * real + imag * imag);
+                                const phase = Math.atan2(imag, real);
+                                
+                                logBins.push({
+                                    freq: logFreq,
+                                    bin: bin,
+                                    magnitude: magnitude,
+                                    phase: phase,
+                                    real: real,
+                                    imag: imag
+                                });
+                            }
+                        }
+                        
+                        // Detect frequency clusters within 20 cents in logarithmic space
+                        const clusters = [];
+                        let currentCluster = null;
+                        const magnitudeThreshold = 0.001;
+                        const centsThreshold = 20; // 20 cents
+                        
+                        for (const logBin of logBins) {
+                            if (logBin.magnitude > magnitudeThreshold) {
+                                // Check if this frequency is within 20 cents of current cluster
+                                let withinCluster = false;
+                                if (currentCluster) {
+                                    const lastFreq = currentCluster.lastFreq;
+                                    // Calculate cents difference: 1200 * log2(f2/f1)
+                                    const centsDiff = Math.abs(1200 * Math.log2(logBin.freq / lastFreq));
+                                    withinCluster = centsDiff <= centsThreshold;
+                                }
+                                
+                                if (!currentCluster || !withinCluster) {
+                                    // Start new cluster
+                                    if (currentCluster) {
+                                        clusters.push(currentCluster);
+                                    }
+                                    currentCluster = {
+                                        bins: [logBin.bin],
+                                        frequencies: [logBin.freq],
+                                        magnitudes: [logBin.magnitude],
+                                        phases: [logBin.phase],
+                                        reals: [logBin.real],
+                                        imags: [logBin.imag],
+                                        lastFreq: logBin.freq,
+                                        count: 1
+                                    };
+                                } else {
+                                    // Add to current cluster
+                                    currentCluster.bins.push(logBin.bin);
+                                    currentCluster.frequencies.push(logBin.freq);
+                                    currentCluster.magnitudes.push(logBin.magnitude);
+                                    currentCluster.phases.push(logBin.phase);
+                                    currentCluster.reals.push(logBin.real);
+                                    currentCluster.imags.push(logBin.imag);
+                                    currentCluster.lastFreq = logBin.freq;
+                                    currentCluster.count++;
+                                }
+                            }
+                        }
+                        if (currentCluster) {
+                            clusters.push(currentCluster);
+                        }
+                        
+                        // Process each cluster with exponential weighting
+                        for (const cluster of clusters) {
+                            // Calculate weighted center frequency of cluster with exponential weighting
+                            let totalMagnitude = 0;
+                            let weightedFreqSum = 0;
+                            let totalReal = 0;
+                            let totalImag = 0;
+                            let totalExponentialWeight = 0;
+                            
+                            for (let i = 0; i < cluster.frequencies.length; i++) {
+                                const freq = cluster.frequencies[i];
+                                const mag = cluster.magnitudes[i];
+                                
+                                // Exponential weighting: higher magnitudes get exponentially more weight
+                                const expWeight = Math.exp(mag * 2); // Adjust multiplier as needed
+                                
+                                totalMagnitude += mag;
+                                weightedFreqSum += freq * mag * expWeight;
+                                totalReal += cluster.reals[i] * expWeight;
+                                totalImag += cluster.imags[i] * expWeight;
+                                totalExponentialWeight += mag * expWeight;
+                            }
+                            
+                            // Center frequency weighted by magnitude and exponential factor
+                            const centerFreq = weightedFreqSum / totalExponentialWeight;
+                            const avgPhase = Math.atan2(totalImag, totalReal);
+                            
+                            // Logarithmic amplification based on cluster size
+                            // +10dB for 10 frequencies, +20dB for 100, etc.
+                            const dbBoost = 10 * Math.log10(cluster.count);
+                            const linearBoost = Math.pow(10, dbBoost / 20); // Convert dB to linear
+                            const amplifiedMagnitude = totalMagnitude * linearBoost;
+                            
+                            // Map center frequency to target TET
+                            const targetStep = freqToTetStep(centerFreq, initialHz, toTet);
+                            const targetFreq = tetStepToFreq(targetStep, initialHz, toTet);
+                            const newBin = Math.round(targetFreq * fftSize / sampleRate);
+                            
+                            if (newBin >= 0 && newBin < fftSize / 2) {
+                                // Place entire cluster energy at target bin with amplification
+                                convertedFFT[newBin * 2] += amplifiedMagnitude * Math.cos(avgPhase);
+                                convertedFFT[newBin * 2 + 1] += amplifiedMagnitude * Math.sin(avgPhase);
+                            }
+                        }
+                        
+                        // Store converted spectrogram data
+                        if (channel === 0 && frameIndex % framesPerPixel === 0) {
+                            const specColumn = [];
+                            for (let bin = 0; bin < fftSize / 2; bin++) {
+                                const freq = bin * sampleRate / fftSize;
+                                if (freq > maxFreqDisplay) break;
+                                
+                                const real = convertedFFT[bin * 2];
+                                const imag = convertedFFT[bin * 2 + 1];
+                                const magnitude = Math.sqrt(real * real + imag * imag);
+                                specColumn.push(magnitude);
+                            }
+                            convertedSpecData.push(specColumn);
+                        }
+                        
+                        // Perform inverse FFT
+                        const reconstructed = performIFFT(convertedFFT);
+                        
+                        frameIndex++;
+                        
+                        // Overlap-add the chunk to output
+                        for (let j = 0; j < fftSize && i + j < length; j++) {
+                            const window = 0.5 * (1 - Math.cos(2 * Math.PI * j / fftSize));
+                            outputData[i + j] += reconstructed[j] * window;
+                        }
+                    }
+                    
+                    // Normalize output
+                    let maxVal = 0;
+                    for (let i = 0; i < length; i++) {
+                        maxVal = Math.max(maxVal, Math.abs(outputData[i]));
+                    }
+                    if (maxVal > 0) {
+                        for (let i = 0; i < length; i++) {
+                            outputData[i] /= maxVal * 1.1; // Slight headroom
+                        }
+                    }
+                    
+                    outputChannels.push(outputData);
+                }
+
+                // Draw spectrograms
+                showStatus('Rendering spectrograms...', 'processing');
+                drawSpectrogram(origCtx, originalSpecData, spectrogramWidth, spectrogramHeight);
+                drawSpectrogram(convCtx, convertedSpecData, spectrogramWidth, spectrogramHeight);
+
+                showStatus('Reconstructing audio...', 'processing');
+
+                // Create output buffer
+                const outputBuffer = audioContext.createBuffer(numChannels, length, sampleRate);
+                for (let channel = 0; channel < numChannels; channel++) {
+                    outputBuffer.copyToChannel(outputChannels[channel], channel);
+                }
+
+                // Create downloadable file
+                const wavBlob = bufferToWave(outputBuffer, outputBuffer.length);
+                const url = URL.createObjectURL(wavBlob);
+                
+                // Create download link
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `converted_${fromTet}tet_to_${toTet}tet.wav`;
+                a.textContent = 'Download Converted Audio';
+                a.style.display = 'block';
+                a.style.marginTop = '10px';
+                a.style.color = '#4a9eff';
+                a.style.textDecoration = 'none';
+                a.style.fontWeight = 'bold';
+                
+                statusDiv.innerHTML = '';
+                statusDiv.appendChild(document.createTextNode('Conversion complete! '));
+                statusDiv.appendChild(a);
+                statusDiv.className = 'status active success';
+
+                processBtn.disabled = false;
+
+            } catch (error) {
+                console.error('Error processing audio:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+                processBtn.disabled = false;
+            }
+        }
+
+        // Simple FFT implementation (Cooley-Tukey algorithm)
+        function performFFT(input) {
+            const n = input.length;
+            const output = new Float32Array(n * 2); // Real and imaginary pairs
+            
+            // Copy input to output (real part)
+            for (let i = 0; i < n; i++) {
+                output[i * 2] = input[i];
+                output[i * 2 + 1] = 0;
+            }
+            
+            // Bit-reversal permutation
+            let j = 0;
+            for (let i = 0; i < n; i++) {
+                if (i < j) {
+                    // Swap
+                    let tempReal = output[i * 2];
+                    let tempImag = output[i * 2 + 1];
+                    output[i * 2] = output[j * 2];
+                    output[i * 2 + 1] = output[j * 2 + 1];
+                    output[j * 2] = tempReal;
+                    output[j * 2 + 1] = tempImag;
+                }
+                let k = n / 2;
+                while (k <= j) {
+                    j -= k;
+                    k /= 2;
+                }
+                j += k;
+            }
+            
+            // Cooley-Tukey FFT
+            for (let len = 2; len <= n; len *= 2) {
+                const halfLen = len / 2;
+                const theta = -2 * Math.PI / len;
+                
+                for (let i = 0; i < n; i += len) {
+                    for (let k = 0; k < halfLen; k++) {
+                        const angle = theta * k;
+                        const wReal = Math.cos(angle);
+                        const wImag = Math.sin(angle);
+                        
+                        const evenIdx = (i + k) * 2;
+                        const oddIdx = (i + k + halfLen) * 2;
+                        
+                        const tReal = wReal * output[oddIdx] - wImag * output[oddIdx + 1];
+                        const tImag = wReal * output[oddIdx + 1] + wImag * output[oddIdx];
+                        
+                        output[oddIdx] = output[evenIdx] - tReal;
+                        output[oddIdx + 1] = output[evenIdx + 1] - tImag;
+                        output[evenIdx] += tReal;
+                        output[evenIdx + 1] += tImag;
+                    }
+                }
+            }
+            
+            return output;
+        }
+
+        // Inverse FFT
+        function performIFFT(input) {
+            const n = input.length / 2;
+            const conjugate = new Float32Array(input.length);
+            
+            // Conjugate the input
+            for (let i = 0; i < n; i++) {
+                conjugate[i * 2] = input[i * 2];
+                conjugate[i * 2 + 1] = -input[i * 2 + 1];
+            }
+            
+            // Perform FFT on conjugate
+            const result = performFFT(conjugate);
+            
+            // Conjugate and normalize
+            const output = new Float32Array(n);
+            for (let i = 0; i < n; i++) {
+                output[i] = result[i * 2] / n;
+            }
+            
+            return output;
+        }
+
+        // Decode audio from video file
+        async function decodeAudioFromVideo(arrayBuffer) {
+            try {
+                // Try to decode directly (works if browser supports the video's audio codec)
+                return await audioContext.decodeAudioData(arrayBuffer.slice(0));
+            } catch (error) {
+                // If direct decode fails, extract using a trick with an audio element
+                return await extractAudioViaElement();
+            }
+        }
+
+        // Alternative method to extract audio
+        async function extractAudioViaElement() {
+            return new Promise((resolve, reject) => {
+                const audio = new Audio(URL.createObjectURL(videoFile));
+                
+                audio.addEventListener('loadedmetadata', async () => {
+                    try {
+                        const mediaSource = audioContext.createMediaElementSource(audio);
+                        const destination = audioContext.createMediaStreamDestination();
+                        mediaSource.connect(destination);
+                        
+                        const mediaRecorder = new MediaRecorder(destination.stream);
+                        const chunks = [];
+                        
+                        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+                        mediaRecorder.onstop = async () => {
+                            const blob = new Blob(chunks, { type: 'audio/webm' });
+                            const arrayBuffer = await blob.arrayBuffer();
+                            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                            resolve(audioBuffer);
+                        };
+                        
+                        mediaRecorder.start();
+                        audio.play();
+                        
+                        setTimeout(() => {
+                            audio.pause();
+                            mediaRecorder.stop();
+                        }, audio.duration * 1000);
+                        
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
+                
+                audio.addEventListener('error', reject);
+            });
+        }
+
+        // Convert AudioBuffer to WAV file
+        function bufferToWave(abuffer, len) {
+            const numOfChan = abuffer.numberOfChannels;
+            const length = len * numOfChan * 2 + 44;
+            const buffer = new ArrayBuffer(length);
+            const view = new DataView(buffer);
+            const channels = [];
+            let offset = 0;
+            let pos = 0;
+
+            // Write WAV header
+            setUint32(0x46464952); // "RIFF"
+            setUint32(length - 8); // file length - 8
+            setUint32(0x45564157); // "WAVE"
+            setUint32(0x20746d66); // "fmt " chunk
+            setUint32(16); // length = 16
+            setUint16(1); // PCM (uncompressed)
+            setUint16(numOfChan);
+            setUint32(abuffer.sampleRate);
+            setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
+            setUint16(numOfChan * 2); // block-align
+            setUint16(16); // 16-bit
+            setUint32(0x61746164); // "data" - chunk
+            setUint32(length - pos - 4); // chunk length
+
+            // Write interleaved data
+            for (let i = 0; i < abuffer.numberOfChannels; i++) {
+                channels.push(abuffer.getChannelData(i));
+            }
+
+            while (pos < len) {
+                for (let i = 0; i < numOfChan; i++) {
+                    let sample = Math.max(-1, Math.min(1, channels[i][pos]));
+                    sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                    view.setInt16(offset, sample, true);
+                    offset += 2;
+                }
+                pos++;
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+
+            function setUint16(data) {
+                view.setUint16(offset, data, true);
+                offset += 2;
+            }
+
+            function setUint32(data) {
+                view.setUint32(offset, data, true);
+                offset += 4;
+            }
+        }
+
+        // Process button click handler
+        processBtn.addEventListener('click', processAudio);
+    </script>
+</body>
+</html>
