@@ -313,7 +313,7 @@
                 }
                 
                 // Match [m:X/Y+...,!,key=K,rgb:R,G,B] or [m:X/Y] (supports chords with +, mute base with !, and key binding)
-                const justRegex = /\[m:([\d.\/+]+)(?:,(!))?,?(?:key=([a-zA-Z0-9]))?,?(?:rgb:([\d,]+))?\]/g;
+                const justRegex = /\[m:([\d.\/+]+)(?:,(!))?,?(?:key=(`?[a-zA-Z0-9\[\]]))?,?(?:rgb:([\d,]+))?\]/g;
                 processedLine = processedLine.replace(justRegex, (match, ratio, muteFlag, key, rgb) => {
                     // Check if it's a chord (contains +)
                     let centsValue;
@@ -330,7 +330,8 @@
                     if (centsValue !== null) {
                         // Register key binding if specified
                         if (key) {
-                            keyBindings[key.toLowerCase()] = { cents: centsValue, baseFreq: currentBaseFreq, muteBase };
+                            const actualKey = key.startsWith('`') ? key.substring(1) : key;
+                            keyBindings[actualKey.toLowerCase()] = { cents: centsValue, baseFreq: currentBaseFreq, muteBase };
                         }
                         
                         let style = '';
@@ -341,15 +342,16 @@
                             }
                         }
                         const centsJson = isChord ? JSON.stringify(centsValue) : centsValue;
-                        const keyLabel = key ? ` [${key}]` : '';
-                        const tooltip = isChord ? `Play chord ${ratio} at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${key ? ' - Press ' + key : ''}` : `Play interval ${ratio} (${centsValue.toFixed(2)} cents) at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${key ? ' - Press ' + key : ''}`;
+                        const actualKey = key ? (key.startsWith('`') ? key.substring(1) : key) : null;
+                        const keyLabel = actualKey ? ` [${actualKey}]` : '';
+                        const tooltip = isChord ? `Play chord ${ratio} at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${actualKey ? ' - Press ' + actualKey : ''}` : `Play interval ${ratio} (${centsValue.toFixed(2)} cents) at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${actualKey ? ' - Press ' + actualKey : ''}`;
                         return `<button class="music-button"${style} onclick="playInterval(${centsJson}, ${currentBaseFreq}, ${muteBase})" title="${tooltip}">[m:${ratio}${muteBase ? ',!' : ''}${keyLabel}]</button>`;
                     }
                     return match;
                 });
                 
                 // Match [t:X+Y...,!,key=K,rgb:R,G,B] or [t:X] (semitones, supports chords with +, mute base with !, and key binding)
-                const semitonesRegex = /\[t:([\d.+]+)(?:,(!))?,?(?:key=([a-zA-Z0-9]))?,?(?:rgb:([\d,]+))?\]/g;
+                const semitonesRegex = /\[t:([\d.+]+)(?:,(!))?,?(?:key=(`?[a-zA-Z0-9\[\]]))?,?(?:rgb:([\d,]+))?\]/g;
                 processedLine = processedLine.replace(semitonesRegex, (match, semitones, muteFlag, key, rgb) => {
                     // Check if it's a chord (contains +)
                     let centsValue;
@@ -374,7 +376,8 @@
                     
                     // Register key binding if specified
                     if (key) {
-                        keyBindings[key.toLowerCase()] = { cents: centsValue, baseFreq: currentBaseFreq, muteBase };
+                        const actualKey = key.startsWith('`') ? key.substring(1) : key;
+                        keyBindings[actualKey.toLowerCase()] = { cents: centsValue, baseFreq: currentBaseFreq, muteBase };
                     }
                     
                     let style = '';
@@ -385,13 +388,14 @@
                         }
                     }
                     const centsJson = isChord ? JSON.stringify(centsValue) : centsValue;
-                    const keyLabel = key ? ` [${key}]` : '';
-                    const tooltip = isChord ? `Play chord ${semitones} semitones at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${key ? ' - Press ' + key : ''}` : `Play ${semitones} semitones (${centsValue} cents) at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${key ? ' - Press ' + key : ''}`;
+                    const actualKey = key ? (key.startsWith('`') ? key.substring(1) : key) : null;
+                    const keyLabel = actualKey ? ` [${actualKey}]` : '';
+                    const tooltip = isChord ? `Play chord ${semitones} semitones at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${actualKey ? ' - Press ' + actualKey : ''}` : `Play ${semitones} semitones (${centsValue} cents) at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${actualKey ? ' - Press ' + actualKey : ''}`;
                     return `<button class="music-button"${style} onclick="playInterval(${centsJson}, ${currentBaseFreq}, ${muteBase})" title="${tooltip}">[t:${semitones}${muteBase ? ',!' : ''}${keyLabel}]</button>`;
                 });
                 
                 // Match [t:X+Y...\Z,!,key=K,rgb:R,G,B] or [t:X\Y] (EDO steps, supports chords with +, mute base with !, and key binding)
-                const edoRegex = /\[t:([\d.+]+)\\([\d.]+)(?:,(!))?,?(?:key=([a-zA-Z0-9]))?,?(?:rgb:([\d,]+))?\]/g;
+                const edoRegex = /\[t:([\d.+]+)\\([\d.]+)(?:,(!))?,?(?:key=(`?[a-zA-Z0-9\[\]]))?,?(?:rgb:([\d,]+))?\]/g;
                 processedLine = processedLine.replace(edoRegex, (match, steps, edo, muteFlag, key, rgb) => {
                     const e = parseFloat(edo);
                     if (isNaN(e) || e === 0) return match;
@@ -419,7 +423,8 @@
                     
                     // Register key binding if specified
                     if (key) {
-                        keyBindings[key.toLowerCase()] = { cents: centsValue, baseFreq: currentBaseFreq, muteBase };
+                        const actualKey = key.startsWith('`') ? key.substring(1) : key;
+                        keyBindings[actualKey.toLowerCase()] = { cents: centsValue, baseFreq: currentBaseFreq, muteBase };
                     }
                     
                     let style = '';
@@ -430,8 +435,9 @@
                         }
                     }
                     const centsJson = isChord ? JSON.stringify(centsValue) : centsValue;
-                    const keyLabel = key ? ` [${key}]` : '';
-                    const tooltip = isChord ? `Play chord ${steps} steps of ${e}EDO at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${key ? ' - Press ' + key : ''}` : `Play ${steps} steps of ${e}EDO (${centsValue.toFixed(2)} cents) at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${key ? ' - Press ' + key : ''}`;
+                    const actualKey = key ? (key.startsWith('`') ? key.substring(1) : key) : null;
+                    const keyLabel = actualKey ? ` [${actualKey}]` : '';
+                    const tooltip = isChord ? `Play chord ${steps} steps of ${e}EDO at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${actualKey ? ' - Press ' + actualKey : ''}` : `Play ${steps} steps of ${e}EDO (${centsValue.toFixed(2)} cents) at ${currentBaseFreq} Hz${muteBase ? ' (no base)' : ''}${actualKey ? ' - Press ' + actualKey : ''}`;
                     return `<button class="music-button"${style} onclick="playInterval(${centsJson}, ${currentBaseFreq}, ${muteBase})" title="${tooltip}">[t:${steps}\\${e}${muteBase ? ',!' : ''}${keyLabel}]</button>`;
                 });
                 

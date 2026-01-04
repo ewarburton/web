@@ -21,6 +21,8 @@
 		<select id="corruptionMode">
 			<option value="bitflip">Bit-flip corruption</option>
 			<option value="distance">Distance loss (video only)</option>
+			<option value="fft">FFT encoding/decoding</option>
+			<option value="analog">Analog degradation [effect-based] (video only)</option>
 		</select><br>
 		
 		<div id="bitflipControls" style="margin-top:0.5em;">
@@ -33,6 +35,18 @@
 				<input type="number" id="distanceInput" min="0" max="1000" value="0" step="0.1" style="width:80px; margin-left:0.5em;">
 				<span style="margin-left:8px;color:#999;font-size:0.9em;" id="delayDisplay">0.000s delay</span>
 			</div>
+
+		<div id="fftControls" style="display:none; margin-top:0.5em;">
+			<label for="fftIterations">FFT iterations:</label>
+			<input type="number" id="fftIterations" min="1" max="100" value="5" style="width:80px; margin-left:0.5em;">
+			<span style="margin-left:8px;color:#999;font-size:0.9em;">Encode/decode cycles</span>
+		</div>
+
+		<div id="analogControls" style="display:none; margin-top:0.5em;">
+			<label for="analogIterations">Analog iterations:</label>
+			<input type="number" id="analogIterations" min="1" max="100" value="5" style="width:80px; margin-left:0.5em;">
+			<span style="margin-left:8px;color:#999;font-size:0.9em;">Horizontal blur + RGB noise passes</span>
+		</div>
 
 			<div id="rotationControls" style="margin-top:0.5em;">
 				<label for="rotationMode">Video rotation fix:</label>
@@ -57,6 +71,8 @@
 			const corruptionMode = document.getElementById('corruptionMode');
 			const bitflipControls = document.getElementById('bitflipControls');
 			const distanceControls = document.getElementById('distanceControls');
+			const fftControls = document.getElementById('fftControls');
+			const analogControls = document.getElementById('analogControls');
 			const distanceInput = document.getElementById('distanceInput');
 			const delayDisplay = document.getElementById('delayDisplay');
 			
@@ -66,12 +82,28 @@
 					if (corruptionMode.value === 'bitflip') {
 						bitflipControls.style.display = '';
 						distanceControls.style.display = 'none';
+						fftControls.style.display = 'none';
+						analogControls.style.display = 'none';
 					} else if (corruptionMode.value === 'distance') {
 						bitflipControls.style.display = 'none';
 						distanceControls.style.display = '';
+						fftControls.style.display = 'none';
+						analogControls.style.display = 'none';
+					} else if (corruptionMode.value === 'fft') {
+						bitflipControls.style.display = 'none';
+						distanceControls.style.display = 'none';
+						fftControls.style.display = '';
+						analogControls.style.display = 'none';
+					} else if (corruptionMode.value === 'analog') {
+						bitflipControls.style.display = 'none';
+						distanceControls.style.display = 'none';
+						fftControls.style.display = 'none';
+						analogControls.style.display = '';
 					} else {
 						bitflipControls.style.display = 'none';
 						distanceControls.style.display = 'none';
+						fftControls.style.display = 'none';
+						analogControls.style.display = 'none';
 					}
 				});
 			}
@@ -100,6 +132,437 @@
 			}
 			return buffer;
 		}
+
+	// FFT Encode/Decode: Apply multiple FFT round-trips to audio/video
+	async function applyFFTCorruption(mediaBlob, iterations, isVideo = false) {
+		return new Promise((resolve, reject) => {
+			const mediaURL = URL.createObjectURL(mediaBlob);
+			const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+			
+			if (isVideo) {
+				const video = document.createElement('video');
+				video.src = mediaURL;
+				
+				video.onloadedmetadata = async function() {
+					try {
+						const source = audioContext.createMediaElementSource(video);
+						const analyser = audioContext.createAnalyser();
+						analyser.fftSize = 2048;
+						source.connect(analyser);
+						
+						const canvas = document.createElement('canvas');
+						canvas.width = video.videoWidth;
+						canvas.height = video.videoHeight;
+						const ctx = canvas.getContext('2d');
+						
+						const stream = canvas.captureStream();
+						const destination = audioContext.createMediaStreamDestination();
+						
+						// Process audio through FFT iterations
+						const bufferLength = analyser.frequencyBinCount;
+						const dataArray = new Float32Array(bufferLength);
+						
+						// Connect audio path
+						analyser.connect(destination);
+						const audioTrack = destination.stream.getAudioTracks()[0];
+						const videoTrack = stream.getVideoTracks()[0];
+						const combinedStream = new MediaStream([videoTrack, audioTrack]);
+						
+						const mediaRecorder = new MediaRecorder(combinedStream, {
+							mimeType: 'video/webm'
+						});
+						
+						const chunks = [];
+						mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+						mediaRecorder.onstop = () => {
+							const processedBlob = new Blob(chunks, { type: 'video/webm' });
+							URL.revokeObjectURL(mediaURL);
+							audioContext.close();
+							resolve(processedBlob);
+						};
+						
+						mediaRecorder.start();
+						video.play();
+						
+						function drawFrame() {
+							if (video.ended) {
+								setTimeout(() => mediaRecorder.stop(), 200);
+								return;
+							}
+							ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+							requestAnimationFrame(drawFrame);
+						}
+						requestAnimationFrame(drawFrame);
+						
+					} catch (err) {
+						URL.revokeObjectURL(mediaURL);
+						audioContext.close();
+						reject(err);
+					}
+				};
+				
+				video.onerror = () => {
+					URL.revokeObjectURL(mediaURL);
+					audioContext.close();
+					reject(new Error('Failed to load video'));
+				};
+			} else {
+				// Audio-only FFT processing
+				fetch(mediaURL)
+					.then(response => response.arrayBuffer())
+					.then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+					.then(audioBuffer => {
+						// Apply FFT iterations
+						let processedBuffer = audioBuffer;
+						for (let i = 0; i < iterations; i++) {
+							processedBuffer = applyFFTIteration(processedBuffer, audioContext);
+						}
+						
+						// Encode back to blob
+						const offlineContext = new OfflineAudioContext(
+							processedBuffer.numberOfChannels,
+							processedBuffer.length,
+							processedBuffer.sampleRate
+						);
+						
+						const source = offlineContext.createBufferSource();
+						source.buffer = processedBuffer;
+						source.connect(offlineContext.destination);
+						source.start();
+						
+						return offlineContext.startRendering();
+					})
+					.then(renderedBuffer => {
+						// Convert to WAV
+						const wavBlob = audioBufferToWav(renderedBuffer);
+						URL.revokeObjectURL(mediaURL);
+						audioContext.close();
+						resolve(wavBlob);
+					})
+					.catch(err => {
+						URL.revokeObjectURL(mediaURL);
+						audioContext.close();
+						reject(err);
+					});
+			}
+		});
+	}
+	
+	function applyFFTIteration(audioBuffer, audioContext) {
+		// Create offline context for processing
+		const offlineContext = new OfflineAudioContext(
+			audioBuffer.numberOfChannels,
+			audioBuffer.length,
+			audioBuffer.sampleRate
+		);
+		
+		// For each channel, apply FFT transform
+		const processedChannels = [];
+		for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+			const data = audioBuffer.getChannelData(channel);
+			const fftSize = 2048;
+			const processed = new Float32Array(data.length);
+			
+			// Process in chunks with FFT
+			for (let i = 0; i < data.length; i += fftSize) {
+				const chunk = data.slice(i, Math.min(i + fftSize, data.length));
+				const fftResult = fft(chunk);
+				const ifftResult = ifft(fftResult);
+				
+				// Copy back to processed array
+				for (let j = 0; j < ifftResult.length && i + j < processed.length; j++) {
+					processed[i + j] = ifftResult[j];
+				}
+			}
+			processedChannels.push(processed);
+		}
+		
+		// Create new audio buffer with processed data
+		const newBuffer = audioContext.createBuffer(
+			audioBuffer.numberOfChannels,
+			audioBuffer.length,
+			audioBuffer.sampleRate
+		);
+		
+		for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+			newBuffer.copyToChannel(processedChannels[channel], channel);
+		}
+		
+		return newBuffer;
+	}
+	
+	// Simple FFT implementation (Cooley-Tukey)
+	function fft(samples) {
+		const n = samples.length;
+		if (n <= 1) return samples.map(x => ({re: x, im: 0}));
+		
+		// Pad to power of 2
+		let paddedN = 1;
+		while (paddedN < n) paddedN *= 2;
+		const padded = new Float32Array(paddedN);
+		padded.set(samples);
+		
+		return fftRecursive(Array.from(padded).map(x => ({re: x, im: 0})));
+	}
+	
+	function fftRecursive(x) {
+		const n = x.length;
+		if (n <= 1) return x;
+		
+		const even = fftRecursive(x.filter((_, i) => i % 2 === 0));
+		const odd = fftRecursive(x.filter((_, i) => i % 2 === 1));
+		
+		const result = new Array(n);
+		for (let k = 0; k < n / 2; k++) {
+			const angle = -2 * Math.PI * k / n;
+			const t = {
+				re: Math.cos(angle) * odd[k].re - Math.sin(angle) * odd[k].im,
+				im: Math.cos(angle) * odd[k].im + Math.sin(angle) * odd[k].re
+			};
+			result[k] = {
+				re: even[k].re + t.re,
+				im: even[k].im + t.im
+			};
+			result[k + n / 2] = {
+				re: even[k].re - t.re,
+				im: even[k].im - t.im
+			};
+		}
+		return result;
+	}
+	
+	// Inverse FFT
+	function ifft(spectrum) {
+		const n = spectrum.length;
+		
+		// Conjugate
+		const conj = spectrum.map(c => ({re: c.re, im: -c.im}));
+		
+		// Apply FFT
+		const result = fftRecursive(conj);
+		
+		// Conjugate and scale
+		return result.map(c => c.re / n);
+	}
+	
+	// Convert AudioBuffer to WAV blob
+	function audioBufferToWav(buffer) {
+		const numberOfChannels = buffer.numberOfChannels;
+		const sampleRate = buffer.sampleRate;
+		const format = 1; // PCM
+		const bitDepth = 16;
+		
+		const bytesPerSample = bitDepth / 8;
+		const blockAlign = numberOfChannels * bytesPerSample;
+		
+		const data = [];
+		for (let i = 0; i < buffer.length; i++) {
+			for (let channel = 0; channel < numberOfChannels; channel++) {
+				const sample = buffer.getChannelData(channel)[i];
+				const s = Math.max(-1, Math.min(1, sample));
+				data.push(s < 0 ? s * 0x8000 : s * 0x7FFF);
+			}
+		}
+		
+		const dataLength = data.length * bytesPerSample;
+		const bufferLength = 44 + dataLength;
+		const arrayBuffer = new ArrayBuffer(bufferLength);
+		const view = new DataView(arrayBuffer);
+		
+		// RIFF chunk descriptor
+		writeString(view, 0, 'RIFF');
+		view.setUint32(4, bufferLength - 8, true);
+		writeString(view, 8, 'WAVE');
+		
+		// fmt sub-chunk
+		writeString(view, 12, 'fmt ');
+		view.setUint32(16, 16, true); // fmt chunk size
+		view.setUint16(20, format, true);
+		view.setUint16(22, numberOfChannels, true);
+		view.setUint32(24, sampleRate, true);
+		view.setUint32(28, sampleRate * blockAlign, true);
+		view.setUint16(32, blockAlign, true);
+		view.setUint16(34, bitDepth, true);
+		
+		// data sub-chunk
+		writeString(view, 36, 'data');
+		view.setUint32(40, dataLength, true);
+		
+		let offset = 44;
+		for (let i = 0; i < data.length; i++) {
+			view.setInt16(offset, data[i], true);
+			offset += 2;
+		}
+		
+		return new Blob([arrayBuffer], { type: 'audio/wav' });
+	}
+	
+	function writeString(view, offset, string) {
+		for (let i = 0; i < string.length; i++) {
+			view.setUint8(offset + i, string.charCodeAt(i));
+		}
+	}
+
+	// Analog Degradation: horizontal blur + RGB noise per iteration
+	async function applyAnalogDegradation(videoBlob, iterations, rotationMode = 'none') {
+		return new Promise((resolve, reject) => {
+			const videoURL = URL.createObjectURL(videoBlob);
+			const video = document.createElement('video');
+			const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+			
+			video.src = videoURL;
+
+			video.onloadedmetadata = async function() {
+				try {
+					const canvas = document.createElement('canvas');
+					
+					// Apply rotation correction if needed
+					if (rotationMode === 'ccw' || rotationMode === 'cw') {
+						canvas.width = video.videoHeight;
+						canvas.height = video.videoWidth;
+					} else {
+						canvas.width = video.videoWidth;
+						canvas.height = video.videoHeight;
+					}
+					const ctx = canvas.getContext('2d');
+					
+					// Calculate blur distance: 3% of video width
+					const blurDistance = Math.ceil(canvas.width * 0.03);
+
+					// Set up audio passthrough
+					const source = audioContext.createMediaElementSource(video);
+					const destination = audioContext.createMediaStreamDestination();
+					source.connect(destination);
+
+					// Use video element's frame rate
+					const stream = canvas.captureStream();
+					const videoTrack = stream.getVideoTracks()[0];
+					const audioTrack = destination.stream.getAudioTracks()[0];
+
+					const combinedStream = new MediaStream([videoTrack, audioTrack]);
+					const mediaRecorder = new MediaRecorder(combinedStream, {
+						mimeType: 'video/webm'
+					});
+
+					const chunks = [];
+					mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+					mediaRecorder.onstop = () => {
+						const processedBlob = new Blob(chunks, { type: 'video/webm' });
+						URL.revokeObjectURL(videoURL);
+						audioContext.close();
+						resolve(processedBlob);
+					};
+
+					mediaRecorder.start();
+					video.play();
+
+					// Temporary canvas for processing
+					const tempCanvas = document.createElement('canvas');
+					tempCanvas.width = canvas.width;
+					tempCanvas.height = canvas.height;
+					const tempCtx = tempCanvas.getContext('2d');
+
+					// Sync drawing with video time
+					let lastDrawTime = -1;
+					function drawFrame() {
+						if (video.ended) {
+							setTimeout(() => mediaRecorder.stop(), 200);
+							return;
+						}
+						
+						// Only draw if video time has advanced
+						if (video.currentTime !== lastDrawTime) {
+							// Draw video to temp canvas
+							tempCtx.save();
+							if (rotationMode === 'ccw') {
+								tempCtx.translate(0, tempCanvas.height);
+								tempCtx.rotate(-Math.PI / 2);
+								tempCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+							} else if (rotationMode === 'cw') {
+								tempCtx.translate(tempCanvas.width, 0);
+								tempCtx.rotate(Math.PI / 2);
+								tempCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+							} else {
+								tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+							}
+							tempCtx.restore();
+							
+							// Apply iterations of analog degradation
+							let imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+							for (let iter = 0; iter < iterations; iter++) {
+								imageData = applyAnalogPass(imageData, blurDistance);
+							}
+							
+							// Draw processed frame to output canvas
+							ctx.putImageData(imageData, 0, 0);
+							lastDrawTime = video.currentTime;
+						}
+						
+						requestAnimationFrame(drawFrame);
+					}
+					requestAnimationFrame(drawFrame);
+
+				} catch (err) {
+					URL.revokeObjectURL(videoURL);
+					if (audioContext) audioContext.close();
+					reject(err);
+				}
+			};
+
+			video.onerror = () => {
+				URL.revokeObjectURL(videoURL);
+				if (audioContext) audioContext.close();
+				reject(new Error('Failed to load video'));
+			};
+		});
+	}
+	
+	// Single pass of analog degradation
+	function applyAnalogPass(imageData, blurDistance) {
+		const width = imageData.width;
+		const height = imageData.height;
+		const data = imageData.data;
+		const newData = new Uint8ClampedArray(data.length);
+		
+		// Process each pixel
+		for (let y = 0; y < height; y++) {
+			for (let x = 0; x < width; x++) {
+				const idx = (y * width + x) * 4;
+				
+				// Calculate average from pixel blurDistance pixels to the right (wrapping)
+				const sourceX = (x + blurDistance) % width;
+				const sourceIdx = (y * width + sourceX) * 4;
+				
+				// Copy RGB from source pixel
+				newData[idx] = data[sourceIdx];         // R
+				newData[idx + 1] = data[sourceIdx + 1]; // G
+				newData[idx + 2] = data[sourceIdx + 2]; // B
+				newData[idx + 3] = data[idx + 3];       // A (preserve alpha)
+			}
+		}
+		
+		// Apply 10% opacity white noise to each RGB channel separately
+		for (let i = 0; i < newData.length; i += 4) {
+			// R channel noise (can add or subtract)
+			const noiseR = (Math.random() * 2 - 1) * 255 * 0.1;
+			newData[i] = Math.max(0, Math.min(255, newData[i] + noiseR));
+			
+			// G channel noise (can add or subtract)
+			const noiseG = (Math.random() * 2 - 1) * 255 * 0.1;
+			newData[i + 1] = Math.max(0, Math.min(255, newData[i + 1] + noiseG));
+			
+			// B channel noise (can add or subtract)
+			const noiseB = (Math.random() * 2 - 1) * 255 * 0.1;
+			newData[i + 2] = Math.max(0, Math.min(255, newData[i + 2] + noiseB));
+		}
+		
+		// Copy back to imageData
+		for (let i = 0; i < data.length; i++) {
+			data[i] = newData[i];
+		}
+		
+		return imageData;
+	}
 
 	// Distance Loss: Simple approach using video element timing
 	async function applyDistanceLoss(videoBlob, delaySeconds, rotationMode = 'none') {
@@ -203,6 +666,8 @@
 			const fileInput = document.getElementById('fileInput');
 			const corruptionMode = document.getElementById('corruptionMode').value;
 			const percent = parseFloat(document.getElementById('percentInput').value);
+			const fftIterations = parseInt(document.getElementById('fftIterations').value);
+			const analogIterations = parseInt(document.getElementById('analogIterations').value);
 			const output = document.getElementById('output');
 			output.innerHTML = '';
 
@@ -268,22 +733,63 @@
 					reader.readAsArrayBuffer(file);
 					return;
 			} else if (name.match(/\.(mp3|wav|ogg|flac|aac)$/)) {
-				if (corruptionMode === 'distance') {
-					output.textContent = 'Distance loss only applies to video files.';
+				if (corruptionMode === 'distance' || corruptionMode === 'analog') {
+					output.textContent = 'Distance loss and analog degradation only apply to video files.';
 					return;
 				}
-				const arrayBuffer = await file.arrayBuffer();
-				corruptedBuffer = flipBits(arrayBuffer.slice(0), percent);
-				blob = new Blob([corruptedBuffer], {type: file.type || 'audio/mpeg'});
-				url = URL.createObjectURL(blob);
-				type = 'audio';
-				ext = name.split('.').pop();
+				
+				if (corruptionMode === 'fft') {
+					// FFT mode for audio
+					try {
+						output.innerHTML = '<p>Processing FFT corruption (' + fftIterations + ' iterations)...</p>';
+						blob = await applyFFTCorruption(file, fftIterations, false);
+						url = URL.createObjectURL(blob);
+						type = 'audio';
+						ext = 'wav'; // FFT output is WAV
+					} catch (err) {
+						console.error('FFT processing failed:', err);
+						output.innerHTML = '<p style="color:#f66;">FFT processing failed: ' + err.message + '</p>';
+						return;
+					}
+				} else {
+					// Bit-flip mode for audio
+					const arrayBuffer = await file.arrayBuffer();
+					corruptedBuffer = flipBits(arrayBuffer.slice(0), percent);
+					blob = new Blob([corruptedBuffer], {type: file.type || 'audio/mpeg'});
+					url = URL.createObjectURL(blob);
+					type = 'audio';
+					ext = name.split('.').pop();
+				}
 				} else if (name.match(/\.(mp4|webm|ogg|avi|mov|mkv)$/)) {
 					const arrayBuffer = await file.arrayBuffer();
 					const rotationMode = document.getElementById('rotationMode').value;
 					let videoBlob;
 					
-					if (corruptionMode === 'bitflip') {
+					if (corruptionMode === 'analog') {
+						// Analog degradation mode
+						videoBlob = new Blob([arrayBuffer], {type: file.type || 'video/mp4'});
+						try {
+							output.innerHTML = '<p>Processing analog degradation (' + analogIterations + ' iterations)...</p>';
+							videoBlob = await applyAnalogDegradation(videoBlob, analogIterations, rotationMode);
+							ext = 'webm';
+						} catch (err) {
+							console.error('Analog processing failed:', err);
+							output.innerHTML = '<p style="color:#f66;">Analog processing failed: ' + err.message + '</p>';
+							return;
+						}
+					} else if (corruptionMode === 'fft') {
+						// FFT mode for video
+						videoBlob = new Blob([arrayBuffer], {type: file.type || 'video/mp4'});
+						try {
+							output.innerHTML = '<p>Processing FFT corruption (' + fftIterations + ' iterations)...</p>';
+							videoBlob = await applyFFTCorruption(videoBlob, fftIterations, true);
+							ext = 'webm'; // FFT output is webm
+						} catch (err) {
+							console.error('FFT processing failed:', err);
+							output.innerHTML = '<p style="color:#f66;">FFT processing failed: ' + err.message + '</p>';
+							return;
+						}
+					} else if (corruptionMode === 'bitflip') {
 						// Apply bit-flip corruption
 						corruptedBuffer = flipBits(arrayBuffer.slice(0), percent);
 						videoBlob = new Blob([corruptedBuffer], {type: file.type || 'video/mp4'});

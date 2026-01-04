@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TET Audio Converter (Alpha 1.0)</title>
+    <title>EDO Audio Converter (Alpha 1.0)</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -48,7 +48,7 @@
             outline: none;
             border-color: #4a9eff;
         }
-        .tet-inputs {
+        .edo-inputs {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
@@ -139,7 +139,7 @@
     </style>
 </head>
 <body>
-    <h1>TET Audio Converter (Alpha 1.0)</h1>
+    <h1>EDO Audio Converter (Alpha 1.0)</h1>
     
     <div class="container">
         <div class="input-group">
@@ -161,15 +161,29 @@
             <input type="number" id="initialHz" value="440" step="0.1" min="1">
         </div>
 
-        <div class="tet-inputs">
+        <div class="input-group">
+            <label for="scaleMaker">Scale Maker (comma-separated cents, optional):</label>
+            <input type="text" id="scaleMaker" placeholder="e.g., 0,100,200,300,400,500,600,700,800,900,1000,1100,1200" style="width: 100%; padding: 10px; border: 2px solid #444; border-radius: 5px; font-size: 16px; background: #1a1a1a; color: #e0e0e0; box-sizing: border-box;">
+            <small style="color: #888; margin-top: 5px; display: block;">Leave empty to use EDO. Enter scale steps in cents (e.g., "0,204,408,612,816,1020,1224" for Pythagorean JI whole tones)</small>
+        </div>
+
+        <div class="edo-inputs">
             <div class="input-group">
-                <label for="fromTet">Change from (TET):</label>
+                <label for="fromTet">Change from (EDO):</label>
                 <input type="number" id="fromTet" value="12" min="1" step="1">
             </div>
             <div class="input-group">
-                <label for="toTet">To (TET):</label>
+                <label for="toTet">To (EDO):</label>
                 <input type="number" id="toTet" value="19" min="1" step="1">
             </div>
+        </div>
+
+        <div class="input-group">
+            <label for="mode">Mode:</label>
+            <select id="mode" style="width: 100%; padding: 10px; border: 2px solid #444; border-radius: 5px; font-size: 16px; background: #1a1a1a; color: #e0e0e0;">
+                <option value="approximate">Approximate - Round to nearest pitch</option>
+                <option value="scale">Scale - Transform by ratio (10-14 EDO only)</option>
+            </select>
         </div>
 
         <button id="processBtn" disabled>Process Audio</button>
@@ -178,11 +192,15 @@
 
         <div class="info">
             <h3>About This Tool</h3>
-            <p><strong>How it works:</strong> This tool uses FFT with logarithmic frequency scaling to better match musical perception. It detects clusters of nearby frequencies (within 20 cents) using exponential weighting, then approximates to the nearest pitch in the target TET system.</p>
+            <p><strong>How it works:</strong> This tool uses FFT with logarithmic frequency scaling to better match musical perception. It detects clusters of nearby frequencies (within 20 cents) using exponential weighting, then applies the selected mode.</p>
             <p><strong>Initial Hz:</strong> The reference frequency (typically A4 = 440 Hz).</p>
-            <p><strong>From TET:</strong> Source equal temperament - mostly ignored since real audio is rarely perfectly in tune!</p>
-            <p><strong>To TET:</strong> Target equal temperament (e.g., 19-TET, 24-TET, 31-TET, etc.).</p>
-            <p><strong>Process:</strong> The spectrum is converted to logarithmic scale (matching how we hear pitch). Clusters within 20 cents are detected with exponential magnitude weighting (stronger signals dominate). Each cluster is amplified logarithmically (+10dB for 10 frequencies, +20dB for 100) and rounded to the nearest pitch in the target TET.</p>
+            <p><strong>Scale Maker:</strong> Optional custom scale in cents. Enter comma-separated values (e.g., "0,100,200,300,400,500,600,700,800,900,1000,1100,1200" for 12-EDO). Leave empty to use standard EDO. The scale automatically repeats each octave.</p>
+            <p><strong>From EDO:</strong> Source equal temperament (default 12-EDO).</p>
+            <p><strong>To EDO:</strong> Target equal temperament (e.g., 19-EDO, 24-EDO, 31-EDO, etc.). Ignored if using custom scale.</p>
+            <p><strong>Modes:</strong></p>
+            <p style="margin-left: 20px;"><strong>Approximate:</strong> Rounds each cluster to the nearest pitch in the target EDO or custom scale. Works for all conversions.</p>
+            <p style="margin-left: 20px;"><strong>Scale:</strong> Transforms frequencies by the ratio fromEDO/toEDO. Converts 12x semitones to (fromEDO/toEDO) × 12x semitones. Only works when both source and target are 10-14 EDO. Ignores custom scale.</p>
+            <p><strong>Process:</strong> The spectrum is converted to logarithmic scale. Clusters within 20 cents are detected with exponential magnitude weighting. Each cluster is amplified logarithmically (+10dB for 10 frequencies, +20dB for 100) and processed according to the selected mode.</p>
         </div>
     </div>
 
@@ -190,8 +208,10 @@
         const videoInput = document.getElementById('videoInput');
         const videoPlayer = document.getElementById('videoPlayer');
         const initialHzInput = document.getElementById('initialHz');
+        const scaleMakerInput = document.getElementById('scaleMaker');
         const fromTetInput = document.getElementById('fromTet');
         const toTetInput = document.getElementById('toTet');
+        const modeSelect = document.getElementById('mode');
         const processBtn = document.getElementById('processBtn');
         const statusDiv = document.getElementById('status');
         const spectrogramContainer = document.getElementById('spectrogramContainer');
@@ -227,16 +247,42 @@
             statusDiv.className = `status active ${type}`;
         }
 
-        // Convert frequency to nearest pitch in a TET system
-        function freqToTetStep(freq, referenceHz, tet) {
+        // Convert frequency to nearest pitch in an EDO system
+        function freqToEdoStep(freq, referenceHz, edo) {
             const ratio = freq / referenceHz;
-            const steps = Math.log2(ratio) * tet;
+            const steps = Math.log2(ratio) * edo;
             return Math.round(steps);
         }
 
-        // Convert TET step back to frequency
-        function tetStepToFreq(step, referenceHz, tet) {
-            return referenceHz * Math.pow(2, step / tet);
+        // Convert EDO step back to frequency
+        function edoStepToFreq(step, referenceHz, edo) {
+            return referenceHz * Math.pow(2, step / edo);
+        }
+
+        // Find nearest pitch in custom scale (in cents)
+        function findNearestScalePitch(freq, referenceHz, scaleCents) {
+            // Convert frequency to cents from reference
+            const cents = 1200 * Math.log2(freq / referenceHz);
+            
+            // Find octave and position within octave
+            const octave = Math.floor(cents / 1200);
+            const centsInOctave = cents - (octave * 1200);
+            
+            // Find nearest scale degree
+            let minDiff = Infinity;
+            let nearestCents = 0;
+            
+            for (const scaleCent of scaleCents) {
+                const diff = Math.abs(centsInOctave - scaleCent);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    nearestCents = scaleCent;
+                }
+            }
+            
+            // Convert back to frequency
+            const totalCents = octave * 1200 + nearestCents;
+            return referenceHz * Math.pow(2, totalCents / 1200);
         }
 
         // Draw spectrogram
@@ -299,9 +345,30 @@
             try {
                 initAudioContext();
                 
-                const fromTet = parseInt(fromTetInput.value);
-                const toTet = parseInt(toTetInput.value);
+                const fromEdo = parseInt(fromTetInput.value);
+                const toEdo = parseInt(toTetInput.value);
                 const initialHz = parseFloat(initialHzInput.value);
+                
+                // Parse custom scale if provided
+                let customScale = null;
+                const scaleInput = scaleMakerInput.value.trim();
+                if (scaleInput) {
+                    try {
+                        customScale = scaleInput.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+                        if (customScale.length === 0) {
+                            customScale = null;
+                        } else {
+                            // Ensure scale starts at 0 and includes octave (1200)
+                            if (!customScale.includes(0)) customScale.unshift(0);
+                            if (!customScale.includes(1200)) customScale.push(1200);
+                            customScale.sort((a, b) => a - b);
+                            showStatus(`Using custom scale with ${customScale.length} steps`, 'processing');
+                        }
+                    } catch (e) {
+                        showStatus('Invalid scale format, using EDO instead', 'processing');
+                        customScale = null;
+                    }
+                }
 
                 showStatus('Extracting audio from video...', 'processing');
                 processBtn.disabled = true;
@@ -506,9 +573,35 @@
                             const linearBoost = Math.pow(10, dbBoost / 20); // Convert dB to linear
                             const amplifiedMagnitude = totalMagnitude * linearBoost;
                             
-                            // Map center frequency to target TET
-                            const targetStep = freqToTetStep(centerFreq, initialHz, toTet);
-                            const targetFreq = tetStepToFreq(targetStep, initialHz, toTet);
+                            // Get processing mode
+                            const mode = modeSelect.value;
+                            let targetFreq;
+                            
+                            // Check if both EDOs are in 10-14 range for scale mode
+                            const inValidRange = (fromEdo >= 10 && fromEdo <= 14 && toEdo >= 10 && toEdo <= 14);
+                            
+                            if (mode === 'approximate' || !inValidRange) {
+                                // Approximate mode: Round to nearest pitch in target EDO or custom scale
+                                // Also used when outside 10-14 EDO range
+                                if (customScale) {
+                                    // Use custom scale
+                                    targetFreq = findNearestScalePitch(centerFreq, initialHz, customScale);
+                                } else {
+                                    // Use EDO
+                                    const targetStep = freqToEdoStep(centerFreq, initialHz, toEdo);
+                                    targetFreq = edoStepToFreq(targetStep, initialHz, toEdo);
+                                }
+                            } else if (mode === 'scale') {
+                                // Scale mode: Transform 12x semitones to (fromEdo/toEdo) * 12x semitones
+                                // Only for 10-14 EDO
+                                // Convert frequency to semitones from reference
+                                const semitones = 12 * Math.log2(centerFreq / initialHz);
+                                // Scale by ratio fromEdo/toEdo
+                                const scaledSemitones = semitones * (fromEdo / toEdo);
+                                // Convert back to frequency
+                                targetFreq = initialHz * Math.pow(2, scaledSemitones / 12);
+                            }
+                            
                             const newBin = Math.round(targetFreq * fftSize / sampleRate);
                             
                             if (newBin >= 0 && newBin < fftSize / 2) {
@@ -579,7 +672,9 @@
                 // Create download link
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `converted_${fromTet}tet_to_${toTet}tet.wav`;
+                const mode = modeSelect.value;
+                const scaleLabel = customScale ? 'customscale' : `${fromEdo}edo_to_${toEdo}edo`;
+                a.download = `converted_${scaleLabel}_${mode}.wav`;
                 a.textContent = 'Download Converted Audio';
                 a.style.display = 'block';
                 a.style.marginTop = '10px';
