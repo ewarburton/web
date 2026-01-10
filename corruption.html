@@ -541,18 +541,18 @@
 			}
 		}
 		
-		// Apply 10% opacity white noise to each RGB channel separately
+		// Apply 40% intensity noise to each RGB channel separately (add or subtract)
 		for (let i = 0; i < newData.length; i += 4) {
-			// R channel noise (can add or subtract)
-			const noiseR = (Math.random() * 2 - 1) * 255 * 0.1;
+			// R channel noise (±40%)
+			const noiseR = (Math.random() - 0.5) * 2 * 255 * 0.4;
 			newData[i] = Math.max(0, Math.min(255, newData[i] + noiseR));
 			
-			// G channel noise (can add or subtract)
-			const noiseG = (Math.random() * 2 - 1) * 255 * 0.1;
+			// G channel noise (±40%)
+			const noiseG = (Math.random() - 0.5) * 2 * 255 * 0.4;
 			newData[i + 1] = Math.max(0, Math.min(255, newData[i + 1] + noiseG));
 			
-			// B channel noise (can add or subtract)
-			const noiseB = (Math.random() * 2 - 1) * 255 * 0.1;
+			// B channel noise (±40%)
+			const noiseB = (Math.random() - 0.5) * 2 * 255 * 0.4;
 			newData[i + 2] = Math.max(0, Math.min(255, newData[i + 2] + noiseB));
 		}
 		

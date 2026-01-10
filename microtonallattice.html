@@ -122,6 +122,7 @@
         <div class="control-group">
             <button onclick="updateLattice()">Update Lattice</button>
             <button onclick="resetToDefaults()">Reset to 5-limit JI</button>
+            <button onclick="toggleOctaveReduction()">Reduce to Octave</button>
         </div>
         
         <div class="preset-buttons">
@@ -153,6 +154,25 @@
         let yRatio = 5/4; // Store exact ratio
         let hoveredNode = null;
         let audioContext = null;
+        let isOctaveReduced = false; // Track if we're in octave-reduced mode
+        
+        // Keyboard to lattice offset mapping
+        const keyMap = {
+            'd': [0, 0],   // touching
+            'e': [0, 1],   // y up
+            'c': [0, -1],  // y down
+            'f': [1, 0],   // x up
+            's': [-1, 0],  // x down
+            'r': [1, 1],   // x+y
+            'z': [-2, -1], // -2x-y
+            '7': [4, 2],   // 4x+2y
+            
+            // Grid mapping (keyboard layout as lattice)
+            '1': [-2, 2], '2': [-1, 2], '3': [0, 2], '4': [1, 2], '5': [2, 2], '6': [3, 2],
+            'q': [-2, 1], 'w': [-1, 1], 't': [2, 1], 'y': [3, 1], 'u': [4, 1],
+            'a': [-2, 0], 'g': [2, 0], 'h': [3, 0], 'j': [4, 0],
+            'x': [-1, -1], 'v': [1, -1], 'b': [2, -1], 'n': [3, -1], 'm': [4, -1]
+        };
         
         // Presets
         const presets = {
@@ -226,15 +246,41 @@
             return allPrimes.every(p => allowedPrimes.has(p));
         }
         
-        function ratioToFraction(ratio, maxDenom = 1000) {
+        function gcd(a, b) {
+            return b === 0 ? a : gcd(b, a % b);
+        }
+        
+        function findApproxFraction(ratio, maxDenom = 1000) {
+            // Find best fraction approximation without prime restrictions
+            for (let denom = 1; denom <= maxDenom; denom++) {
+                const numer = Math.round(ratio * denom);
+                if (Math.abs(numer / denom - ratio) < 1e-9) {
+                    const g = gcd(numer, denom);
+                    return { numer: numer / g, denom: denom / g };
+                }
+            }
+            return null;
+        }
+        
+        function ratioToFraction(ratio, distance, maxDenom = 100000) {
             const allowedPrimes = getUsedPrimes();
             
             // Try to find a fraction using only the allowed primes
             for (let denom = 1; denom <= maxDenom; denom++) {
                 const numer = Math.round(ratio * denom);
-                if (Math.abs(numer / denom - ratio) < 1e-10) {
-                    if (onlyUsesAllowedPrimes(numer, denom, allowedPrimes)) {
-                        return { numer, denom };
+                if (Math.abs(numer / denom - ratio) < 1e-9) {
+                    // Only reduce with GCD if distance < 5
+                    let finalNumer = numer;
+                    let finalDenom = denom;
+                    
+                    if (distance < 5) {
+                        const g = gcd(numer, denom);
+                        finalNumer = numer / g;
+                        finalDenom = denom / g;
+                    }
+                    
+                    if (onlyUsesAllowedPrimes(finalNumer, finalDenom, allowedPrimes)) {
+                        return { numer: finalNumer, denom: finalDenom };
                     }
                 }
             }
@@ -267,8 +313,11 @@
         function playTone(cents, duration = 0.5) {
             initAudioContext();
             
+            // Apply octave reduction if enabled
+            const playbackCents = isOctaveReduced ? ((cents % 1200) + 1200) % 1200 : cents;
+            
             const baseFreq = 261.63; // Middle C
-            const frequency = baseFreq * centsToRatio(cents);
+            const frequency = baseFreq * centsToRatio(playbackCents);
             
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
@@ -338,13 +387,14 @@
                     const cents = getCentsForNode(x, y);
                     const octaveReduced = ((cents % 1200) + 1200) % 1200;
                     const ratio = centsToRatio(cents);
+                    const distance = Math.sqrt(x * x + y * y);
                     
                     // Color based on position
                     let hue = octaveReduced / 1200 * 360;
                     let saturation = 70;
                     let lightness = 50;
                     
-                    const squareSize = 32;
+                    const squareSize = 50;
                     
                     // Highlight origin
                     if (x === 0 && y === 0) {
@@ -369,27 +419,42 @@
                     
                     // Draw text
                     ctx.fillStyle = '#000';
-                    ctx.font = 'bold 9px Courier New';
+                    ctx.font = 'bold 8px Courier New';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     
                     // Format ratio
                     let ratioText;
-                    const frac = ratioToFraction(ratio);
+                    const frac = ratioToFraction(ratio, distance);
+                    
                     if (frac && frac.denom === 1) {
                         ratioText = `${frac.numer}F`;
                     } else if (frac) {
                         ratioText = `${frac.numer}/${frac.denom}F`;
                     } else {
-                        ratioText = `${ratio.toFixed(2)}F`;
+                        // Show decimal when no valid fraction with allowed primes exists
+                        ratioText = `${ratio.toFixed(3)}F`;
                     }
                     
-                    // Draw ratio on top line
-                    ctx.fillText(ratioText, pos.x, pos.y - 6);
+                    // Check if we need to split the fraction across lines
+                    const needsMultiLine = frac && (
+                        (frac.numer.toString().length >= 4) ||
+                        (frac.numer.toString().length >= 3 && frac.denom.toString().length >= 3)
+                    );
+                    
+                    if (needsMultiLine) {
+                        // Draw numerator on top line
+                        ctx.fillText(`${frac.numer}`, pos.x, pos.y - 8);
+                        // Draw /denominator on bottom line
+                        ctx.fillText(`/${frac.denom}F`, pos.x, pos.y + 2);
+                    } else {
+                        // Draw ratio on single top line
+                        ctx.fillText(ratioText, pos.x, pos.y - 8);
+                    }
                     
                     // Draw cents on bottom line
-                    ctx.font = '8px Courier New';
-                    ctx.fillText(`${Math.round(octaveReduced)}¢`, pos.x, pos.y + 6);
+                    ctx.font = '7px Courier New';
+                    ctx.fillText(`${Math.round(octaveReduced)}¢`, pos.x, pos.y + 12);
                 }
             }
         }
@@ -424,7 +489,8 @@
                     <strong>Ratio from C:</strong> ${ratio.toFixed(6)}:1
                 `;
             } else {
-                info.innerHTML = 'Hover over nodes to see pitch information. Click to hear the tone.';
+                info.innerHTML = 'Hover over nodes to see pitch information. Click to hear the tone.<br>' +
+                    '<strong>Keys:</strong> Press letter/number keys to play notes relative to hovered position (e.g., D=current, E=+Y, F=+X, R=+X+Y, 7=+4X+2Y)';
             }
         }
         
@@ -478,6 +544,47 @@
             info.innerHTML = `Preset loaded: <strong>${preset.name}</strong>`;
             setTimeout(() => updateInfo(hoveredNode), 2000);
         }
+        
+        function toggleOctaveReduction() {
+            isOctaveReduced = !isOctaveReduced;
+            const button = document.querySelector('button[onclick="toggleOctaveReduction()"]');
+            button.textContent = isOctaveReduced ? 'Unreduce from Octave' : 'Reduce to Octave';
+            
+            const info = document.getElementById('info');
+            info.innerHTML = `<strong>${isOctaveReduced ? 'Octave reduction enabled' : 'Octave reduction disabled'}</strong> - All notes will now play ${isOctaveReduced ? 'within one octave' : 'at their full pitch'}`;
+            setTimeout(() => updateInfo(hoveredNode), 2000);
+        }
+        
+        // Keyboard controls - play notes relative to hovered position
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            
+            // Check if this key is mapped
+            if (keyMap.hasOwnProperty(key)) {
+                const [offsetX, offsetY] = keyMap[key];
+                
+                // Calculate note position relative to hovered node (or origin if no hover)
+                const baseX = hoveredNode ? hoveredNode.x : 0;
+                const baseY = hoveredNode ? hoveredNode.y : 0;
+                const targetX = baseX + offsetX;
+                const targetY = baseY + offsetY;
+                
+                // Check if target is within grid
+                if (targetX >= -gridSize && targetX <= gridSize && 
+                    targetY >= -gridSize && targetY <= gridSize) {
+                    const cents = getCentsForNode(targetX, targetY);
+                    playTone(cents);
+                    
+                    // Show info about the played note
+                    const info = document.getElementById('info');
+                    const octaveReduced = ((cents % 1200) + 1200) % 1200;
+                    const ratio = centsToRatio(cents);
+                    info.innerHTML = `<strong>Played:</strong> (${targetX}, ${targetY}) = ${cents.toFixed(3)}¢ ` +
+                        `(${octaveReduced.toFixed(3)}¢ octave-reduced) | Ratio: ${ratio.toFixed(6)}:1`;
+                    setTimeout(() => updateInfo(hoveredNode), 2000);
+                }
+            }
+        });
         
         // Initialize
         drawLattice();

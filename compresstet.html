@@ -43,6 +43,12 @@
             color: #e0e0e0;
             box-sizing: border-box;
         }
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #4a9eff;
+        }
         input[type="number"]:focus,
         input[type="file"]:focus {
             outline: none;
@@ -81,6 +87,26 @@
         }
         video.active {
             display: block;
+        }
+        .video-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .video-wrapper {
+            display: none;
+        }
+        .video-wrapper.active {
+            display: block;
+        }
+        .video-wrapper label {
+            font-size: 14px;
+            color: #4a9eff;
+            margin-bottom: 5px;
+        }
+        #colorVideoCanvas {
+            display: none;
         }
         .spectrogram-container {
             margin: 20px 0;
@@ -147,7 +173,17 @@
             <input type="file" id="videoInput" accept="video/*">
         </div>
 
-        <video id="videoPlayer" controls></video>
+        <div class="video-container">
+            <div class="video-wrapper" id="originalVideoWrapper">
+                <label>Original Video:</label>
+                <video id="videoPlayer" controls></video>
+            </div>
+            <div class="video-wrapper" id="colorVideoWrapper">
+                <label>Color-Transformed Video (Hue = Pitch):</label>
+                <video id="colorVideo" controls></video>
+            </div>
+        </div>
+        <canvas id="colorVideoCanvas"></canvas>
 
         <div class="spectrogram-container" id="spectrogramContainer">
             <div class="spectrogram-label">Original Spectrogram:</div>
@@ -165,6 +201,20 @@
             <label for="scaleMaker">Scale Maker (comma-separated cents, optional):</label>
             <input type="text" id="scaleMaker" placeholder="e.g., 0,100,200,300,400,500,600,700,800,900,1000,1100,1200" style="width: 100%; padding: 10px; border: 2px solid #444; border-radius: 5px; font-size: 16px; background: #1a1a1a; color: #e0e0e0; box-sizing: border-box;">
             <small style="color: #888; margin-top: 5px; display: block;">Leave empty to use EDO. Enter scale steps in cents (e.g., "0,204,408,612,816,1020,1224" for Pythagorean JI whole tones)</small>
+        </div>
+
+        <div class="input-group">
+            <label>Interval Mapping (optional):</label>
+            <div id="intervalMapContainer">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <small style="color: #888;">If cents &gt; than</small>
+                    <small style="color: #888;">and cents &lt; than</small>
+                    <small style="color: #888;">turn to (cents)</small>
+                </div>
+                <div id="intervalMapRows"></div>
+                <button type="button" id="addIntervalRow" style="width: auto; padding: 8px 15px; margin-top: 10px; background: #555; font-size: 14px;">+ Add Interval</button>
+            </div>
+            <small style="color: #888; margin-top: 5px; display: block;">Define interval ranges to map to specific cents values. Ranges are checked before scale/EDO mapping.</small>
         </div>
 
         <div class="edo-inputs">
@@ -186,6 +236,22 @@
             </select>
         </div>
 
+        <div class="input-group" style="display: flex; align-items: center; gap: 10px;">
+            <input type="checkbox" id="audioOnly" style="width: auto; margin: 0;">
+            <label for="audioOnly" style="margin: 0; cursor: pointer;">Audio only (skip color video processing)</label>
+        </div>
+
+        <div class="input-group">
+            <label for="frameSkip">Video Frame Processing (higher = faster):</label>
+            <select id="frameSkip" style="width: 100%; padding: 10px; border: 2px solid #444; border-radius: 5px; font-size: 16px; background: #1a1a1a; color: #e0e0e0;">
+                <option value="1">Process every frame (slowest, best quality)</option>
+                <option value="2" selected>Process every 2nd frame (2x faster)</option>
+                <option value="3">Process every 3rd frame (3x faster)</option>
+                <option value="5">Process every 5th frame (5x faster)</option>
+                <option value="10">Process every 10th frame (10x faster)</option>
+            </select>
+        </div>
+
         <button id="processBtn" disabled>Process Audio</button>
 
         <div id="status" class="status"></div>
@@ -195,6 +261,7 @@
             <p><strong>How it works:</strong> This tool uses FFT with logarithmic frequency scaling to better match musical perception. It detects clusters of nearby frequencies (within 20 cents) using exponential weighting, then applies the selected mode.</p>
             <p><strong>Initial Hz:</strong> The reference frequency (typically A4 = 440 Hz).</p>
             <p><strong>Scale Maker:</strong> Optional custom scale in cents. Enter comma-separated values (e.g., "0,100,200,300,400,500,600,700,800,900,1000,1100,1200" for 12-EDO). Leave empty to use standard EDO. The scale automatically repeats each octave.</p>
+            <p><strong>Interval Mapping:</strong> Optional conditional mapping. For each row, if a note falls within the range (greater than X cents AND less than Y cents), it will be transformed to Z cents. Mappings are applied before EDO/scale conversion. Works within each octave (0-1200 cents). Useful for custom pitch corrections or microtuning adjustments.</p>
             <p><strong>From EDO:</strong> Source equal temperament (default 12-EDO).</p>
             <p><strong>To EDO:</strong> Target equal temperament (e.g., 19-EDO, 24-EDO, 31-EDO, etc.). Ignored if using custom scale.</p>
             <p><strong>Modes:</strong></p>
@@ -220,6 +287,195 @@
 
         let audioContext;
         let videoFile;
+        let intervalMapRows = [];
+
+        // Interval mapping row management
+        const intervalMapRowsContainer = document.getElementById('intervalMapRows');
+        const addIntervalRowBtn = document.getElementById('addIntervalRow');
+
+        function createIntervalRow() {
+            const rowId = Date.now();
+            const rowDiv = document.createElement('div');
+            rowDiv.id = `interval-row-${rowId}`;
+            rowDiv.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 8px; align-items: center;';
+            
+            const greaterInput = document.createElement('input');
+            greaterInput.type = 'number';
+            greaterInput.step = '0.1';
+            greaterInput.placeholder = 'e.g., 0';
+            greaterInput.style.cssText = 'padding: 8px; border: 2px solid #444; border-radius: 5px; background: #1a1a1a; color: #e0e0e0;';
+            greaterInput.className = 'interval-greater';
+            
+            const lessInput = document.createElement('input');
+            lessInput.type = 'number';
+            lessInput.step = '0.1';
+            lessInput.placeholder = 'e.g., 100';
+            lessInput.style.cssText = 'padding: 8px; border: 2px solid #444; border-radius: 5px; background: #1a1a1a; color: #e0e0e0;';
+            lessInput.className = 'interval-less';
+            
+            const turnToInput = document.createElement('input');
+            turnToInput.type = 'number';
+            turnToInput.step = '0.1';
+            turnToInput.placeholder = 'e.g., 50';
+            turnToInput.style.cssText = 'padding: 8px; border: 2px solid #444; border-radius: 5px; background: #1a1a1a; color: #e0e0e0;';
+            turnToInput.className = 'interval-turnto';
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = '×';
+            removeBtn.type = 'button';
+            removeBtn.style.cssText = 'width: 40px; padding: 8px; background: #d32f2f; color: white; font-size: 18px; font-weight: bold;';
+            removeBtn.onclick = () => {
+                rowDiv.remove();
+                intervalMapRows = intervalMapRows.filter(r => r.id !== rowId);
+            };
+            
+            rowDiv.appendChild(greaterInput);
+            rowDiv.appendChild(lessInput);
+            rowDiv.appendChild(turnToInput);
+            rowDiv.appendChild(removeBtn);
+            
+            intervalMapRowsContainer.appendChild(rowDiv);
+            intervalMapRows.push({ id: rowId, element: rowDiv });
+        }
+
+        addIntervalRowBtn.addEventListener('click', createIntervalRow);
+
+        // Initialize with one row
+        createIntervalRow();
+
+        // Parse interval mappings from UI
+        function getIntervalMappings() {
+            const mappings = [];
+            const rows = intervalMapRowsContainer.querySelectorAll('[id^="interval-row-"]');
+            
+            rows.forEach(row => {
+                const greaterInput = row.querySelector('.interval-greater');
+                const lessInput = row.querySelector('.interval-less');
+                const turnToInput = row.querySelector('.interval-turnto');
+                
+                const greaterThan = parseFloat(greaterInput.value);
+                const lessThan = parseFloat(lessInput.value);
+                const turnTo = parseFloat(turnToInput.value);
+                
+                if (!isNaN(greaterThan) && !isNaN(lessThan) && !isNaN(turnTo)) {
+                    mappings.push({
+                        greaterThan: greaterThan,
+                        lessThan: lessThan,
+                        turnTo: turnTo
+                    });
+                }
+            });
+            
+            // Sort by greaterThan value for proper range checking
+            mappings.sort((a, b) => a.greaterThan - b.greaterThan);
+            
+            return mappings;
+        }
+
+        // Apply interval mapping to cents value
+        function applyIntervalMapping(centsFromRef, intervalMappings) {
+            // Normalize cents to be within an octave (0-1200)
+            const octave = Math.floor(centsFromRef / 1200);
+            const centsInOctave = centsFromRef - (octave * 1200);
+            
+            // Check each interval mapping
+            for (const mapping of intervalMappings) {
+                if (centsInOctave > mapping.greaterThan && centsInOctave < mapping.lessThan) {
+                    // Found a matching range, return the target value (preserving octave)
+                    return octave * 1200 + mapping.turnTo;
+                }
+            }
+            
+            // No mapping found, return original value
+            return centsFromRef;
+        }
+
+        // RGB to HSV conversion
+        function rgbToHsv(r, g, b) {
+            r /= 255;
+            g /= 255;
+            b /= 255;
+            
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const diff = max - min;
+            
+            let h = 0;
+            const s = max === 0 ? 0 : diff / max;
+            const v = max;
+            
+            if (diff !== 0) {
+                if (max === r) {
+                    h = ((g - b) / diff + (g < b ? 6 : 0)) / 6;
+                } else if (max === g) {
+                    h = ((b - r) / diff + 2) / 6;
+                } else {
+                    h = ((r - g) / diff + 4) / 6;
+                }
+            }
+            
+            return { h: h * 360, s: s, v: v };
+        }
+
+        // HSV to RGB conversion
+        function hsvToRgb(h, s, v) {
+            h = h / 360;
+            
+            const i = Math.floor(h * 6);
+            const f = h * 6 - i;
+            const p = v * (1 - s);
+            const q = v * (1 - f * s);
+            const t = v * (1 - (1 - f) * s);
+            
+            let r, g, b;
+            switch (i % 6) {
+                case 0: r = v; g = t; b = p; break;
+                case 1: r = q; g = v; b = p; break;
+                case 2: r = p; g = v; b = t; break;
+                case 3: r = p; g = q; b = v; break;
+                case 4: r = t; g = p; b = v; break;
+                case 5: r = v; g = p; b = q; break;
+            }
+            
+            return {
+                r: Math.round(r * 255),
+                g: Math.round(g * 255),
+                b: Math.round(b * 255)
+            };
+        }
+
+        // Transform cents value using the same logic as audio processing
+        function transformCents(cents, intervalMappings, customScale, fromEdo, toEdo, initialHz, mode) {
+            const inValidRange = (fromEdo >= 10 && fromEdo <= 14 && toEdo >= 10 && toEdo <= 14);
+            
+            // Convert cents to frequency
+            let freq = initialHz * Math.pow(2, cents / 1200);
+            
+            // Apply interval mapping if any
+            let processedFreq = freq;
+            if (intervalMappings.length > 0) {
+                const centsFromRef = 1200 * Math.log2(freq / initialHz);
+                const mappedCents = applyIntervalMapping(centsFromRef, intervalMappings);
+                processedFreq = initialHz * Math.pow(2, mappedCents / 1200);
+            }
+            
+            let targetFreq;
+            if (mode === 'approximate' || !inValidRange) {
+                if (customScale) {
+                    targetFreq = findNearestScalePitch(processedFreq, initialHz, customScale);
+                } else {
+                    const targetStep = freqToEdoStep(processedFreq, initialHz, toEdo);
+                    targetFreq = edoStepToFreq(targetStep, initialHz, toEdo);
+                }
+            } else if (mode === 'scale') {
+                const semitones = 12 * Math.log2(processedFreq / initialHz);
+                const scaledSemitones = semitones * (fromEdo / toEdo);
+                targetFreq = initialHz * Math.pow(2, scaledSemitones / 12);
+            }
+            
+            // Convert back to cents
+            return 1200 * Math.log2(targetFreq / initialHz);
+        }
 
         // Initialize Audio Context
         function initAudioContext() {
@@ -235,7 +491,7 @@
                 videoFile = file;
                 const url = URL.createObjectURL(file);
                 videoPlayer.src = url;
-                videoPlayer.classList.add('active');
+                document.getElementById('originalVideoWrapper').classList.add('active');
                 processBtn.disabled = false;
                 showStatus('Video loaded. Ready to process.', 'success');
             }
@@ -348,6 +604,9 @@
                 const fromEdo = parseInt(fromTetInput.value);
                 const toEdo = parseInt(toTetInput.value);
                 const initialHz = parseFloat(initialHzInput.value);
+                
+                // Get interval mappings
+                const intervalMappings = getIntervalMappings();
                 
                 // Parse custom scale if provided
                 let customScale = null;
@@ -577,6 +836,14 @@
                             const mode = modeSelect.value;
                             let targetFreq;
                             
+                            // First, apply interval mapping if any mappings are defined
+                            let processedFreq = centerFreq;
+                            if (intervalMappings.length > 0) {
+                                const centsFromRef = 1200 * Math.log2(centerFreq / initialHz);
+                                const mappedCents = applyIntervalMapping(centsFromRef, intervalMappings);
+                                processedFreq = initialHz * Math.pow(2, mappedCents / 1200);
+                            }
+                            
                             // Check if both EDOs are in 10-14 range for scale mode
                             const inValidRange = (fromEdo >= 10 && fromEdo <= 14 && toEdo >= 10 && toEdo <= 14);
                             
@@ -585,17 +852,17 @@
                                 // Also used when outside 10-14 EDO range
                                 if (customScale) {
                                     // Use custom scale
-                                    targetFreq = findNearestScalePitch(centerFreq, initialHz, customScale);
+                                    targetFreq = findNearestScalePitch(processedFreq, initialHz, customScale);
                                 } else {
                                     // Use EDO
-                                    const targetStep = freqToEdoStep(centerFreq, initialHz, toEdo);
+                                    const targetStep = freqToEdoStep(processedFreq, initialHz, toEdo);
                                     targetFreq = edoStepToFreq(targetStep, initialHz, toEdo);
                                 }
                             } else if (mode === 'scale') {
                                 // Scale mode: Transform 12x semitones to (fromEdo/toEdo) * 12x semitones
                                 // Only for 10-14 EDO
                                 // Convert frequency to semitones from reference
-                                const semitones = 12 * Math.log2(centerFreq / initialHz);
+                                const semitones = 12 * Math.log2(processedFreq / initialHz);
                                 // Scale by ratio fromEdo/toEdo
                                 const scaledSemitones = semitones * (fromEdo / toEdo);
                                 // Convert back to frequency
@@ -686,6 +953,21 @@
                 statusDiv.appendChild(document.createTextNode('Conversion complete! '));
                 statusDiv.appendChild(a);
                 statusDiv.className = 'status active success';
+
+                // Process color video if not audio-only
+                const audioOnly = document.getElementById('audioOnly').checked;
+                if (!audioOnly) {
+                    statusDiv.appendChild(document.createElement('br'));
+                    statusDiv.appendChild(document.createTextNode('Processing color-transformed video...'));
+                    statusDiv.className = 'status active processing';
+                    await processColorVideo(intervalMappings, customScale, fromEdo, toEdo, initialHz, modeSelect.value);
+                } else {
+                    showStatus('Audio processing complete!', 'success');
+                    statusDiv.innerHTML = '';
+                    statusDiv.appendChild(document.createTextNode('Audio processing complete! '));
+                    statusDiv.appendChild(a);
+                    statusDiv.className = 'status active success';
+                }
 
                 processBtn.disabled = false;
 
@@ -878,6 +1160,161 @@
             function setUint32(data) {
                 view.setUint32(offset, data, true);
                 offset += 4;
+            }
+        }
+
+        // Process color video where hue represents pitch
+        async function processColorVideo(intervalMappings, customScale, fromEdo, toEdo, initialHz, mode) {
+            try {
+                const canvas = document.getElementById('colorVideoCanvas');
+                const ctx = canvas.getContext('2d');
+                const colorVideoElement = document.getElementById('colorVideo');
+                
+                // Create a temporary video element for reading frames
+                const tempVideo = document.createElement('video');
+                tempVideo.src = videoPlayer.src;
+                tempVideo.muted = true;
+                
+                await new Promise((resolve) => {
+                    tempVideo.onloadedmetadata = resolve;
+                });
+                
+                canvas.width = tempVideo.videoWidth;
+                canvas.height = tempVideo.videoHeight;
+                
+                const fps = 30;
+                const duration = tempVideo.duration;
+                const frameSkip = parseInt(document.getElementById('frameSkip').value);
+                const frameInterval = (1/fps) * frameSkip;
+                const totalFramesToProcess = Math.floor(duration / frameInterval);
+                const frames = [];
+                
+                showStatus(`Processing video frames (${totalFramesToProcess} frames, skipping ${frameSkip-1} of every ${frameSkip})...`, 'processing');
+                
+                // Process frames with skipping
+                for (let time = 0; time < duration; time += frameInterval) {
+                    tempVideo.currentTime = time;
+                    await new Promise(resolve => {
+                        tempVideo.onseeked = resolve;
+                    });
+                    
+                    // Draw current frame
+                    ctx.drawImage(tempVideo, 0, 0);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    
+                    // Transform each pixel's hue
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+                        
+                        // Convert to HSV
+                        const hsv = rgbToHsv(r, g, b);
+                        
+                        // Hue represents pitch: 360° = 1200 cents, so 1 cent = 0.3°
+                        const inputCents = (hsv.h / 0.3) % 1200;
+                        
+                        // Transform cents using the same logic as audio
+                        const outputCents = transformCents(inputCents, intervalMappings, customScale, fromEdo, toEdo, initialHz, mode);
+                        
+                        // Convert back to hue
+                        const outputHue = (outputCents % 1200) * 0.3;
+                        
+                        // Convert back to RGB with transformed hue
+                        const rgb = hsvToRgb(outputHue, hsv.s, hsv.v);
+                        
+                        data[i] = rgb.r;
+                        data[i + 1] = rgb.g;
+                        data[i + 2] = rgb.b;
+                    }
+                    
+                    ctx.putImageData(imageData, 0, 0);
+                    
+                    // Duplicate frame based on skip rate to maintain timing
+                    for (let skip = 0; skip < frameSkip; skip++) {
+                        frames.push(canvas.toDataURL('image/jpeg', 0.9));
+                    }
+                    
+                    if (frames.length % 30 === 0) {
+                        showStatus(`Processed ${frames.length / frameSkip} unique frames (${frames.length} total with duplication)...`, 'processing');
+                    }
+                }
+                
+                showStatus('Encoding video...', 'processing');
+                
+                // Create video from frames using MediaRecorder
+                const stream = canvas.captureStream(fps);
+                const mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm',
+                    videoBitsPerSecond: 5000000
+                });
+                
+                const chunks = [];
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) {
+                        chunks.push(e.data);
+                    }
+                };
+                
+                await new Promise((resolve) => {
+                    mediaRecorder.onstop = resolve;
+                    mediaRecorder.start();
+                    
+                    // Play through frames at original fps to maintain duration
+                    let frameIndex = 0;
+                    const playInterval = setInterval(() => {
+                        if (frameIndex >= frames.length) {
+                            clearInterval(playInterval);
+                            mediaRecorder.stop();
+                            return;
+                        }
+                        
+                        const img = new Image();
+                        img.onload = () => {
+                            ctx.drawImage(img, 0, 0);
+                        };
+                        img.src = frames[frameIndex];
+                        frameIndex++;
+                    }, 1000 / fps);
+                });
+                
+                const videoBlob = new Blob(chunks, { type: 'video/webm' });
+                const videoUrl = URL.createObjectURL(videoBlob);
+                
+                // Wait for video to load before showing
+                colorVideoElement.src = videoUrl;
+                await new Promise(resolve => {
+                    colorVideoElement.onloadeddata = resolve;
+                });
+                
+                document.getElementById('colorVideoWrapper').classList.add('active');
+                
+                // Create download link
+                const downloadLink = document.createElement('a');
+                downloadLink.href = videoUrl;
+                downloadLink.download = 'color_transformed_video.webm';
+                downloadLink.textContent = 'Download Color Video';
+                downloadLink.style.display = 'block';
+                downloadLink.style.marginTop = '5px';
+                downloadLink.style.color = '#4a9eff';
+                downloadLink.style.textDecoration = 'none';
+                downloadLink.style.fontWeight = 'bold';
+                
+                // Update status with both download links
+                const audioLink = statusDiv.querySelector('a');
+                statusDiv.innerHTML = '';
+                statusDiv.appendChild(document.createTextNode('All processing complete! '));
+                if (audioLink) {
+                    statusDiv.appendChild(audioLink);
+                    statusDiv.appendChild(document.createTextNode(' | '));
+                }
+                statusDiv.appendChild(downloadLink);
+                statusDiv.className = 'status active success';
+                
+            } catch (error) {
+                console.error('Error processing color video:', error);
+                showStatus(`Video processing error: ${error.message}`, 'error');
             }
         }
 
