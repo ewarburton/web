@@ -120,6 +120,13 @@
         </div>
         
         <div class="control-group">
+            <label for="gridSize">Grid Size:</label>
+            <input type="number" id="gridX" value="9" min="1" max="20" style="width: 60px;"> x
+            <input type="number" id="gridY" value="9" min="1" max="20" style="width: 60px;">
+            <span style="font-size: 12px;">(X by Y from center)</span>
+        </div>
+        
+        <div class="control-group">
             <button onclick="updateLattice()">Update Lattice</button>
             <button onclick="resetToDefaults()">Reset to 5-limit JI</button>
             <button onclick="toggleOctaveReduction()">Reduce to Octave</button>
@@ -144,7 +151,8 @@
     <script>
         const canvas = document.getElementById('lattice');
         const ctx = canvas.getContext('2d');
-        const gridSize = 9; // 9 units from center in each direction
+        let gridSizeX = 9; // X units from center
+        let gridSizeY = 9; // Y units from center
         const nodeRadius = 8;
         const spacing = 45;
         
@@ -262,29 +270,49 @@
             return null;
         }
         
-        function ratioToFraction(ratio, distance, maxDenom = 100000) {
-            const allowedPrimes = getUsedPrimes();
+        function getFractionForNode(x, y, distance) {
+            // Get base fractions for x and y axes
+            const xFrac = ratioToSimpleFraction(xRatio);
+            const yFrac = ratioToSimpleFraction(yRatio);
             
-            // Try to find a fraction using only the allowed primes
-            for (let denom = 1; denom <= maxDenom; denom++) {
-                const numer = Math.round(ratio * denom);
-                if (Math.abs(numer / denom - ratio) < 1e-9) {
-                    // Only reduce with GCD if distance < 5
-                    let finalNumer = numer;
-                    let finalDenom = denom;
-                    
-                    if (distance < 5) {
-                        const g = gcd(numer, denom);
-                        finalNumer = numer / g;
-                        finalDenom = denom / g;
-                    }
-                    
-                    if (onlyUsesAllowedPrimes(finalNumer, finalDenom, allowedPrimes)) {
-                        return { numer: finalNumer, denom: finalDenom };
-                    }
-                }
+            if (!xFrac || !yFrac) return null;
+            
+            // Calculate numerator and denominator separately
+            // ratio = (xNumer/xDenom)^x * (yNumer/yDenom)^y
+            // Start with 1/1
+            let numer = 1;
+            let denom = 1;
+            
+            // Handle x exponent
+            if (x > 0) {
+                numer *= Math.pow(xFrac.numer, x);
+                denom *= Math.pow(xFrac.denom, x);
+            } else if (x < 0) {
+                numer *= Math.pow(xFrac.denom, -x);
+                denom *= Math.pow(xFrac.numer, -x);
             }
-            return null;
+            
+            // Handle y exponent
+            if (y > 0) {
+                numer *= Math.pow(yFrac.numer, y);
+                denom *= Math.pow(yFrac.denom, y);
+            } else if (y < 0) {
+                numer *= Math.pow(yFrac.denom, -y);
+                denom *= Math.pow(yFrac.numer, -y);
+            }
+            
+            // Round to handle floating point errors
+            numer = Math.round(numer);
+            denom = Math.round(denom);
+            
+            // Only reduce with GCD if distance < 5
+            if (distance < 5) {
+                const g = gcd(numer, denom);
+                numer /= g;
+                denom /= g;
+            }
+            
+            return { numer, denom };
         }
         
         function parseInput(input) {
@@ -357,12 +385,12 @@
             ctx.strokeStyle = '#222';
             ctx.lineWidth = 1;
             
-            for (let x = -gridSize; x <= gridSize; x++) {
-                for (let y = -gridSize; y <= gridSize; y++) {
+            for (let x = -gridSizeX; x <= gridSizeX; x++) {
+                for (let y = -gridSizeY; y <= gridSizeY; y++) {
                     const pos = getScreenPos(x, y);
                     
                     // Draw connections
-                    if (x < gridSize) {
+                    if (x < gridSizeX) {
                         const rightPos = getScreenPos(x + 1, y);
                         ctx.beginPath();
                         ctx.moveTo(pos.x, pos.y);
@@ -370,7 +398,7 @@
                         ctx.stroke();
                     }
                     
-                    if (y < gridSize) {
+                    if (y < gridSizeY) {
                         const upPos = getScreenPos(x, y + 1);
                         ctx.beginPath();
                         ctx.moveTo(pos.x, pos.y);
@@ -381,8 +409,8 @@
             }
             
             // Draw nodes
-            for (let x = -gridSize; x <= gridSize; x++) {
-                for (let y = -gridSize; y <= gridSize; y++) {
+            for (let x = -gridSizeX; x <= gridSizeX; x++) {
+                for (let y = -gridSizeY; y <= gridSizeY; y++) {
                     const pos = getScreenPos(x, y);
                     const cents = getCentsForNode(x, y);
                     const octaveReduced = ((cents % 1200) + 1200) % 1200;
@@ -425,14 +453,14 @@
                     
                     // Format ratio
                     let ratioText;
-                    const frac = ratioToFraction(ratio, distance);
+                    const frac = getFractionForNode(x, y, distance);
                     
                     if (frac && frac.denom === 1) {
                         ratioText = `${frac.numer}F`;
                     } else if (frac) {
                         ratioText = `${frac.numer}/${frac.denom}F`;
                     } else {
-                        // Show decimal when no valid fraction with allowed primes exists
+                        // Show decimal when no valid fraction exists
                         ratioText = `${ratio.toFixed(3)}F`;
                     }
                     
@@ -460,8 +488,8 @@
         }
         
         function getNodeAtPosition(mouseX, mouseY) {
-            for (let x = -gridSize; x <= gridSize; x++) {
-                for (let y = -gridSize; y <= gridSize; y++) {
+            for (let x = -gridSizeX; x <= gridSizeX; x++) {
+                for (let y = -gridSizeY; y <= gridSizeY; y++) {
                     const pos = getScreenPos(x, y);
                     const dx = mouseX - pos.x;
                     const dy = mouseY - pos.y;
@@ -525,6 +553,10 @@
             xRatio = xInput.ratio;
             yRatio = yInput.ratio;
             
+            // Update grid size
+            gridSizeX = parseInt(document.getElementById('gridX').value) || 9;
+            gridSizeY = parseInt(document.getElementById('gridY').value) || 9;
+            
             drawLattice();
         }
         
@@ -570,8 +602,8 @@
                 const targetY = baseY + offsetY;
                 
                 // Check if target is within grid
-                if (targetX >= -gridSize && targetX <= gridSize && 
-                    targetY >= -gridSize && targetY <= gridSize) {
+                if (targetX >= -gridSizeX && targetX <= gridSizeX && 
+                    targetY >= -gridSizeY && targetY <= gridSizeY) {
                     const cents = getCentsForNode(targetX, targetY);
                     playTone(cents);
                     
