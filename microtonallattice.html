@@ -513,6 +513,29 @@
                     let saturation = 70;
                     let lightness = 50;
                     
+                    // For EDT/EDP, adjust color based on tritave/pentave and octave position
+                    const divisionTypeIndex = parseInt(document.getElementById('divisionType').value);
+                    if (divisionTypeIndex > 0) { // EDT (1) or EDP (2)
+                        const divisionBases = [2, 3, 5];
+                        const divisionBase = divisionBases[divisionTypeIndex];
+                        const divisionCents = 1200 * Math.log2(divisionBase);
+                        
+                        // Force hue to wrap at tritave/pentave boundary when reduced to non-octave
+                        if (isOctaveReduced) {
+                            const reduced = ((cents % divisionCents) + divisionCents) % divisionCents;
+                            hue = reduced / divisionCents * 360;
+                        }
+                        
+                        // Adjust lightness based on octave position (for separate octave reduction)
+                        if (isOctaveReducedSeparate) {
+                            const octaveNumber = Math.floor(cents / 1200);
+                            // Each octave above has 10% less value (darker)
+                            lightness = 50 - (octaveNumber * 5); // 10% of 50 base = 5
+                            // Clamp lightness to reasonable bounds
+                            lightness = Math.max(15, Math.min(85, lightness));
+                        }
+                    }
+                    
                     const squareSize = 50;
                     
                     // Highlight origin
@@ -685,6 +708,9 @@
             const info = document.getElementById('info');
             info.innerHTML = `<strong>${isOctaveReduced ? fullName + ' reduction enabled' : fullName + ' reduction disabled'}</strong> - All notes will now play ${isOctaveReduced ? 'within one ' + fullName.toLowerCase() : 'at their full pitch'}`;
             setTimeout(() => updateInfo(hoveredNode), 2000);
+            
+            // Redraw lattice to update colors
+            drawLattice();
         }
         
         function updateReductionButton() {
@@ -703,6 +729,9 @@
             const info = document.getElementById('info');
             info.innerHTML = `<strong>Octave reduction ${isOctaveReducedSeparate ? 'enabled' : 'disabled'}</strong> - All notes will now ${isOctaveReducedSeparate ? 'also be reduced to within one octave' : 'not have additional octave reduction'}`;
             setTimeout(() => updateInfo(hoveredNode), 2000);
+            
+            // Redraw lattice to update colors
+            drawLattice();
         }
         
         function toggleWaveformMode() {
