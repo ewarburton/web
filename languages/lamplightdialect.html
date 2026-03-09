@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kana Counter</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        .result {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+            margin-top: 20px;
+        }
+        .kana {
+            font-size: 24px;
+            margin: 10px 0;
+            color: #2c3e50;
+        }
+        .count {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+        .breakdown {
+            font-family: monospace;
+            color: #666;
+            margin: 10px 0;
+        }
+        .expanded {
+            color: #7f8c8d;
+            font-style: italic;
+            margin: 10px 0;
+        }
+        .examples {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .example {
+            background: #ecf0f1;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .example:hover {
+            background: #d5dbdc;
+        }
+        .options {
+            margin-bottom: 15px;
+        }
+        .options label {
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .options input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+            margin-bottom: 0;
+        }
+        .options button {
+            padding: 6px 12px;
+            margin-left: 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .options button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kana Counter v2.0 TEST</h1>
+        <input type="text" id="input" placeholder="Enter romanized text (e.g., shter, skware)" autofocus>
+        <div class="options">
+            <label>
+                <input type="checkbox" id="addSpaces">
+                Add Spaces
+            </label>
+            <label style="margin-left: 15px;">
+                <input type="checkbox" id="geminatePlosives">
+                Geminate Plosives
+            </label>
+            <label style="margin-left: 15px;">
+                <input type="checkbox" id="mBeforeM">
+                M before M → N
+            </label>
+        </div>
+        <div id="output"></div>
+        
+        <div class="examples">
+            <h3>Examples (click to try):</h3>
+            <div class="example" onclick="tryExample('shter')">shter</div>
+            <div class="example" onclick="tryExample('skware')">skware</div>
+            <div class="example" onclick="tryExample('shtanda')">shtanda</div>
+            <div class="example" onclick="tryExample('semak')">semak</div>
+        </div>
+    </div>
+
+    <script>
+        let geminatePlosives = false;
+        
+        // Kana mapping
+        const kanaMap = {
+            // Vowels
+            'a': 'あ', 'i': 'い', 'u': 'う', 'e': 'え', 'o': 'お',
+            
+            // Small vowels
+            '%a': 'ぁ', '%i': 'ぃ', '%u': 'ぅ', '%e': 'ぇ', '%o': 'ぉ',
+            
+            // Small tsu
+            '%tsu': 'っ',
+            
+            // Small y-vowels
+            '%ya': 'ゃ', '%yu': 'ゅ', '%yo': 'ょ',
+            
+            // K-row
+            'ka': 'か', 'ki': 'き', 'ku': 'く', 'ke': 'け', 'ko': 'こ',
+            'kya': 'きゃ', 'kyu': 'きゅ', 'kyo': 'きょ',
+            
+            // S-row
+            'sa': 'さ', 'shi': 'し', 'si': 'し', 'su': 'す', 'se': 'せ', 'so': 'そ',
+            'sha': 'しゃ', 'shu': 'しゅ', 'sho': 'しょ',
+            
+            // T-row
+            'ta': 'た', 'chi': 'ち', 'ti': 'ち', 'tsu': 'つ', 'tu': 'つ', 'te': 'て', 'to': 'と',
+            'cha': 'ちゃ', 'chu': 'ちゅ', 'cho': 'ちょ',
+            'tsa': 'つぁ', 'tsi': 'つぃ', 'tse': 'つぇ', 'tso': 'つぉ',
+            
+            // N-row
+            'na': 'な', 'ni': 'に', 'nu': 'ぬ', 'ne': 'ね', 'no': 'の',
+            'nya': 'にゃ', 'nyu': 'にゅ', 'nyo': 'にょ',
+            
+            // H-row
+            'ha': 'は', 'hi': 'ひ', 'fu': 'ふ', 'hu': 'ふ', 'he': 'へ', 'ho': 'ほ',
+
+            // X-row
+            'xa': 'は', 'xi': 'ひ', 'xu': 'ふ', 'xe': 'へ', 'xo': 'ほ',
+            
+            // F-row (fu + small vowels)
+            'fa': 'ふぁ', 'fi': 'ふぃ', 'fe': 'ふぇ', 'fo': 'ふぉ',
+            
+            // M-row
+            'ma': 'ま', 'mi': 'み', 'mu': 'む', 'me': 'め', 'mo': 'も',
+            'mya': 'みゃ', 'myu': 'みゅ', 'myo': 'みょ',
+            
+            // Y-row
+            'ya': 'や', 'yu': 'ゆ', 'yo': 'よ',
+            
+            // R-row
+            'ra': 'ら', 'ri': 'り', 'ru': 'る', 're': 'れ', 'ro': 'ろ',
+            'rya': 'りゃ', 'ryu': 'りゅ', 'ryo': 'りょ',
+            
+            // L-row (same as R-row)
+            'la': 'ら', 'li': 'り', 'lu': 'る', 'le': 'れ', 'lo': 'ろ',
+            
+            // W-row
+            'wa': 'わ', 'wi': 'ゐ', 'we': 'ゑ', 'wo': 'を',
+            
+            // N
+            'n': 'ん',
+            
+            // G-row
+            'ga': 'が', 'gi': 'ぎ', 'gu': 'ぐ', 'ge': 'げ', 'go': 'ご',
+            'gya': 'ぎゃ', 'gyu': 'ぎゅ', 'gyo': 'ぎょ',
+            
+            // Z-row
+            'za': 'ざ', 'zi': 'じ', 'zu': 'ず', 'ze': 'ぜ', 'zo': 'ぞ',
+            'zha': 'じゃ', 'zhi': 'じ', 'zhu': 'じゅ', 'zhe': 'じぇ', 'zho': 'じょ',
+            
+            // D-row
+            'da': 'だ', 'du': 'づ', 'de': 'で', 'do': 'ど',
+            'dza': 'づぁ', 'dzu': 'づ', 'dze': 'づぇ', 'dzo': 'づぉ',
+            
+            // J-row
+            'ja': 'ぢゃ', 'ji': 'ぢ', 'ju': 'ぢゅ', 'je': 'ぢぇ', 'jo': 'ぢょ',
+            
+            // B-row
+            'ba': 'ば', 'bi': 'び', 'bu': 'ぶ', 'be': 'べ', 'bo': 'ぼ',
+            'bya': 'びゃ', 'byu': 'びゅ', 'byo': 'びょ',
+            
+            // P-row
+            'pa': 'ぱ', 'pi': 'ぴ', 'pu': 'ぷ', 'pe': 'ぺ', 'po': 'ぽ',
+            'pya': 'ぴゃ', 'pyu': 'ぴゅ', 'pyo': 'ぴょ'
+        };
+
+        // Consonants that need vowels
+        const consonants = ['k', 's', 't', 'n', 'h', 'f', 'm', 'y', 'r', 'l', 'w', 'g', 'z', 'd', 'j', 'b', 'p', 'x'];
+        
+        // Common vowel preferences for consonants
+        const vowelPreferences = {
+            'k': ['u', 'i', 'a'],
+            's': ['u', 'i', 'a'],
+            't': ['u', 'o', 'e'],
+            'n': ['u', 'o', 'a'],
+            'h': ['u', 'o', 'a'],
+            'f': ['u', 'a', 'o'],
+            'm': ['u', 'a', 'o'],
+            'y': ['u', 'a', 'o'],
+            'r': ['u', 'i', 'a'],
+            'l': ['u', 'i', 'a'],
+            'w': ['a', 'o', 'i'],
+            'g': ['u', 'a', 'o'],
+            'z': ['u', 'a', 'o'],
+            'zh': ['i', 'a', 'u'],
+            'd': ['u', 'o', 'a'],
+            'dz': ['u', 'a', 'o'],
+            'j': ['i', 'a', 'u'],
+            'b': ['u', 'a', 'o'],
+            'p': ['u', 'a', 'o'],
+            'sh': ['i', 'u', 'a'],
+            'ch': ['i', 'u', 'a'],
+            'x': ['u', 'a', 'o']
+        };
+
+        function expandConsonants(text) {
+            let result = text.toLowerCase();
+            let expanded = [];
+            let breakdown = [];
+            
+            let i = 0;
+            while (i < result.length) {
+                // Handle spaces
+                if (result[i] === ' ') {
+                    expanded.push(' ');
+                    breakdown.push(' ');
+                    i++;
+                    continue;
+                }
+                
+                // Handle TSU: marker (prevents expansion of single consonant)
+                if (result.substring(i, i + 4) === 'tsu:') {
+                    // Extract the consonant after TSU:
+                    let consonant = result[i + 4];
+                    expanded.push('TSU:' + consonant);
+                    breakdown.push('TSU:' + consonant);
+                    i += 5; // Skip "tsu:" + consonant
+                    continue;
+                }
+                // Try three-character combinations first (nya, mya, rya, kya, etc.)
+                if (i < result.length - 2) {
+                    let threeChar = result.substring(i, i + 3);
+                    
+                    // Check if it's a valid three-character kana syllable
+                    if (kanaMap[threeChar]) {
+                        expanded.push(threeChar);
+                        breakdown.push(threeChar);
+                        i += 3;
+                        continue;
+                    }
+                }
+                
+                // Try two-character combinations (shi, chi, tsu, etc.)
+                if (i < result.length - 1) {
+                    let twoChar = result.substring(i, i + 2);
+                    
+                    // Handle % encoding for small kana
+                    if (twoChar[0] === '%') {
+                        // Check for %tsu
+                        if (i + 3 < result.length && result.substring(i, i + 4) === '%tsu') {
+                            expanded.push('%tsu');
+                            breakdown.push('%tsu');
+                            i += 4;
+                            continue;
+                        }
+                        // Check for %ya, %yu, %yo
+                        if (i + 2 < result.length && result.substring(i, i + 3).match(/%y[auo]/)) {
+                            let threeChar = result.substring(i, i + 3);
+                            expanded.push(threeChar);
+                            breakdown.push(threeChar);
+                            i += 3;
+                            continue;
+                        }
+                        // Check for %a, %i, %u, %e, %o
+                        if ('aiueo'.includes(twoChar[1])) {
+                            expanded.push(twoChar);
+                            breakdown.push(twoChar);
+                            i += 2;
+                            continue;
+                        }
+                    }
+                    
+                    // Check if it's already a valid kana syllable
+                    if (kanaMap[twoChar]) {
+                        // Mark alternative romanizations for conversion
+                        let displayChar = twoChar;
+                        if (twoChar === 'du') displayChar = 'ALT:dzu';
+                        else if (twoChar === 'ti') displayChar = 'ALT:chi';
+                        else if (twoChar === 'si') displayChar = 'ALT:shi';
+                        else if (twoChar === 'tu') displayChar = 'ALT:tsu';
+                        else if (twoChar === 'hu') displayChar = 'ALT:fu';
+                        
+                        expanded.push(twoChar);
+                        breakdown.push(displayChar === twoChar ? twoChar : displayChar);
+                        i += 2;
+                        continue;
+                    }
+                    
+                    // Special handling for sh, ch, ts, zh, dz, j
+                    if (twoChar === 'sh' || twoChar === 'ch' || twoChar === 'ts' || twoChar === 'zh' || twoChar === 'dz') {
+                        if (i + 2 < result.length && 'aiueo'.includes(result[i + 2])) {
+                            // Already has vowel
+                            let syllable = result.substring(i, i + 3);
+                            let vowel = result[i + 2];
+                            
+                            // For sh/ch, use small ya/yu/yo for a/u/o
+                            if ((twoChar === 'sh' || twoChar === 'ch') && (vowel === 'a' || vowel === 'u' || vowel === 'o')) {
+                                // Count as 2 kana: shi/chi + small ya/yu/yo
+                                expanded.push(syllable);
+                                breakdown.push(syllable);
+                            } else if ((twoChar === 'zh') && (vowel === 'a' || vowel === 'u' || vowel === 'o' || vowel === 'e')) {
+                                // For zh, use small ya/yu/yo for a/u/o, and zhi for i
+                                expanded.push(syllable);
+                                breakdown.push(syllable);
+                            } else if (twoChar === 'ts' && vowel !== 'u') {
+                                // For ts, use small vowel (except tsu which is normal)
+                                expanded.push(syllable);
+                                breakdown.push(syllable);
+                            } else if (twoChar === 'dz' && vowel !== 'u') {
+                                // For dz, use small vowel (except dzu which is normal)
+                                expanded.push(syllable);
+                                breakdown.push(syllable);
+                            } else {
+                                // Normal syllable
+                                expanded.push(syllable);
+                                breakdown.push(syllable);
+                            }
+                            i += 3;
+                            continue;
+                        } else {
+                            // Add default vowel
+                            let vowel = vowelPreferences[twoChar][0];
+                            let syllable = twoChar + vowel;
+                            
+                            // Mark ts for special breakdown display
+                            if (twoChar === 'ts') {
+                                expanded.push(syllable);
+                                breakdown.push('TS:ts(u)');
+                            } else {
+                                expanded.push(syllable);
+                                breakdown.push(`${twoChar}(${vowel})`);
+                            }
+                            i += 2;
+                            continue;
+                        }
+                    }
+                    
+                    // Special handling for j (single char that acts like a consonant cluster)
+                    if (twoChar[0] === 'j' && 'aiueo'.includes(twoChar[1])) {
+                        // j + vowel
+                        let syllable = twoChar;
+                        expanded.push(syllable);
+                        breakdown.push(syllable);
+                        i += 2;
+                        continue;
+                    }
+                }
+                
+                // Check single character
+                let char = result[i];
+                
+                // Handle double consonants (kk, tt, pp, etc.) - only for plosives
+                const plosives = ['k', 'g', 't', 'd', 'p', 'b', 's', 'z'];
+                if (i + 1 < result.length && char === result[i + 1] && plosives.includes(char)) {
+                    // Double consonant - mark with TSU: prefix
+                    expanded.push(`TSU:${char}`);
+                    breakdown.push(`TSU:${char}`);
+                    i++; // Skip the first one, continue to process second normally
+                    continue;
+                }
+                
+                // If it's a vowel by itself
+                if ('aiueo'.includes(char)) {
+                    expanded.push(char);
+                    breakdown.push(char);
+                    i++;
+                    continue;
+                }
+                
+                // If it's 'n' by itself (not followed by a vowel or y)
+                if (char === 'n' && (i + 1 >= result.length || !'aiueoy'.includes(result[i + 1]))) {
+                    expanded.push('n');
+                    breakdown.push('n');
+                    i++;
+                    continue;
+                }
+                
+                // If it's a consonant
+                if (consonants.includes(char)) {
+                    // Replace 'l' with 'r' and 'x' with 'h' for display
+                    let displayChar = char === 'l' ? 'r' : (char === 'x' ? 'h' : char);
+                    let isL = char === 'l';
+                    let isX = char === 'x';
+                    let isS = char === 's';
+                    let isT = char === 't';
+                    let isD = char === 'd';
+                    
+                    // Check if next char is a vowel
+                    if (i + 1 < result.length && 'aiueo'.includes(result[i + 1])) {
+                        let syllable = char + result[i + 1];
+                        let displaySyllable = displayChar + result[i + 1];
+                        
+                        // Special handling for ti -> chi
+                        if (syllable === 'ti') {
+                            expanded.push(syllable);
+                            breakdown.push('T>CHI:chi');
+                        } else if (isL) {
+                            expanded.push(syllable);
+                            breakdown.push(`L:${displaySyllable}`);
+                        } else if (isX) {
+                            // Map xV to hV
+                            let hSyllable = 'h' + result[i + 1];
+                            expanded.push(hSyllable);
+                            breakdown.push(`X:${displaySyllable}`);
+                        } else if (isS) {
+                            expanded.push(syllable);
+                            breakdown.push(`S:${syllable}`);
+                        } else {
+                            expanded.push(syllable);
+                            breakdown.push(displaySyllable);
+                        }
+                        i += 2;
+                    } else {
+                        // Add default vowel
+                        let vowel = vowelPreferences[char] ? vowelPreferences[char][0] : 'u';
+                        let syllable = char + vowel;
+                        
+                        if (isT) {
+                            // t defaults to tsu: t(s)(u)
+                            expanded.push(syllable);
+                            breakdown.push('T:t(s)(u)');
+                        } else if (isD) {
+                            // d defaults to dzu: d(z)(u)
+                            expanded.push(syllable);
+                            breakdown.push('D:d(z)(u)');
+                        } else if (isL) {
+                            expanded.push(syllable);
+                            breakdown.push(`L:${displayChar}(${vowel})`);
+                        } else if (isX) {
+                            // Map x to hu
+                            let hSyllable = 'h' + vowel;
+                            expanded.push(hSyllable);
+                            breakdown.push(`X:${displayChar}(${vowel})`);
+                        } else if (isS) {
+                            // s defaults to su: s(u)
+                            expanded.push(syllable);
+                            breakdown.push(`S:s(u)`);
+                        } else {
+                            expanded.push(syllable);
+                            breakdown.push(`${displayChar}(${vowel})`);
+                        }
+                        i++;
+                    }
+                } else {
+                    // Unknown character, just add it
+                    expanded.push(char);
+                    breakdown.push(char);
+                    i++;
+                }
+            }
+            
+            return { expanded, breakdown };
+        }
+
+        function toKana(syllables, addSpaces) {
+            let result = '';
+            for (let i = 0; i < syllables.length; i++) {
+                const s = syllables[i];
+                
+                if (s === ' ') {
+                    // Check if previous syllable was TSU: (small tsu)
+                    if (addSpaces && i > 0 && syllables[i-1].startsWith('TSU:')) {
+                        result += '-';
+                    } else {
+                        result += addSpaces ? ' ' : '';
+                    }
+                } else if (s.startsWith('TSU:')) {
+                    // TSU: marker means small tsu
+                    result += 'っ';
+                } else {
+                    result += kanaMap[s] || '?';
+                }
+            }
+            return result;
+        }
+
+        function processInput() {
+            const input = document.getElementById('input').value.trim();
+            const output = document.getElementById('output');
+            const addSpaces = document.getElementById('addSpaces').checked;
+            geminatePlosives = document.getElementById('geminatePlosives').checked;
+            
+            if (!input) {
+                output.innerHTML = '';
+                return;
+            }
+            
+            let processedInput = input;
+            
+            // If m before m is enabled, convert m before m+vowel to n
+            const mBeforeM = document.getElementById('mBeforeM').checked;
+            if (mBeforeM) {
+                processedInput = processedInput.replace(/m( +)m([aiueo])/gi, 'n$1m$2');
+            }
+            
+            // If geminate plosives is enabled, add small tsu before word-initial plosives after spaces
+            if (geminatePlosives) {
+                const plosives = ['k', 'g', 't', 'd', 'p', 'b'];
+                let words = processedInput.split(' ');
+                
+                for (let i = 1; i < words.length; i++) {
+                    if (words[i].length > 0 && words[i-1].length > 0) {
+                        const prevLastChar = words[i-1][words[i-1].length - 1].toLowerCase();
+                        const currentFirstChar = words[i][0].toLowerCase();
+                        
+                        // Only add TSU: marker if previous word ends with same plosive as current word starts with
+                        if (plosives.includes(prevLastChar) && prevLastChar === currentFirstChar) {
+                            // Just mark the final plosive in previous word - don't add %tsu
+                            words[i-1] = words[i-1].slice(0, -1) + 'TSU:' + prevLastChar;
+                        }
+                    }
+                }
+                processedInput = words.join(' ');
+            }
+            
+            const { expanded, breakdown } = expandConsonants(processedInput);
+            const kana = toKana(expanded, addSpaces);
+            const count = expanded.filter(s => s !== ' ').length;
+            
+            // Replace 'l' with 'r' and alternative romanizations in expanded display
+            const expandedDisplay = expanded.map(s => {
+                if (s.startsWith('TSU:')) return s.substring(4); // Just show the consonant
+                if (s === '%tsu') return ''; // Hide %tsu from expanded display
+                if (s === ' ') return ' '; // Always show spaces in expanded
+                return s;
+            }).join('')
+                .replace(/l/g, 'r')
+                .replace(/x/g, 'h')
+                .replace(/du/g, 'dzu')
+                .replace(/ti/g, 'chi')
+                .replace(/si/g, 'shi')
+                .replace(/tu/g, 'tsu')
+                .replace(/(?<![a-z])hu/g, 'fu');
+            
+            // Build breakdown with proper space handling
+            let breakdownText = '';
+            let currentGroup = [];
+            for (let i = 0; i < breakdown.length; i++) {
+                if (breakdown[i] === ' ') {
+                    if (currentGroup.length > 0) {
+                        breakdownText += currentGroup.join('-');
+                        currentGroup = [];
+                    }
+                    breakdownText += ' ';
+                } else if (breakdown[i] === '%tsu') {
+                    // Skip %tsu in breakdown
+                    continue;
+                } else {
+                    // Check if this syllable came from 'l' or alternative romanization
+                    let syllable = breakdown[i];
+                    if (syllable.startsWith('TSU:')) {
+                        // Double consonant - show the consonant itself
+                        syllable = syllable.substring(4);
+                    } else if (syllable.startsWith('ALT:')) {
+                        // Show alternative romanizations with parenthetical notation
+                        let alt = syllable.substring(4);
+                        if (alt === 'shi') syllable = 's(h)i';
+                        else if (alt === 'tsu') syllable = 't(s)u';
+                        else if (alt === 'chi') syllable = 'chi';
+                        else if (alt === 'dzu') syllable = 'd(z)u';
+                        else if (alt === 'fu') syllable = '(f)u';
+                        else syllable = alt;
+                    } else if (syllable.startsWith('T>CHI:')) {
+                        // ti -> t(ch)i
+                        syllable = 't(ch)i';
+                    } else if (syllable.startsWith('T:')) {
+                        // t -> t(s)(u)
+                        syllable = syllable.substring(2);
+                    } else if (syllable.startsWith('D:')) {
+                        // d -> d(z)(u)
+                        syllable = syllable.substring(2);
+                    } else if (syllable.startsWith('S:')) {
+                        // s -> s(u)
+                        syllable = syllable.substring(2);
+                    } else if (syllable.startsWith('TS:')) {
+                        // ts -> ts(u)
+                        syllable = syllable.substring(3);
+                    } else if (syllable.startsWith('X:')) {
+                        // xV -> hV (remove marker)
+                        syllable = syllable.substring(2);
+                    } else if (syllable.startsWith('L:')) {
+                        syllable = syllable.substring(2);
+                        // Always show l(r)V format
+                        syllable = syllable.replace(/^r/, 'l(r)');
+                    }
+                    currentGroup.push(syllable);
+                }
+            }
+            if (currentGroup.length > 0) {
+                breakdownText += currentGroup.join('-');
+            }
+            
+            output.innerHTML = `
+                <div class="result">
+                    <div class="kana">${kana}</div>
+                    <div class="count">${count} kana</div>
+                    <div class="expanded">Expanded: ${expandedDisplay}</div>
+                    <div class="breakdown">Breakdown: [${breakdownText}]</div>
+                </div>
+            `;
+        }
+
+        function tryExample(text) {
+            document.getElementById('input').value = text;
+            processInput();
+        }
+
+        document.getElementById('input').addEventListener('input', processInput);
+        document.getElementById('addSpaces').addEventListener('change', processInput);
+        document.getElementById('geminatePlosives').addEventListener('change', processInput);
+        document.getElementById('mBeforeM').addEventListener('change', processInput);
+    </script>
+</body>
+</html>

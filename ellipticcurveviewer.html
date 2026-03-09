@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Elliptic Curve & Modular Function Viewer</title>
+	<style>
+		:root {
+			color-scheme: dark;
+			--bg: #0f1220;
+			--panel: #171b2f;
+			--panel-2: #1f2541;
+			--text: #e7ecff;
+			--muted: #9fb0ff;
+			--accent: #6ee7ff;
+			--accent-2: #a78bfa;
+			--warn: #f59e0b;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			font-family: Inter, Segoe UI, Roboto, system-ui, sans-serif;
+			background: radial-gradient(1200px 700px at 80% -20%, #1f2350 0%, var(--bg) 45%);
+			color: var(--text);
+			min-height: 100vh;
+			display: grid;
+			grid-template-rows: auto 1fr auto;
+		}
+
+		header {
+			padding: 14px 20px;
+			border-bottom: 1px solid #2a3360;
+			background: color-mix(in srgb, var(--panel) 88%, black 12%);
+		}
+
+		h1 {
+			margin: 0;
+			font-size: 1.08rem;
+			letter-spacing: 0.02em;
+			color: #dbe6ff;
+		}
+
+		main {
+			display: grid;
+			grid-template-columns: minmax(300px, 420px) 1fr;
+			gap: 16px;
+			padding: 16px;
+		}
+
+		.panel {
+			background: linear-gradient(180deg, var(--panel), var(--panel-2));
+			border: 1px solid #2a3360;
+			border-radius: 14px;
+			padding: 14px;
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+		}
+
+		.controls {
+			display: grid;
+			gap: 10px;
+			align-content: start;
+		}
+
+		.row {
+			display: grid;
+			grid-template-columns: 130px 1fr;
+			align-items: center;
+			gap: 8px;
+		}
+
+		label {
+			color: var(--muted);
+			font-size: 0.9rem;
+		}
+
+		input, select, button, textarea {
+			width: 100%;
+			border: 1px solid #33407a;
+			background: #0f1530;
+			color: var(--text);
+			border-radius: 8px;
+			padding: 7px 10px;
+			font: inherit;
+		}
+
+		textarea {
+			min-height: 70px;
+			resize: vertical;
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		}
+
+		button {
+			cursor: pointer;
+			font-weight: 600;
+			background: linear-gradient(135deg, #182452, #243370);
+		}
+
+		button:hover {
+			border-color: #5673d7;
+		}
+
+		.hint {
+			font-size: 0.8rem;
+			color: #a9b8f0;
+			line-height: 1.35;
+		}
+
+		.warn {
+			color: var(--warn);
+			font-size: 0.82rem;
+			min-height: 1.2em;
+		}
+
+		.canvasWrap {
+			position: relative;
+			overflow: hidden;
+			min-height: 520px;
+			display: grid;
+		}
+
+		canvas {
+			width: 100%;
+			height: 100%;
+			border-radius: 14px;
+			border: 1px solid #2a3360;
+			background: #060914;
+		}
+
+		.overlay {
+			position: absolute;
+			left: 12px;
+			top: 12px;
+			background: rgba(7, 11, 23, 0.8);
+			border: 1px solid #2a3360;
+			border-radius: 10px;
+			padding: 8px 10px;
+			font-size: 0.84rem;
+			color: #c8d7ff;
+			backdrop-filter: blur(5px);
+			pointer-events: none;
+			max-width: 70%;
+			line-height: 1.35;
+		}
+
+		footer {
+			padding: 8px 14px;
+			color: #8da3f0;
+			font-size: 0.8rem;
+			border-top: 1px solid #2a3360;
+			background: rgba(8, 12, 28, 0.8);
+		}
+
+		@media (max-width: 1000px) {
+			main {
+				grid-template-columns: 1fr;
+			}
+			.canvasWrap {
+				min-height: 460px;
+			}
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<h1>Elliptic Curve + Modular Domain Viewer</h1>
+	</header>
+
+	<main>
+		<section class="panel controls">
+			<div class="row">
+				<label for="engine">Renderer</label>
+				<select id="engine">
+					<option value="complex">Complex domain coloring (expected style)</option>
+					<option value="finite">Finite field points mod p</option>
+				</select>
+			</div>
+
+			<div class="row complex-only">
+				<label for="complexPreset">Complex preset</label>
+				<select id="complexPreset">
+					<option value="j">Klein j(τ) (q-series)</option>
+					<option value="delta">Ramanujan Δ(τ)=q∏(1−qⁿ)²⁴</option>
+					<option value="custom">Custom complex f(z,τ)</option>
+				</select>
+			</div>
+
+			<div class="row complex-only">
+				<label for="terms">Series terms</label>
+				<input id="terms" type="number" min="2" max="20" step="1" value="8" />
+			</div>
+
+			<div class="row complex-only">
+				<label for="diskClip">Disk clip</label>
+				<select id="diskClip">
+					<option value="yes" selected>Yes</option>
+					<option value="no">No</option>
+				</select>
+			</div>
+
+			<div class="row complex-only">
+				<label for="cayley">Use τ map</label>
+				<select id="cayley">
+					<option value="yes" selected>τ = i(1+z)/(1−z)</option>
+					<option value="no">τ = z</option>
+				</select>
+			</div>
+
+			<div class="row complex-only">
+				<label for="complexExpr">Complex custom</label>
+				<textarea id="complexExpr">j(tau)</textarea>
+			</div>
+
+			<div class="row finite-only">
+				<label for="mode">Finite mode</label>
+				<select id="mode">
+					<option value="ec">Elliptic curve points: y² ≡ f(x) (mod p)</option>
+					<option value="func">Function graph: y ≡ f(x) (mod p)</option>
+				</select>
+			</div>
+
+			<div class="row finite-only">
+				<label for="preset">Finite preset</label>
+				<select id="preset">
+					<option value="short">Short Weierstrass (custom a,b)</option>
+					<option value="frey">Frey-like curve x(x−Aⁿ)(x+Bⁿ)</option>
+					<option value="ramanujan">Ramanujan τ(n) from Δ(q)</option>
+					<option value="custom">Custom expression f(x)</option>
+				</select>
+			</div>
+
+			<div class="row finite-only">
+				<label for="p">Prime p</label>
+				<input id="p" type="number" min="3" max="997" step="1" value="101" />
+			</div>
+
+			<div class="row finite-only">
+				<label for="a">a</label>
+				<input id="a" type="number" step="1" value="2" />
+			</div>
+
+			<div class="row finite-only">
+				<label for="b">b</label>
+				<input id="b" type="number" step="1" value="3" />
+			</div>
+
+			<div class="row finite-only">
+				<label for="A">A (Frey)</label>
+				<input id="A" type="number" step="1" value="3" />
+			</div>
+
+			<div class="row finite-only">
+				<label for="B">B (Frey)</label>
+				<input id="B" type="number" step="1" value="4" />
+			</div>
+
+			<div class="row finite-only">
+				<label for="n">n (Frey)</label>
+				<input id="n" type="number" min="2" max="20" step="1" value="5" />
+			</div>
+
+			<div class="row finite-only">
+				<label for="customExpr">f(x) custom</label>
+				<textarea id="customExpr">((x*x*x + a*x + b) % p + p) % p</textarea>
+			</div>
+
+			<div class="hint" id="hintBlock"></div>
+
+			<div class="row">
+				<label>&nbsp;</label>
+				<button id="renderBtn">Render</button>
+			</div>
+
+			<div class="warn" id="warn"></div>
+		</section>
+
+		<section class="panel canvasWrap">
+			<canvas id="plot" width="1200" height="800"></canvas>
+			<div class="overlay" id="overlay"></div>
+		</section>
+	</main>
+
+	<footer>
+		Mouse wheel: zoom • Drag: pan • Double-click: reset view. Complex mode produces modular-function domain coloring like your reference image.
+	</footer>
+
+	<script>
+		const engineEl = document.getElementById('engine');
+		const complexPresetEl = document.getElementById('complexPreset');
+		const termsEl = document.getElementById('terms');
+		const diskClipEl = document.getElementById('diskClip');
+		const cayleyEl = document.getElementById('cayley');
+		const complexExprEl = document.getElementById('complexExpr');
+
+		const modeEl = document.getElementById('mode');
+		const presetEl = document.getElementById('preset');
+		const pEl = document.getElementById('p');
+		const aEl = document.getElementById('a');
+		const bEl = document.getElementById('b');
+		const AEl = document.getElementById('A');
+		const BEl = document.getElementById('B');
+		const nEl = document.getElementById('n');
+		const customExprEl = document.getElementById('customExpr');
+
+		const renderBtn = document.getElementById('renderBtn');
+		const warnEl = document.getElementById('warn');
+		const overlayEl = document.getElementById('overlay');
+		const hintBlockEl = document.getElementById('hintBlock');
+		const canvas = document.getElementById('plot');
+		const ctx = canvas.getContext('2d');
+
+		const state = {
+			engine: 'complex',
+			points: [],
+			p: 101,
+			mode: 'ec',
+			preset: 'short',
+			cell: 7,
+			panX: 60,
+			panY: 40,
+			scale: 260,
+			cPanX: 0,
+			cPanY: 0,
+			mouseDown: false,
+			lastX: 0,
+			lastY: 0,
+			description: ''
+		};
+
+		const PRIME_SET = new Set([
+			3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97,
+			101,103,107,109,113,127,131,137,139,149,151,157,163,167,173,179,181,191,
+			193,197,199,211,223,227,229,233,239,241,251,257,263,269,271,277,281,283,
+			293,307,311,313,317,331,337,347,349,353,359,367,373,379,383,389,397,401,
+			409,419,421,431,433,439,443,449,457,461,463,467,479,487,491,499,503,509,
+			521,523,541,547,557,563,569,571,577,587,593,599,601,607,613,617,619,631,
+			641,643,647,653,659,661,673,677,683,691,701,709,719,727,733,739,743,751,
+			757,761,769,773,787,797,809,811,821,823,827,829,839,853,857,859,863,877,
+			881,883,887,907,911,919,929,937,941,947,953,967,971,977,983,991,997
+		]);
+
+		const J_COEFF = [
+			196884, 21493760, 864299970, 20245856256, 333202640600,
+			4252023300096, 44656994071935, 401490886656000, 3176440229784420,
+			22567393309593600, 146211911499519294, 874313719685775360
+		];
+
+		const C = (re = 0, im = 0) => ({ re, im });
+		const cAdd = (a, b) => C(a.re + b.re, a.im + b.im);
+		const cSub = (a, b) => C(a.re - b.re, a.im - b.im);
+		const cMul = (a, b) => C(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
+		const cScale = (a, s) => C(a.re * s, a.im * s);
+		const cDiv = (a, b) => {
+			const d = b.re * b.re + b.im * b.im;
+			if (d < 1e-30) return C(1e12, 1e12);
+			return C((a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d);
+		};
+		const cAbs = (a) => Math.hypot(a.re, a.im);
+		const cArg = (a) => Math.atan2(a.im, a.re);
+		const cConj = (a) => C(a.re, -a.im);
+		const cPowInt = (z, n) => {
+			let out = C(1, 0);
+			let base = C(z.re, z.im);
+			let e = Math.max(0, Math.floor(n));
+			while (e > 0) {
+				if (e & 1) out = cMul(out, base);
+				base = cMul(base, base);
+				e >>= 1;
+			}
+			return out;
+		};
+
+		function qFromTau(tau) {
+			const amp = Math.exp(-2 * Math.PI * tau.im);
+			const th = 2 * Math.PI * tau.re;
+			return C(amp * Math.cos(th), amp * Math.sin(th));
+		}
+
+		function kleinJ(tau, terms) {
+			if (!(tau.im > 0)) return C(1e8, 0);
+			const q = qFromTau(tau);
+			const qAbs = cAbs(q);
+			if (qAbs >= 0.995) return C(1e8, 0);
+			const invQ = cDiv(C(1, 0), q);
+			let sum = cAdd(invQ, C(744, 0));
+			let qn = C(q.re, q.im);
+			for (let i = 0; i < Math.min(terms, J_COEFF.length); i++) {
+				sum = cAdd(sum, cScale(qn, J_COEFF[i]));
+				qn = cMul(qn, q);
+			}
+			return sum;
+		}
+
+		function deltaRamanujan(tau, terms) {
+			if (!(tau.im > 0)) return C(0, 0);
+			const q = qFromTau(tau);
+			let prod = C(1, 0);
+			for (let n = 1; n <= terms; n++) {
+				const qn = cPowInt(q, n);
+				const term = cSub(C(1, 0), qn);
+				prod = cMul(prod, cPowInt(term, 24));
+			}
+			return cMul(q, prod);
+		}
+
+		function hsvToRgb(h, s, v) {
+			const i = Math.floor(h * 6);
+			const f = h * 6 - i;
+			const p = v * (1 - s);
+			const q = v * (1 - f * s);
+			const t = v * (1 - (1 - f) * s);
+			const m = i % 6;
+			const r = [v, q, p, p, t, v][m];
+			const g = [t, v, v, q, p, p][m];
+			const b = [p, p, t, v, v, q][m];
+			return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+		}
+
+		function toComplex(v) {
+			if (typeof v === 'number' && Number.isFinite(v)) return C(v, 0);
+			if (v && Number.isFinite(v.re) && Number.isFinite(v.im)) return C(v.re, v.im);
+			return C(0, 0);
+		}
+
+		function cayleyToUpperHalf(z) {
+			const num = cMul(C(0, 1), cAdd(C(1, 0), z));
+			const den = cSub(C(1, 0), z);
+			return cDiv(num, den);
+		}
+
+		function mod(n, p) {
+			return ((n % p) + p) % p;
+		}
+
+		function powMod(base, exp, p) {
+			let b = BigInt(mod(base, p));
+			let e = BigInt(Math.max(0, Math.floor(exp)));
+			const m = BigInt(p);
+			let out = 1n;
+			while (e > 0n) {
+				if (e & 1n) out = (out * b) % m;
+				b = (b * b) % m;
+				e >>= 1n;
+			}
+			return Number(out);
+		}
+
+		function toInt(value, fallback = 0) {
+			const x = Number(value);
+			return Number.isFinite(x) ? Math.trunc(x) : fallback;
+		}
+
+		function isPrimeTiny(n) {
+			if (PRIME_SET.has(n)) return true;
+			if (n < 2 || n % 2 === 0) return n === 2;
+			for (let d = 3; d * d <= n; d += 2) {
+				if (n % d === 0) return false;
+			}
+			return true;
+		}
+
+		function chooseBigInt(n, k) {
+			if (k < 0 || k > n) return 0n;
+			k = Math.min(k, n - k);
+			let num = 1n;
+			let den = 1n;
+			for (let i = 1; i <= k; i++) {
+				num *= BigInt(n - k + i);
+				den *= BigInt(i);
+			}
+			return num / den;
+		}
+
+		const choose24 = Array.from({ length: 25 }, (_, k) => chooseBigInt(24, k));
+
+		function ramanujanTauTable(maxN) {
+			const cap = Math.max(1, Math.floor(maxN));
+			const coeff = Array(cap + 1).fill(0n);
+			coeff[0] = 1n;
+			for (let n = 1; n <= cap; n++) {
+				const next = coeff.slice();
+				for (let k = 1; k <= 24; k++) {
+					const shift = k * n;
+					if (shift > cap) break;
+					const c = choose24[k] * (k % 2 === 0 ? 1n : -1n);
+					for (let i = shift; i <= cap; i++) next[i] += coeff[i - shift] * c;
+				}
+				for (let i = 0; i <= cap; i++) coeff[i] = next[i];
+			}
+			const tau = Array(cap + 1).fill(0n);
+			for (let n = 1; n <= cap; n++) tau[n] = coeff[n - 1];
+			return tau;
+		}
+
+		function evaluateRhsFactory(params) {
+			const { p, a, b, A, B, n, preset, expr, tauTable } = params;
+			const addFn = (u, v) => Number(u) + Number(v);
+			const expFn = (u, e) => {
+				const base = Number(u);
+				const pow = Number(e);
+				return Number.isFinite(base) && Number.isFinite(pow) ? Math.pow(base, pow) : 0;
+			};
+			const modFn = (u, m) => {
+				const uu = Math.trunc(Number(u));
+				const mm = Math.trunc(Number(m));
+				if (!Number.isFinite(uu) || !Number.isFinite(mm) || mm === 0) return 0;
+				return ((uu % mm) + mm) % mm;
+			};
+			if (preset === 'short') return (x) => mod(x * x * x + a * x + b, p);
+			if (preset === 'frey') {
+				const an = powMod(A, n, p);
+				const bn = powMod(B, n, p);
+				return (x) => mod(x * mod(x - an, p) * mod(x + bn, p), p);
+			}
+			if (preset === 'ramanujan') {
+				return (x) => {
+					const t = x >= 1 && x < tauTable.length ? tauTable[x] : 0n;
+					return Number(((t % BigInt(p)) + BigInt(p)) % BigInt(p));
+				};
+			}
+			const compiled = new Function('x', 'p', 'a', 'b', 'A', 'B', 'n', 'tau', 'add', 'exp', 'mod', `return (${expr});`);
+			return (x) => {
+				const tx = (m) => {
+					const idx = Math.trunc(m);
+					if (idx >= 0 && idx < tauTable.length) {
+						const t = tauTable[idx];
+						return Number(((t % BigInt(p)) + BigInt(p)) % BigInt(p));
+					}
+					return 0;
+				};
+				return mod(Math.trunc(Number(compiled(x, p, a, b, A, B, n, tx, addFn, expFn, modFn))), p);
+			};
+		}
+
+		function updateControlVisibility() {
+			const engine = engineEl.value;
+			state.engine = engine;
+			document.querySelectorAll('.complex-only').forEach((el) => {
+				el.style.display = engine === 'complex' ? 'grid' : 'none';
+			});
+			document.querySelectorAll('.finite-only').forEach((el) => {
+				el.style.display = engine === 'finite' ? 'grid' : 'none';
+			});
+
+			if (engine === 'complex') {
+				hintBlockEl.innerHTML = 'Complex custom vars: <b>z</b>, <b>tau</b>; helpers: <b>C</b>, <b>add</b>, <b>sub</b>, <b>mul</b>, <b>div</b>, <b>abs</b>, <b>arg</b>, <b>conj</b>, <b>powInt</b>, <b>j</b>, <b>delta</b>.';
+			} else {
+				hintBlockEl.innerHTML = 'Finite custom vars: <b>x</b>, <b>p</b>, <b>a</b>, <b>b</b>, <b>A</b>, <b>B</b>, <b>n</b>, <b>tau(x)</b>. Helpers: <b>add(u,v)</b>, <b>exp(u,e)</b>, <b>mod(u,m)</b>, plus Math functions.';
+			}
+		}
+
+		function renderFinite() {
+			warnEl.textContent = '';
+			const mode = modeEl.value;
+			const preset = presetEl.value;
+			const p = toInt(pEl.value, 101);
+			const a = toInt(aEl.value, 2);
+			const b = toInt(bEl.value, 3);
+			const A = toInt(AEl.value, 3);
+			const B = toInt(BEl.value, 4);
+			const n = toInt(nEl.value, 5);
+
+			if (!Number.isFinite(p) || p < 3 || p > 997) {
+				warnEl.textContent = 'Choose 3 ≤ p ≤ 997.';
+				return;
+			}
+			if (!isPrimeTiny(p)) warnEl.textContent = 'For finite-field behavior, p should be prime.';
+
+			const tauTable = ramanujanTauTable(p + 5);
+			let rhs;
+			try {
+				rhs = evaluateRhsFactory({ p, a, b, A, B, n, preset, expr: customExprEl.value, tauTable });
+			} catch (err) {
+				warnEl.textContent = `Expression error: ${err.message}`;
+				return;
+			}
+
+			const points = [];
+			if (mode === 'ec') {
+				for (let x = 0; x < p; x++) {
+					const val = rhs(x);
+					for (let y = 0; y < p; y++) if (mod(y * y - val, p) === 0) points.push({ x, y, c: val });
+				}
+			} else {
+				for (let x = 0; x < p; x++) {
+					const y = rhs(x);
+					points.push({ x, y, c: y });
+				}
+			}
+
+			state.points = points;
+			state.p = p;
+			state.mode = mode;
+			state.preset = preset;
+
+			const width = canvas.clientWidth || 800;
+			const height = canvas.clientHeight || 540;
+			ctx.clearRect(0, 0, width, height);
+			ctx.fillStyle = '#060914';
+			ctx.fillRect(0, 0, width, height);
+
+			ctx.save();
+			ctx.lineWidth = 1;
+			const maxLines = Math.min(2500, p + 2);
+			for (let i = 0; i <= maxLines; i++) {
+				const gx = state.panX + i * state.cell;
+				const gy = state.panY + i * state.cell;
+				if (gx >= -1 && gx <= width + 1) {
+					ctx.strokeStyle = i % 5 === 0 ? '#1d2a58' : '#111a38';
+					ctx.beginPath();
+					ctx.moveTo(gx, 0);
+					ctx.lineTo(gx, height);
+					ctx.stroke();
+				}
+				if (gy >= -1 && gy <= height + 1) {
+					ctx.strokeStyle = i % 5 === 0 ? '#1d2a58' : '#111a38';
+					ctx.beginPath();
+					ctx.moveTo(0, gy);
+					ctx.lineTo(width, gy);
+					ctx.stroke();
+				}
+			}
+			ctx.restore();
+
+			const radius = Math.max(1.5, Math.min(7, state.cell * 0.28));
+			for (const pt of points) {
+				const px = state.panX + (pt.x + 0.5) * state.cell;
+				const py = state.panY + (pt.y + 0.5) * state.cell;
+				if (px < -10 || py < -10 || px > width + 10 || py > height + 10) continue;
+				const hue = (200 + (pt.c * 11) % 150) % 360;
+				ctx.fillStyle = `hsl(${hue} 90% ${mode === 'ec' ? 67 : 62}%)`;
+				if (mode === 'func') ctx.fillRect(px - radius, py - radius, radius * 2, radius * 2);
+				else {
+					ctx.beginPath();
+					ctx.arc(px, py, radius, 0, Math.PI * 2);
+					ctx.fill();
+				}
+			}
+
+			state.description = `${mode === 'ec' ? 'Finite elliptic points' : 'Finite function'} • preset=${preset} • p=${p} • points=${points.length}`;
+			overlayEl.textContent = `${state.description} | zoom=${state.cell.toFixed(2)} px`;
+		}
+
+		function renderComplex() {
+			warnEl.textContent = '';
+			const preset = complexPresetEl.value;
+			const terms = Math.max(2, Math.min(20, toInt(termsEl.value, 8)));
+			const clipDisk = diskClipEl.value === 'yes';
+			const useCayley = cayleyEl.value === 'yes';
+
+			const width = canvas.clientWidth || 800;
+			const height = canvas.clientHeight || 540;
+			const img = ctx.createImageData(width, height);
+			const data = img.data;
+
+			let customFn = null;
+			if (preset === 'custom') {
+				try {
+					customFn = new Function('z', 'tau', 'math', `with(math){ return (${complexExprEl.value}); }`);
+				} catch (err) {
+					warnEl.textContent = `Custom expression error: ${err.message}`;
+					return;
+				}
+			}
+
+			const cx = width * 0.5;
+			const cy = height * 0.5;
+			const bg = [151, 168, 188];
+
+			const helper = {
+				C,
+				add: cAdd,
+				sub: cSub,
+				mul: cMul,
+				div: cDiv,
+				conj: cConj,
+				powInt: cPowInt,
+				abs: cAbs,
+				arg: cArg,
+				j: (tau) => kleinJ(toComplex(tau), terms),
+				delta: (tau) => deltaRamanujan(toComplex(tau), terms * 4),
+				pi: Math.PI,
+				e: Math.E,
+				i: C(0, 1)
+			};
+
+			for (let y = 0; y < height; y++) {
+				for (let x = 0; x < width; x++) {
+					const i = (y * width + x) * 4;
+					const zx = (x - cx) / state.scale + state.cPanX;
+					const zy = (y - cy) / state.scale + state.cPanY;
+					const z = C(zx, zy);
+					if (clipDisk && z.re * z.re + z.im * z.im > 1) {
+						data[i] = bg[0];
+						data[i + 1] = bg[1];
+						data[i + 2] = bg[2];
+						data[i + 3] = 255;
+						continue;
+					}
+
+					const tau = useCayley ? cayleyToUpperHalf(z) : z;
+					let f;
+					try {
+						if (preset === 'j') f = kleinJ(tau, terms);
+						else if (preset === 'delta') f = deltaRamanujan(tau, terms * 4);
+						else f = toComplex(customFn(z, tau, helper));
+					} catch {
+						f = C(0, 0);
+					}
+
+					const mag = Math.log1p(cAbs(f));
+					const hue = (cArg(f) / (2 * Math.PI) + 1) % 1;
+					const stripes = 0.55 + 0.45 * Math.cos(6 * mag);
+					const sat = Math.max(0.45, Math.min(1, 0.72 + 0.25 * stripes));
+					const val = Math.max(0.2, Math.min(1, 0.42 + 0.58 * (1 - 1 / (1 + mag))));
+					const [r, g, b] = hsvToRgb(hue, sat, val);
+
+					data[i] = r;
+					data[i + 1] = g;
+					data[i + 2] = b;
+					data[i + 3] = 255;
+				}
+			}
+
+			ctx.putImageData(img, 0, 0);
+			state.description = `Complex domain coloring • preset=${preset} • ${useCayley ? 'τ=i(1+z)/(1−z)' : 'τ=z'} • terms=${terms}`;
+			overlayEl.textContent = `${state.description} | zoom=${state.scale.toFixed(1)} px`;
+		}
+
+		function renderAll() {
+			if (engineEl.value === 'complex') renderComplex();
+			else renderFinite();
+		}
+
+		function resizeCanvas() {
+			const dpr = Math.max(1, window.devicePixelRatio || 1);
+			const rect = canvas.getBoundingClientRect();
+			const w = Math.max(320, Math.floor(rect.width));
+			const h = Math.max(320, Math.floor(rect.height));
+			canvas.width = Math.floor(w * dpr);
+			canvas.height = Math.floor(h * dpr);
+			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+			renderAll();
+		}
+
+		function installInteractions() {
+			canvas.addEventListener('wheel', (ev) => {
+				ev.preventDefault();
+				const rect = canvas.getBoundingClientRect();
+				const mx = ev.clientX - rect.left;
+				const my = ev.clientY - rect.top;
+				const factor = ev.deltaY < 0 ? 1.14 : 1 / 1.14;
+				if (engineEl.value === 'complex') {
+					const old = state.scale;
+					state.scale = Math.max(80, Math.min(1800, state.scale * factor));
+					const k = 1 / old - 1 / state.scale;
+					state.cPanX += (mx - canvas.clientWidth * 0.5) * k;
+					state.cPanY += (my - canvas.clientHeight * 0.5) * k;
+				} else {
+					const old = state.cell;
+					state.cell = Math.max(2, Math.min(80, state.cell * factor));
+					const ratio = state.cell / old;
+					state.panX = mx - (mx - state.panX) * ratio;
+					state.panY = my - (my - state.panY) * ratio;
+				}
+				renderAll();
+			}, { passive: false });
+
+			canvas.addEventListener('mousedown', (ev) => {
+				state.mouseDown = true;
+				state.lastX = ev.clientX;
+				state.lastY = ev.clientY;
+			});
+
+			window.addEventListener('mouseup', () => {
+				state.mouseDown = false;
+			});
+
+			window.addEventListener('mousemove', (ev) => {
+				if (!state.mouseDown) return;
+				const dx = ev.clientX - state.lastX;
+				const dy = ev.clientY - state.lastY;
+				state.lastX = ev.clientX;
+				state.lastY = ev.clientY;
+				if (engineEl.value === 'complex') {
+					state.cPanX -= dx / state.scale;
+					state.cPanY -= dy / state.scale;
+				} else {
+					state.panX += dx;
+					state.panY += dy;
+				}
+				renderAll();
+			});
+
+			canvas.addEventListener('dblclick', () => {
+				if (engineEl.value === 'complex') {
+					state.scale = 260;
+					state.cPanX = 0;
+					state.cPanY = 0;
+				} else {
+					state.cell = 7;
+					state.panX = 60;
+					state.panY = 40;
+				}
+				renderAll();
+			});
+		}
+
+		function applyPresetDefaults() {
+			if (presetEl.value === 'short') {
+				modeEl.value = 'ec';
+				customExprEl.value = '((x*x*x + a*x + b) % p + p) % p';
+			} else if (presetEl.value === 'frey') {
+				modeEl.value = 'ec';
+				customExprEl.value = '((x * (x - (A**n)) * (x + (B**n))) % p + p) % p';
+			} else if (presetEl.value === 'ramanujan') {
+				modeEl.value = 'func';
+				customExprEl.value = 'tau(x)';
+			}
+			renderAll();
+		}
+
+		function applyComplexDefaults() {
+			if (complexPresetEl.value === 'j') complexExprEl.value = 'j(tau)';
+			if (complexPresetEl.value === 'delta') complexExprEl.value = 'delta(tau)';
+			renderAll();
+		}
+
+		renderBtn.addEventListener('click', renderAll);
+		engineEl.addEventListener('change', () => {
+			updateControlVisibility();
+			renderAll();
+		});
+		presetEl.addEventListener('change', applyPresetDefaults);
+		complexPresetEl.addEventListener('change', applyComplexDefaults);
+		modeEl.addEventListener('change', renderAll);
+		window.addEventListener('resize', resizeCanvas);
+
+		installInteractions();
+		updateControlVisibility();
+		resizeCanvas();
+	</script>
+</body>
+</html>

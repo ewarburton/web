@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Nguhcraft Ores → Slabs Converter</title>
+		<style>
+			:root {
+				color-scheme: light dark;
+				--bg: #0f1115;
+				--panel: #171a21;
+				--text: #e9edf5;
+				--muted: #a7b0c2;
+				--accent: #6aa6ff;
+				--border: #2a2f3a;
+			}
+			* { box-sizing: border-box; }
+			body {
+				margin: 0;
+				font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+				background: var(--bg);
+				color: var(--text);
+			}
+			.wrap {
+				max-width: 980px;
+				margin: 32px auto;
+				padding: 0 20px 40px;
+			}
+			header {
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+				margin-bottom: 20px;
+			}
+			h1 {
+				font-size: 1.9rem;
+				margin: 0;
+			}
+			p { margin: 0; color: var(--muted); }
+			.panel {
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 14px;
+				padding: 16px;
+				margin: 16px 0;
+			}
+			.grid {
+				display: grid;
+				gap: 12px;
+				grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+			}
+			label {
+				font-weight: 600;
+				display: block;
+				margin-bottom: 6px;
+			}
+			input, select {
+				width: 100%;
+				padding: 10px 12px;
+				border-radius: 10px;
+				border: 1px solid var(--border);
+				background: #0b0d12;
+				color: var(--text);
+			}
+			table {
+				width: 100%;
+				border-collapse: collapse;
+				margin-top: 8px;
+			}
+			th, td {
+				padding: 10px 8px;
+				text-align: left;
+				border-bottom: 1px solid var(--border);
+			}
+			th { color: var(--muted); font-weight: 600; }
+			.rate {
+				color: var(--muted);
+				font-size: 0.9rem;
+			}
+			.chip {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				padding: 4px 10px;
+				border: 1px solid var(--border);
+				border-radius: 999px;
+				font-size: 0.85rem;
+				color: var(--muted);
+				margin-right: 6px;
+			}
+			.note { font-size: 0.9rem; color: var(--muted); }
+			.accent { color: var(--accent); }
+			select:focus, input:focus {
+				border-color: var(--accent);
+				outline: none;
+				box-shadow: 0 0 0 2px rgba(106, 166, 255, 0.2);
+			}
+			.is-hidden { display: none; }
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<header>
+				<h1>Nguhcraft Ores → Slabs Converter</h1>
+				<p>Convert ore amounts into slabs using the established Nguhcraft rate system.</p>
+			</header>
+
+			<section class="panel">
+				<div class="grid">
+					<div>
+						<label for="oreType">Ore type</label>
+						<select id="oreType"></select>
+					</div>
+					<div>
+						<label for="oreAmount">Ore amount</label>
+						<input id="oreAmount" type="number" min="0" step="0.000001" value="1" />
+					</div>
+					<div>
+						<label for="adjust">Server rate adjustment (±1 smallest unit)</label>
+						<select id="adjust" style="display: none;">
+							<option value="0" selected>0 (no adjustment)</option>
+							<option value="1">+1 frison</option>
+							<option value="-1">-1 frison</option>
+						</select>
+					</div>
+					<div>
+						<label for="unitToggle">Smallest unit</label>
+						<select id="unitToggle">
+							<option value="shavingDecimal" selected>Shavings (1dp)</option>
+							<option value="frison">Frisons (1/64 shaving)</option>
+							<option value="shavinglet">Shavinglets (1/32 shaving)</option>
+						</select>
+					</div>
+					<div>
+						<label>
+							<input type="checkbox" id="allowHybrid" />
+							Allow hybrids (just-in-lore ores)
+						</label>
+					</div>
+					<div id="hybridControls" class="is-hidden">
+						<div class="grid">
+							<div>
+								<label for="baseOne">Hybrid base 1</label>
+								<select id="baseOne"></select>
+							</div>
+							<div>
+								<label for="baseTwo">Hybrid base 2</label>
+								<select id="baseTwo"></select>
+							</div>
+							<div>
+								<label for="baseThree">Hybrid base 3 (optional)</label>
+								<select id="baseThree"></select>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div style="margin-top:10px;">
+					<span class="chip">1 slab = <span id="frisonsPerSlab"></span> <span id="unitPlural"></span></span>
+					<span class="chip">1 slablet = 1/32 slab</span>
+					<span class="chip">1 shaving = 1/64 slablet</span>
+					<span class="chip"><span id="unitLabel"></span> = <span id="unitRatio"></span> shaving</span>
+				</div>
+				<p class="note" style="margin-top:10px;">Adjustment can be toggled any time, but only applies once (±1 smallest unit).</p>
+			</section>
+
+			<section class="panel">
+				<table>
+					<thead>
+						<tr>
+							<th>Ore</th>
+							<th>Established rate</th>
+							<th>Adjusted smallest unit</th>
+							<th>Base rate (slabs / ore)</th>
+							<th>Slabs for amount</th>
+						</tr>
+					</thead>
+					<tbody id="results"></tbody>
+				</table>
+			</section>
+
+			<section class="panel">
+				<p class="note">
+					Diamond and netherite rates are established and do not change. Other rates start as: copper 14 frisons, gold 1 shaving, iron 32 frisons. Toggle between 1dp shavings, frisons, and shavinglets to change the smallest unit size.
+				</p>
+			</section>
+
+			<section class="panel">
+				<label style="display: block; margin-bottom: 12px;">Conversion Report</label>
+				<p class="note" style="margin-bottom: 12px;">
+					Use this report to share the conversion summary.
+				</p>
+				<pre id="conversionReport" class="note" style="white-space: pre-wrap; margin: 0;"></pre>
+			</section>
+		</div>
+
+	<script>
+		const FRISONS_PER_SHAVING = 64;
+		const SHAVINGS_PER_SLABLET = 64;
+		const SLABLETS_PER_SLAB = 32;
+		const FRISONS_PER_SLAB = FRISONS_PER_SHAVING * SHAVINGS_PER_SLABLET * SLABLETS_PER_SLAB;
+
+		const UNIT_OPTIONS = {
+				shavingDecimal: {
+					label: "Shaving tenth",
+					ratio: "1/10",
+					perShaving: 10
+				},
+				frison: {
+					label: "Frison",
+					ratio: "1/64",
+					perShaving: 64
+				},
+				shavinglet: {
+					label: "Shavinglet",
+					ratio: "1/32",
+					perShaving: 32
+				}
+			};
+
+		const rates = [
+				{
+					key: "diamond",
+					name: "Diamond",
+					shavings: 48,
+					baseFrisons: 48 + 48 / 63,
+					display: "0 slabs, 0 slablets, 48 shavings, 48 48/63 frisons",
+					established: true
+				},
+				{
+					key: "netherite",
+					name: "Netherite",
+					slabs: 1,
+					display: "1 slab",
+					established: true
+				},
+				{
+					key: "copper",
+					name: "Copper",
+					shavings: 0,
+					baseFrisons: 14,
+					display: "14 frisons",
+					established: false
+				},
+				{
+					key: "gold",
+					name: "Gold",
+					shavings: 1,
+					baseFrisons: 0,
+					display: "1 shaving",
+					established: false
+				},
+				{
+					key: "iron",
+					name: "Iron",
+					shavings: 0,
+					baseFrisons: 32,
+					display: "32 frisons",
+					established: false
+				},
+				{
+					key: "redstone",
+					name: "Redstone",
+					baseOf: "copper",
+					multiplier: 3,
+					display: "3 copper",
+					established: false
+				},
+				{
+					key: "lapiz",
+					name: "Lapiz",
+					baseOf: "copper",
+					multiplier: 24,
+					display: "24 copper",
+					established: false
+				},
+				{
+					key: "emerald",
+					name: "Emerald",
+					slabs: 18 / 32,
+					display: "18 slablets",
+					established: false
+				},
+				{
+					key: "quartz",
+					name: "Quartz",
+					baseOf: "copper",
+					multiplier: 5,
+					display: "5 copper",
+					established: false
+				}
+			];
+
+		const oreTypeSelect = document.getElementById("oreType");
+		const oreAmountInput = document.getElementById("oreAmount");
+		const adjustSelect = document.getElementById("adjust");
+		const unitToggle = document.getElementById("unitToggle");
+		const resultsBody = document.getElementById("results");
+		const frisonsPerSlab = document.getElementById("frisonsPerSlab");
+		const unitLabel = document.getElementById("unitLabel");
+		const unitRatio = document.getElementById("unitRatio");
+		const unitPlural = document.getElementById("unitPlural");
+		const allowHybrid = document.getElementById("allowHybrid");
+		const baseOne = document.getElementById("baseOne");
+		const baseTwo = document.getElementById("baseTwo");
+		const baseThree = document.getElementById("baseThree");
+		const conversionReport = document.getElementById("conversionReport");
+		const hybridControls = document.getElementById("hybridControls");
+
+		frisonsPerSlab.textContent = FRISONS_PER_SLAB.toLocaleString();
+		rates.forEach(rate => {
+			const option = document.createElement("option");
+			option.value = rate.key;
+			option.textContent = rate.name;
+			oreTypeSelect.appendChild(option);
+		});
+
+		[baseOne, baseTwo, baseThree].forEach(select => {
+			const blank = document.createElement("option");
+			blank.value = "";
+			blank.textContent = "—";
+			select.appendChild(blank);
+			rates.forEach(rate => {
+				const option = document.createElement("option");
+				option.value = rate.key;
+				option.textContent = rate.name;
+				select.appendChild(option);
+			});
+		});
+
+		function formatNumber(value, maxDigits = 6) {
+			if (!isFinite(value)) return "—";
+			return value.toLocaleString(undefined, { maximumFractionDigits: maxDigits });
+		}
+
+		function formatBreakdown(totalSlabs, unitKey) {
+			const unit = UNIT_OPTIONS[unitKey];
+			const shavingsPerSlab = SHAVINGS_PER_SLABLET * SLABLETS_PER_SLAB;
+			const unitsPerSlab = shavingsPerSlab * unit.perShaving;
+			const totalUnits = Math.round(Math.max(0, totalSlabs * unitsPerSlab));
+
+			const slabs = Math.floor(totalUnits / unitsPerSlab);
+			let remainder = totalUnits - slabs * unitsPerSlab;
+
+			const unitsPerSlablet = unit.perShaving * SHAVINGS_PER_SLABLET;
+			const slablets = Math.floor(remainder / unitsPerSlablet);
+			remainder -= slablets * unitsPerSlablet;
+
+			const unitsPerShaving = unit.perShaving;
+			const shavings = Math.floor(remainder / unitsPerShaving);
+			remainder -= shavings * unitsPerShaving;
+
+			const smallest = remainder;
+			const unitLabel = unit.label.toLowerCase();
+			const pluralize = (value, label) => `${value} ${label}${value === 1 ? "" : "s"}`;
+			const parts = [
+				{ value: slabs, label: "slab" },
+				{ value: slablets, label: "slablet" },
+				{ value: shavings, label: "shaving" },
+				{ value: smallest, label: unitLabel }
+			];
+
+			let start = 0;
+			let end = parts.length - 1;
+			while (start <= end && parts[start].value === 0) start++;
+			while (end >= start && parts[end].value === 0) end--;
+
+			const visible = parts.slice(start, end + 1);
+			if (visible.length === 0) {
+				return pluralize(0, "slab");
+			}
+			return visible.map(part => pluralize(part.value, part.label)).join(", ");
+		}
+
+		function getRateByKey(key) {
+			return rates.find(rate => rate.key === key);
+		}
+
+		function rateToSlabs(rate, unitKey, adjustment) {
+			if (!rate) return 0;
+			if (rate.slabs != null) return rate.slabs;
+			if (rate.baseOf) {
+				const baseRate = getRateByKey(rate.baseOf);
+				return rateToSlabs(baseRate, unitKey, adjustment) * (rate.multiplier || 1);
+			}
+
+			const unit = UNIT_OPTIONS[unitKey];
+			const shavingsPerSlab = SHAVINGS_PER_SLABLET * SLABLETS_PER_SLAB;
+			const adjustmentFrisons = rate.established
+				? 0
+				: adjustment * (FRISONS_PER_SHAVING / unit.perShaving);
+			const adjustedFrisons = Math.max((rate.baseFrisons || 0) + adjustmentFrisons, 0);
+			const totalShavings = (rate.shavings || 0) + adjustedFrisons / FRISONS_PER_SHAVING;
+			return totalShavings / shavingsPerSlab;
+		}
+
+		function updateAdjustmentLabels() {
+			const unit = UNIT_OPTIONS[unitToggle.value];
+			adjustSelect.options[1].textContent = `+1 ${unit.label.toLowerCase()}`;
+			adjustSelect.options[2].textContent = `-1 ${unit.label.toLowerCase()}`;
+		}
+
+		function buildHybridRate(unitKey, adjustment) {
+			const selectedKeys = [baseOne.value, baseTwo.value, baseThree.value].filter(Boolean);
+			const uniqueKeys = [...new Set(selectedKeys)];
+			if (uniqueKeys.length < 2) {
+				return {
+					key: "hybrid",
+					name: "Hybrid (select 2-3 bases)",
+					slabs: 0,
+					display: "—",
+					established: false
+				};
+			}
+			const total = uniqueKeys.reduce((sum, key) => {
+				const baseRate = getRateByKey(key);
+				return sum + rateToSlabs(baseRate, unitKey, adjustment);
+			}, 0);
+			const avg = total / uniqueKeys.length;
+			return {
+				key: "hybrid",
+				name: `Hybrid (${uniqueKeys.length} bases)`,
+				slabs: avg,
+				display: uniqueKeys.map(key => getRateByKey(key)?.name || key).join(" + "),
+				established: false
+			};
+		}
+
+		function render() {
+			const oreAmount = Math.max(0, Number(oreAmountInput.value || 0));
+			const adjustment = Number(adjustSelect.value || 0);
+			const unitKey = unitToggle.value;
+			const unit = UNIT_OPTIONS[unitKey];
+			const selectedKey = oreTypeSelect.value;
+
+			unitLabel.textContent = unit.label;
+			unitRatio.textContent = unit.ratio;
+			unitPlural.textContent = `${unit.label.toLowerCase()}s`;
+
+			const shavingsPerSlab = SHAVINGS_PER_SLABLET * SLABLETS_PER_SLAB;
+			const unitsPerSlab = shavingsPerSlab * unit.perShaving;
+			frisonsPerSlab.textContent = unitsPerSlab.toLocaleString();
+
+			resultsBody.innerHTML = "";
+
+			const activeRates = allowHybrid.checked
+				? [buildHybridRate(unitKey, adjustment)]
+				: rates.filter(item => item.key === selectedKey);
+
+			for (const rate of activeRates) {
+				const baseSlabs = rateToSlabs(rate, unitKey, 0);
+				const adjustedSlabs = rateToSlabs(rate, unitKey, adjustment);
+				const slabsForAmount = oreAmount * adjustedSlabs;
+				const breakdown = formatBreakdown(slabsForAmount, unitKey);
+				const baseUnits = rate.slabs != null || rate.baseOf
+					? null
+					: (rate.baseFrisons || 0) * unit.perShaving / FRISONS_PER_SHAVING;
+				const adjustmentFrisons = rate.established
+					? 0
+					: adjustment * (FRISONS_PER_SHAVING / unit.perShaving);
+				const adjustedFrisons = rate.slabs != null || rate.baseOf
+					? null
+					: Math.max((rate.baseFrisons || 0) + adjustmentFrisons, 0);
+				const adjustedSmallUnit = adjustedFrisons == null
+					? null
+					: adjustedFrisons * unit.perShaving / FRISONS_PER_SHAVING;
+
+				const unitDisplay = rate.slabs != null
+					? rate.display
+					: rate.baseOf
+						? rate.display
+						: (unitKey === "shavingDecimal"
+							? `${formatNumber((rate.shavings || 0) + (rate.baseFrisons || 0) / FRISONS_PER_SHAVING, 1)} shavings`
+							: `${rate.shavings || 0} shavings, ${formatNumber(baseUnits == null ? 0 : Math.round(baseUnits))} ${unit.label.toLowerCase()}${baseUnits === 1 ? "" : "s"}`);
+
+				const row = document.createElement("tr");
+				row.style.backgroundColor = "rgba(106, 166, 255, 0.08)";
+				row.innerHTML = `
+					<td><strong>${rate.name}</strong></td>
+					<td><span class="rate">${unitDisplay}</span></td>
+					<td>${adjustedSmallUnit == null ? "—" : formatNumber(Math.round(adjustedSmallUnit))}</td>
+					<td>${formatNumber(baseSlabs)}</td>
+					<td><span class="accent">${breakdown}</span></td>
+				`;
+				resultsBody.appendChild(row);
+
+				conversionReport.textContent = [
+					`Ore: ${rate.name}`,
+					`Amount: ${formatNumber(oreAmount)}`,
+					`Unit: ${unit.label}`,
+					`Base rate (slabs/ore): ${formatNumber(baseSlabs)}`,
+					`Adjusted rate (slabs/ore): ${formatNumber(adjustedSlabs)}`,
+					`Total slabs: ${formatNumber(slabsForAmount)}`,
+					`Breakdown: ${breakdown}`
+				].join("\n");
+			}
+			hybridControls.classList.toggle("is-hidden", !allowHybrid.checked);
+		}
+
+		oreAmountInput.addEventListener("input", render);
+		oreTypeSelect.addEventListener("change", render);
+		adjustSelect.addEventListener("change", () => {
+			updateAdjustmentLabels();
+			render();
+		});
+		unitToggle.addEventListener("change", () => {
+			updateAdjustmentLabels();
+			render();
+		});
+		allowHybrid.addEventListener("change", render);
+		[baseOne, baseTwo, baseThree].forEach(select => {
+			select.addEventListener("change", render);
+		});
+		updateAdjustmentLabels();
+		render();
+	</script>
+	</body>
+</html>

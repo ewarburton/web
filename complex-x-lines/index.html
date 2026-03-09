@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Complex X Lines - Index</title>
+	<style>
+		body{font-family:system-ui,sans-serif;background:#111;color:#eee;margin:0;padding:24px}
+		h1{margin:0 0 8px}
+		p{margin:0 0 18px;color:#bbb}
+		ul{padding-left:20px}
+		a{color:#8cc8ff}
+		.small{font-size:12px;color:#999;margin-top:14px}
+	</style>
+</head>
+<body>
+	<h1>Complex X Lines</h1>
+	<p>Playable files in this folder:</p>
+	<ul id="list"></ul>
+	<div class="small" id="note"></div>
+	<script>
+	if(location.pathname.endsWith('/complex-x-lines/')||location.pathname.endsWith('/complex-x-lines')){
+		if(!location.pathname.endsWith('/index.html')){
+			const p=location.pathname.replace(/\/?$/,'/');
+			location.replace(p+'index.html'+location.search+location.hash);
+		}
+	}
+	const list=document.getElementById('list');
+	const note=document.getElementById('note');
+	const min=1;
+	const max=500;
+	(async()=>{
+		const found=[];
+		for(let i=min;i<=max;i++){
+			const name=`complex-${i}-lines.html`;
+			try{
+				const r=await fetch(name,{method:'HEAD',cache:'no-store'});
+				if(r.ok)found.push({i,name});
+			}catch{}
+		}
+		found.sort((a,b)=>a.i-b.i);
+		if(!found.length){
+			list.innerHTML='<li>No matching files found.</li>';
+		}else{
+			for(const f of found){
+				const li=document.createElement('li');
+				const a=document.createElement('a');
+				a.href=f.name;
+				a.textContent=f.name;
+				li.appendChild(a);
+				list.appendChild(li);
+			}
+		}
+		note.textContent='Auto-scans complex-<n>-lines.html (1..500). Open via http(s), not file://, for reliable detection.';
+	})();
+	</script>
+</body>
+</html>

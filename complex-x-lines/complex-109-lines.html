@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>100-Line Block Game</title>
+<style>
+body{margin:0;background:#111;color:#fff;font:14px system-ui;display:grid;place-items:center;height:100vh}
+#ui{position:fixed;top:10px;left:10px}
+canvas{background:#1a1a1a;border:2px solid #555;image-rendering:pixelated}
+</style>
+<div id="ui">Arrows/WASD move • Survive falling blocks • <b id="s">0</b></div>
+<canvas id="c" width="360" height="540"></canvas>
+<script>
+const c=document.getElementById('c');
+const x=c.getContext('2d');
+const S=20;
+const W=c.width/S;
+const H=c.height/S;
+const scoreEl=document.getElementById('s');
+let p={x:W/2|0,y:H-2,w:1,h:1,s:0};
+let k={};
+let b=[];
+let t=0;
+let fallEvery=8;
+let live=1;
+onkeydown=e=>k[e.key.toLowerCase()]=1;
+onkeyup=e=>k[e.key.toLowerCase()]=0;
+function add(){
+	let n=1+Math.random()*3|0;
+	let w=1+Math.random()*4|0;
+	for(let i=0;i<n;i++){
+		b.push({x:Math.random()*(W-w)|0,y:-(Math.random()*8|0),w,h:1});
+	}
+}
+function hit(a,o){
+	return a.x<o.x+o.w&&a.x+a.w>o.x&&a.y<o.y+o.h&&a.y+a.h>o.y;
+}
+function step(){
+	if(!live)return;
+	if(k.arrowleft||k.a)p.x-=.25;
+	if(k.arrowright||k.d)p.x+=.25;
+	if(k.arrowup||k.w)p.y-=.25;
+	if(k.arrowdown||k.s)p.y+=.25;
+	p.x=Math.max(0,Math.min(W-p.w,p.x));
+	p.y=Math.max(0,Math.min(H-p.h,p.y));
+	t++;
+	if(t%25===0)add();
+	if(t%900===0&&fallEvery>3)fallEvery--;
+	if(t%fallEvery===0){
+		for(let i=b.length-1;i>=0;i--){
+			let o=b[i];
+			o.y++;
+			if(o.y>H){
+				b.splice(i,1);
+				p.s++;
+			}else if(hit(p,o)){
+				live=0;
+			}
+		}
+	}
+}
+function rect(a,col){
+	x.fillStyle=col;
+	x.fillRect(a.x*S,a.y*S,a.w*S,a.h*S);
+}
+function draw(){
+	x.fillStyle='#111';
+	x.fillRect(0,0,c.width,c.height);
+	x.strokeStyle='#222';
+	for(let i=1;i<W;i++){
+		x.beginPath();
+		x.moveTo(i*S,0);
+		x.lineTo(i*S,c.height);
+		x.stroke();
+	}
+	for(let j=1;j<H;j++){
+		x.beginPath();
+		x.moveTo(0,j*S);
+		x.lineTo(c.width,j*S);
+		x.stroke();
+	}
+	rect(p,live?'#5cf':'#f44');
+	b.forEach(o=>rect(o,'#fa4'));
+	scoreEl.textContent=p.s;
+	if(!live){
+		x.fillStyle='rgba(0,0,0,.6)';
+		x.fillRect(0,0,c.width,c.height);
+		x.fillStyle='#fff';
+		x.font='bold 28px system-ui';
+		x.fillText('Game Over',105,230);
+		x.font='16px system-ui';
+		x.fillText('Press R to restart',120,265);
+	}
+}
+function loop(){
+	if((k.r||k.R)&&!live){
+		p={x:W/2|0,y:H-2,w:1,h:1,s:0};
+		b=[];
+		t=0;
+		fallEvery=8;
+		live=1;
+		k.r=k.R=0;
+	}
+	step();
+	draw();
+	requestAnimationFrame(loop);
+}
+loop();
+</script>
+</html>

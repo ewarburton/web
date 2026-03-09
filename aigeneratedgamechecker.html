@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Generated Game Checker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+            margin-bottom: 30px;
+        }
+
+        .upload-area:hover {
+            background: #eef1ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragover {
+            background: #e0e7ff;
+            border-color: #4c1d95;
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .preview-container {
+            display: none;
+            margin-bottom: 30px;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .analyze-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-weight: 600;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .analyze-btn:active {
+            transform: translateY(0);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .verdict {
+            text-align: center;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .verdict.ai-generated {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .verdict.human-made {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .confidence-meter {
+            margin: 20px 0;
+        }
+
+        .confidence-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 1s ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .indicators {
+            margin-top: 30px;
+        }
+
+        .indicator-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .indicator-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .indicator-item strong {
+            color: #333;
+        }
+
+        .indicator-item.positive {
+            border-left-color: #f5576c;
+            background: #fff5f7;
+        }
+
+        .reset-btn {
+            width: 100%;
+            padding: 12px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: #5a6268;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Game Checker</h1>
+        <p class="subtitle">Upload a screenshot to detect if it's AI-generated</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📸</div>
+            <div class="upload-text">Click to upload or drag and drop</div>
+            <div class="upload-hint">PNG, JPG, or GIF (max 10MB)</div>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+
+        <div class="preview-container" id="previewContainer">
+            <img id="previewImage" class="preview-image" alt="Preview">
+            <button class="analyze-btn" id="analyzeBtn">Analyze Image</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing image...</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="verdict" id="verdict"></div>
+            
+            <div class="confidence-meter">
+                <div class="confidence-label">
+                    <span>Confidence Level</span>
+                    <span id="confidencePercent">0%</span>
+                </div>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="indicators">
+                <div class="indicator-title">Analysis Details</div>
+                <div id="indicatorsList"></div>
+            </div>
+
+            <button class="reset-btn" id="resetBtn">Check Another Image</button>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const verdict = document.getElementById('verdict');
+        const confidenceFill = document.getElementById('confidenceFill');
+        const confidencePercent = document.getElementById('confidencePercent');
+        const indicatorsList = document.getElementById('indicatorsList');
+        const resetBtn = document.getElementById('resetBtn');
+
+        let currentImage = null;
+
+        // Upload area click
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleImageUpload(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleImageUpload(file);
+            }
+        });
+
+        function handleImageUpload(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentImage = e.target.result;
+                previewImage.src = currentImage;
+                uploadArea.style.display = 'none';
+                previewContainer.style.display = 'block';
+                results.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        analyzeBtn.addEventListener('click', analyzeImage);
+
+        function analyzeImage() {
+            loading.style.display = 'block';
+            previewContainer.style.display = 'none';
+            results.style.display = 'none';
+
+            // Simulate analysis with actual image analysis heuristics
+            setTimeout(() => {
+                const analysis = performAnalysis(previewImage);
+                displayResults(analysis);
+                loading.style.display = 'none';
+                results.style.display = 'block';
+            }, 2000);
+        }
+
+        function performAnalysis(img) {
+            // Create a canvas to analyze the image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            ctx.drawImage(img, 0, 0);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Heuristic checks for AI-generated content
+            let humanScore = 0;
+            const indicators = [];
+
+            // 1. Check for high color variance (real games have lots of varied colors)
+            const colorVariance = calculateColorVariance(data);
+            if (colorVariance > 3000) {
+                humanScore += 20;
+                indicators.push({
+                    text: 'High color variation (typical of real games)',
+                    isPositive: false
+                });
+            } else if (colorVariance < 1500) {
+                indicators.push({
+                    text: 'Unusually smooth color gradients detected',
+                    isPositive: true
+                });
+            }
+
+            // 2. Check for blocky/pixelated patterns (real games, especially pixel art)
+            const blockiness = calculateBlockiness(data, canvas.width, canvas.height);
+            if (blockiness > 0.4) {
+                humanScore += 20;
+                indicators.push({
+                    text: 'Blocky pixel patterns detected (typical of game graphics)',
+                    isPositive: false
+                });
+            }
+
+            // 2b. Detect text/number HUD regions (even if unreadable) - strong human indicator
+            const hasText = detectTextRegions(data, canvas.width, canvas.height);
+            if (hasText) {
+                humanScore += 30;
+                indicators.push({
+                    text: 'Text or HUD regions detected (hotbar, score, timers)',
+                    isPositive: false
+                });
+            }
+
+            // 3. Detect UI elements (HUD, hotbars, health bars - strong indicator of real games)
+            const hasUI = detectUIElements(data, canvas.width, canvas.height);
+            if (hasUI) {
+                humanScore += 20;
+                indicators.push({
+                    text: 'Game UI elements detected (HUD/hotbar/menu)',
+                    isPositive: false
+                });
+            }
+
+            // 4. Check for high edge density (sharp transitions common in games)
+            const sharpnessScore = calculateSharpness(data);
+            if (sharpnessScore > 0.5) {
+                humanScore += 15;
+                indicators.push({
+                    text: 'Sharp pixel edges detected (game graphics characteristic)',
+                    isPositive: false
+                });
+            }
+
+            // 5. Check for limited color palette (games often use specific palettes)
+            const uniqueColors = countUniqueColorRegions(data);
+            if (uniqueColors < 1000) {
+                humanScore += 10;
+                indicators.push({
+                    text: 'Limited color palette (typical of game assets)',
+                    isPositive: false
+                });
+            }
+
+            // 6. Texture richness (real games have layered texture detail)
+            const textureStats = calculateTextureStats(data, canvas.width, canvas.height);
+            if (textureStats.avgVariance > 900) {
+                humanScore += 20;
+                indicators.push({
+                    text: 'High texture richness detected',
+                    isPositive: false
+                });
+            }
+
+            if (textureStats.flatBlockRatio > 0.45) {
+                humanScore -= 30;
+                indicators.push({
+                    text: 'Large flat regions with sparse noise detected',
+                    isPositive: true
+                });
+            }
+
+            // 7. Procedural noise speckle detection (common in synthetic renders)
+            const microSquares = detectMicroSquares(data, canvas.width, canvas.height);
+            if (microSquares > 0.22) {
+                humanScore -= 20;
+                indicators.push({
+                    text: 'Procedural noise speckling detected',
+                    isPositive: true
+                });
+            }
+
+            // 6. Check symmetry (too perfect = suspicious)
+            const symmetryScore = checkSymmetry(data, canvas.width, canvas.height);
+            if (symmetryScore > 0.8) {
+                humanScore -= 15;
+                indicators.push({
+                    text: 'Unusually high symmetry detected',
+                    isPositive: true
+                });
+            }
+
+            // 8b. Check extreme asymmetry (over-randomized layouts can indicate AI)
+            const asymmetryScore = 1 - symmetryScore;
+            if (asymmetryScore > 0.92) {
+                humanScore -= 18;
+                indicators.push({
+                    text: 'Extremely high asymmetry detected',
+                    isPositive: true
+                });
+            }
+
+            // 7. Check for smooth gradients (AI tends to create these)
+            // If HUD/text is present, many UI overlays or compression can mimic smoothness - reduce penalty
+            if (!(hasText || hasUI)) {
+                if (colorVariance < 1500 && sharpnessScore < 0.3) {
+                    humanScore -= 25;
+                    indicators.push({
+                        text: 'Overly smooth transitions suggest AI generation',
+                        isPositive: true
+                    });
+                }
+            } else {
+                // soften the smoothness penalty when HUD/text is detected
+                if (colorVariance < 1500 && sharpnessScore < 0.25) {
+                    humanScore -= 8;
+                    indicators.push({
+                        text: 'Mild smooth transitions detected (HUD present)',
+                        isPositive: true
+                    });
+                }
+            }
+
+            // Additional context-based indicators
+            if (humanScore > 80) {
+                indicators.push({
+                    text: 'Multiple game-specific artifacts detected',
+                    isPositive: false
+                });
+            }
+
+            if (humanScore < 30) {
+                indicators.push({
+                    text: 'Patterns consistent with AI neural network generation',
+                    isPositive: true
+                });
+            }
+
+            // Calculate final confidence (higher humanScore = more human)
+            const confidence = Math.min(98, Math.max(40, humanScore + 5));
+
+            return {
+                isAI: humanScore < 50,
+                confidence: confidence,
+                indicators: indicators
+            };
+        }
+
+        function calculateColorVariance(data) {
+            let totalVariance = 0;
+            const sampleSize = Math.min(10000, data.length / 4);
+            
+            for (let i = 0; i < sampleSize; i++) {
+                const idx = Math.floor(Math.random() * (data.length / 4)) * 4;
+                const r = data[idx];
+                const g = data[idx + 1];
+                const b = data[idx + 2];
+                
+                const avg = (r + g + b) / 3;
+                totalVariance += Math.abs(r - avg) + Math.abs(g - avg) + Math.abs(b - avg);
+            }
+            
+            return totalVariance / sampleSize;
+        }
+
+        function checkSymmetry(data, width, height) {
+            const samples = 100;
+            let symmetryMatches = 0;
+            
+            for (let i = 0; i < samples; i++) {
+                const x = Math.floor(Math.random() * (width / 2));
+                const y = Math.floor(Math.random() * height);
+                const mirrorX = width - x - 1;
+                
+                const idx1 = (y * width + x) * 4;
+                const idx2 = (y * width + mirrorX) * 4;
+                
+                const diff = Math.abs(data[idx1] - data[idx2]) + 
+                            Math.abs(data[idx1 + 1] - data[idx2 + 1]) + 
+                            Math.abs(data[idx1 + 2] - data[idx2 + 2]);
+                
+                if (diff < 50) symmetryMatches++;
+            }
+            
+            return symmetryMatches / samples;
+        }
+
+        function calculateSharpness(data) {
+            let edgeCount = 0;
+            const samples = 1000;
+            
+            for (let i = 0; i < samples; i++) {
+                const idx = Math.floor(Math.random() * (data.length / 4 - 1)) * 4;
+                const brightness1 = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                const brightness2 = (data[idx + 4] + data[idx + 5] + data[idx + 6]) / 3;
+                
+                if (Math.abs(brightness1 - brightness2) > 50) {
+                    edgeCount++;
+                }
+            }
+            
+            return edgeCount / samples;
+        }
+
+        function calculateBlockiness(data, width, height) {
+            // Detect blocky/pixelated patterns (Minecraft, pixel art games)
+            let blockPatterns = 0;
+            const samples = 200;
+            
+            for (let i = 0; i < samples; i++) {
+                const x = Math.floor(Math.random() * (width - 4));
+                const y = Math.floor(Math.random() * (height - 4));
+                
+                // Check if a small area has uniform color (blocky)
+                const idx = (y * width + x) * 4;
+                const r1 = data[idx];
+                const g1 = data[idx + 1];
+                const b1 = data[idx + 2];
+                
+                let uniform = true;
+                for (let dy = 0; dy < 4; dy++) {
+                    for (let dx = 0; dx < 4; dx++) {
+                        const i2 = ((y + dy) * width + (x + dx)) * 4;
+                        if (Math.abs(data[i2] - r1) > 30 || 
+                            Math.abs(data[i2 + 1] - g1) > 30 || 
+                            Math.abs(data[i2 + 2] - b1) > 30) {
+                            uniform = false;
+                            break;
+                        }
+                    }
+                    if (!uniform) break;
+                }
+                
+                if (uniform) blockPatterns++;
+            }
+            
+            return blockPatterns / samples;
+        }
+
+        function detectUIElements(data, width, height) {
+            // Check bottom 15% of image for UI elements (hotbar, HUD)
+            const bottomStart = Math.floor(height * 0.85);
+            let darkRectangles = 0;
+            
+            for (let y = bottomStart; y < height; y += 5) {
+                for (let x = 0; x < width; x += 5) {
+                    const idx = (y * width + x) * 4;
+                    const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                    
+                    // Dark UI backgrounds are common
+                    if (brightness < 80) {
+                        darkRectangles++;
+                    }
+                }
+            }
+            
+            // Check for contrasting elements (health bars, icons)
+            const bottomArea = width * (height - bottomStart);
+            const darkRatio = darkRectangles / (bottomArea / 25);
+            
+            return darkRatio > 0.3; // If >30% of bottom is dark UI
+        }
+
+        function detectTextRegions(data, width, height) {
+            // Look for clusters of small high-contrast components in the top and bottom regions.
+            const regionHeight = Math.floor(height * 0.22);
+            let hits = 0;
+            const samples = 800;
+
+            for (let i = 0; i < samples; i++) {
+                // sample mostly in top/bottom HUD areas
+                const top = Math.random() < 0.5;
+                const y = top ? Math.floor(Math.random() * regionHeight) : Math.floor(Math.random() * regionHeight) + (height - regionHeight);
+                const x = Math.floor(Math.random() * width);
+
+                const idx = (y * width + x) * 4;
+                const b = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+
+                // check small neighborhood contrast
+                let contrastCount = 0;
+                for (let oy = -2; oy <= 2; oy++) {
+                    for (let ox = -6; ox <= 6; ox++) {
+                        const nx = Math.min(Math.max(0, x + ox), width - 1);
+                        const ny = Math.min(Math.max(0, y + oy), height - 1);
+                        const nidx = (ny * width + nx) * 4;
+                        const nb = (data[nidx] + data[nidx + 1] + data[nidx + 2]) / 3;
+                        if (Math.abs(nb - b) > 30) contrastCount++;
+                    }
+                }
+
+                if (contrastCount > 18) hits++;
+            }
+
+            // If a significant fraction of samples show small high-contrast clusters, treat as text/HUD
+            return (hits / samples) > 0.12;
+        }
+
+        function countUniqueColorRegions(data) {
+            // Sample colors and count distinct ones
+            const colorSet = new Set();
+            const samples = 5000;
+            
+            for (let i = 0; i < samples; i++) {
+                const idx = Math.floor(Math.random() * (data.length / 4)) * 4;
+                // Quantize to reduce near-duplicates
+                const r = Math.floor(data[idx] / 16) * 16;
+                const g = Math.floor(data[idx + 1] / 16) * 16;
+                const b = Math.floor(data[idx + 2] / 16) * 16;
+                colorSet.add(`${r},${g},${b}`);
+            }
+            
+            return colorSet.size;
+        }
+
+        function calculateTextureStats(data, width, height) {
+            // Sample local variance across small blocks to estimate texture richness
+            const samples = 200;
+            let varianceSum = 0;
+            let flatBlocks = 0;
+
+            for (let i = 0; i < samples; i++) {
+                const x = Math.floor(Math.random() * (width - 8));
+                const y = Math.floor(Math.random() * (height - 8));
+                let sum = 0;
+                let sumSq = 0;
+                let count = 0;
+
+                for (let dy = 0; dy < 8; dy++) {
+                    for (let dx = 0; dx < 8; dx++) {
+                        const idx = ((y + dy) * width + (x + dx)) * 4;
+                        const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                        sum += brightness;
+                        sumSq += brightness * brightness;
+                        count++;
+                    }
+                }
+
+                const mean = sum / count;
+                const variance = (sumSq / count) - (mean * mean);
+                varianceSum += variance;
+
+                if (variance < 200) {
+                    flatBlocks++;
+                }
+            }
+
+            return {
+                avgVariance: varianceSum / samples,
+                flatBlockRatio: flatBlocks / samples
+            };
+        }
+
+        function detectMicroSquares(data, width, height) {
+            // Detect tiny uniform 2x2 blocks that contrast with neighbors (procedural speckle)
+            const samples = 300;
+            let speckles = 0;
+
+            for (let i = 0; i < samples; i++) {
+                const x = Math.floor(Math.random() * (width - 2));
+                const y = Math.floor(Math.random() * (height - 2));
+
+                const baseIdx = (y * width + x) * 4;
+                const r = data[baseIdx];
+                const g = data[baseIdx + 1];
+                const b = data[baseIdx + 2];
+
+                let uniform = true;
+                for (let dy = 0; dy < 2; dy++) {
+                    for (let dx = 0; dx < 2; dx++) {
+                        const idx = ((y + dy) * width + (x + dx)) * 4;
+                        if (Math.abs(data[idx] - r) > 10 ||
+                            Math.abs(data[idx + 1] - g) > 10 ||
+                            Math.abs(data[idx + 2] - b) > 10) {
+                            uniform = false;
+                            break;
+                        }
+                    }
+                    if (!uniform) break;
+                }
+
+                if (!uniform) continue;
+
+                // Compare to a surrounding pixel to ensure contrast
+                const nx = Math.min(width - 1, x + 2);
+                const ny = Math.min(height - 1, y + 2);
+                const nIdx = (ny * width + nx) * 4;
+                const diff = Math.abs(data[nIdx] - r) + Math.abs(data[nIdx + 1] - g) + Math.abs(data[nIdx + 2] - b);
+
+                if (diff > 40) {
+                    speckles++;
+                }
+            }
+
+            return speckles / samples;
+        }
+
+        function displayResults(analysis) {
+            // Set verdict
+            if (analysis.isAI) {
+                verdict.textContent = '🤖 Likely AI-Generated';
+                verdict.className = 'verdict ai-generated';
+            } else {
+                verdict.textContent = '👤 Likely Human-Made';
+                verdict.className = 'verdict human-made';
+            }
+
+            // Set confidence
+            confidencePercent.textContent = Math.round(analysis.confidence) + '%';
+            setTimeout(() => {
+                confidenceFill.style.width = analysis.confidence + '%';
+            }, 100);
+
+            // Display indicators
+            indicatorsList.innerHTML = '';
+            analysis.indicators.forEach(indicator => {
+                const div = document.createElement('div');
+                div.className = 'indicator-item' + (indicator.isPositive ? ' positive' : '');
+                div.innerHTML = `<strong>${indicator.isPositive ? '⚠️' : '✓'}</strong> ${indicator.text}`;
+                indicatorsList.appendChild(div);
+            });
+        }
+
+        resetBtn.addEventListener('click', () => {
+            uploadArea.style.display = 'block';
+            previewContainer.style.display = 'none';
+            results.style.display = 'none';
+            fileInput.value = '';
+            currentImage = null;
+            confidenceFill.style.width = '0%';
+        });
+    </script>
+</body>
+</html>

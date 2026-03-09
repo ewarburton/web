@@ -101,10 +101,6 @@
         .preset-buttons button:hover {
             background: #777;
         }
-        
-        input[type="checkbox"] {
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -124,34 +120,9 @@
         </div>
         
         <div class="control-group">
-            <label for="gridSize">Grid Size:</label>
-            <input type="number" id="gridX" value="9" min="1" max="20" style="width: 60px;"> x
-            <input type="number" id="gridY" value="9" min="1" max="20" style="width: 60px;">
-            <span style="font-size: 12px;">(X by Y from center)</span>
-        </div>
-        
-        <div class="control-group">
-            <label for="showDivisions">Show Divisions:</label>
-            <input type="checkbox" id="showDivisions" checked style="width: auto;">
-        </div>
-        
-        <div class="control-group" id="divisionTypeControl">
-            <label for="divisionType">Division Type:</label>
-            <input type="range" id="divisionType" min="0" max="2" value="0" step="1" style="width: 150px;">
-            <span id="divisionLabel" style="min-width: 180px; font-weight: bold;">For Divisions of the Octave</span>
-        </div>
-        
-        <div class="control-group" id="edoControl">
-            <label for="edoSlider">EDO Tuning:</label>
-            <input type="range" id="edoSlider" min="5" max="53" value="12" style="width: 200px;">
-            <span id="edoValue" style="min-width: 60px; font-weight: bold;">12-EDO</span>
-            <button onclick="applyEDO()" style="padding: 6px 12px;">Apply</button>
-        </div>
-        
-        <div class="control-group">
             <button onclick="updateLattice()">Update Lattice</button>
+            <button onclick="resetToDefaults()">Reset to 5-limit JI</button>
             <button onclick="toggleOctaveReduction()">Reduce to Octave</button>
-            <button onclick="toggleOctaveReductionSeparate()" id="octaveReductionBtn" style="display: none;">Reduce to Octave</button>
             <button onclick="toggleWaveformMode()">Mode: Sine Finite</button>
         </div>
         
@@ -159,6 +130,9 @@
             <button onclick="setPreset('5limit')">5-limit JI</button>
             <button onclick="setPreset('pythagorean')">Pythagorean</button>
             <button onclick="setPreset('7limit')">7-limit JI</button>
+            <button onclick="setPreset('12edo')">12-EDO</button>
+            <button onclick="setPreset('31edo')">31-EDO</button>
+            <button onclick="setPreset('53edo')">53-EDO</button>
         </div>
     </div>
     
@@ -171,8 +145,7 @@
     <script>
         const canvas = document.getElementById('lattice');
         const ctx = canvas.getContext('2d');
-        let gridSizeX = 9; // X units from center
-        let gridSizeY = 9; // Y units from center
+        const gridSize = 9; // 9 units from center in each direction
         const nodeRadius = 8;
         const spacing = 45;
         
@@ -183,10 +156,10 @@
         let hoveredNode = null;
         let audioContext = null;
         let isOctaveReduced = false; // Track if we're in octave-reduced mode
-        let isOctaveReducedSeparate = false; // Track octave reduction when using EDT/EDP
         let waveformMode = 'sine-finite'; // 'sine-finite' or 'sawtooth-infinite'
-        let activeOscillators = new Map(); // Track active infinite oscillators by key
-        let activeNodeOscillators = new Map(); // Track oscillators by node position (for canvas clicks)
+        let activeSounds = new Set(); // Track which nodes are currently playing sound
+        let activeOscillators = new Map(); // Map of nodeKey -> oscillator for sustained notes
+        let keyToNode = new Map(); // Map of key -> nodeKey for tracking which nodes are pressed by which keys
         
         // Keyboard to lattice offset mapping
         const keyMap = {
@@ -210,13 +183,21 @@
         const presets = {
             '5limit': { x: '3/2F', y: '5/4F', name: '5-limit JI (3/2, 5/4)' },
             'pythagorean': { x: '3/2F', y: '3/2F', name: 'Pythagorean (3/2, 3/2)' },
-            '7limit': { x: '3/2F', y: '7/4F', name: '7-limit JI (3/2, 7/4)' }
+            '7limit': { x: '3/2F', y: '7/4F', name: '7-limit JI (3/2, 7/4)' },
+            '12edo': { x: '700', y: '400', name: '12-EDO approx' },
+            '31edo': { x: '696.774', y: '387.097', name: '31-EDO' },
+            '53edo': { x: '701.887', y: '384.906', name: '53-EDO' }
         };
         
         function initAudioContext() {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
+            // Resume audio context if suspended (required by browser autoplay policies)
+            if (audioContext.state === 'suspended') {
+                audioContext.resume().catch(err => console.error('Failed to resume audio context:', err));
+            }
+            return audioContext;
         }
         
         function centsToRatio(cents) {
@@ -291,49 +272,29 @@
             return null;
         }
         
-        function getFractionForNode(x, y, distance) {
-            // Get base fractions for x and y axes
-            const xFrac = ratioToSimpleFraction(xRatio);
-            const yFrac = ratioToSimpleFraction(yRatio);
+        function ratioToFraction(ratio, distance, maxDenom = 100000) {
+            const allowedPrimes = getUsedPrimes();
             
-            if (!xFrac || !yFrac) return null;
-            
-            // Calculate numerator and denominator separately
-            // ratio = (xNumer/xDenom)^x * (yNumer/yDenom)^y
-            // Start with 1/1
-            let numer = 1;
-            let denom = 1;
-            
-            // Handle x exponent
-            if (x > 0) {
-                numer *= Math.pow(xFrac.numer, x);
-                denom *= Math.pow(xFrac.denom, x);
-            } else if (x < 0) {
-                numer *= Math.pow(xFrac.denom, -x);
-                denom *= Math.pow(xFrac.numer, -x);
+            // Try to find a fraction using only the allowed primes
+            for (let denom = 1; denom <= maxDenom; denom++) {
+                const numer = Math.round(ratio * denom);
+                if (Math.abs(numer / denom - ratio) < 1e-9) {
+                    // Only reduce with GCD if distance < 5
+                    let finalNumer = numer;
+                    let finalDenom = denom;
+                    
+                    if (distance < 5) {
+                        const g = gcd(numer, denom);
+                        finalNumer = numer / g;
+                        finalDenom = denom / g;
+                    }
+                    
+                    if (onlyUsesAllowedPrimes(finalNumer, finalDenom, allowedPrimes)) {
+                        return { numer: finalNumer, denom: finalDenom };
+                    }
+                }
             }
-            
-            // Handle y exponent
-            if (y > 0) {
-                numer *= Math.pow(yFrac.numer, y);
-                denom *= Math.pow(yFrac.denom, y);
-            } else if (y < 0) {
-                numer *= Math.pow(yFrac.denom, -y);
-                denom *= Math.pow(yFrac.numer, -y);
-            }
-            
-            // Round to handle floating point errors
-            numer = Math.round(numer);
-            denom = Math.round(denom);
-            
-            // Only reduce with GCD if distance < 5
-            if (distance < 5) {
-                const g = gcd(numer, denom);
-                numer /= g;
-                denom /= g;
-            }
-            
-            return { numer, denom };
+            return null;
         }
         
         function parseInput(input) {
@@ -359,99 +320,86 @@
             return { ratio, cents };
         }
         
-        function getNodeId(x, y) {
-            return `${x},${y}`;
-        }
-        
-        function playTone(cents, duration = 0.5, keyId = null, nodePos = null) {
-            initAudioContext();
+        function startSustainedTone(cents, nodeX, nodeY) {
+            const ctx = initAudioContext();
             
-            // Apply equivalence interval reduction if enabled
-            let playbackCents = cents;
-            if (isOctaveReduced) {
-                const divisionTypeIndex = parseInt(document.getElementById('divisionType').value);
-                const divisionBases = [2, 3, 5];
-                const divisionBase = divisionBases[divisionTypeIndex];
-                const intervalCents = 1200 * Math.log2(divisionBase);
-                playbackCents = ((cents % intervalCents) + intervalCents) % intervalCents;
+            const nodeKey = `${nodeX},${nodeY}`;
+            
+            // If already playing, do nothing
+            if (activeOscillators.has(nodeKey)) {
+                return;
             }
             
-            // Apply octave reduction if separate octave reduction is enabled (for EDT/EDP)
-            if (isOctaveReducedSeparate) {
-                playbackCents = ((playbackCents % 1200) + 1200) % 1200;
-            }
+            // Apply octave reduction if enabled
+            const playbackCents = isOctaveReduced ? ((cents % 1200) + 1200) % 1200 : cents;
             
             const baseFreq = 261.63; // Middle C
             const frequency = baseFreq * centsToRatio(playbackCents);
             
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
             
             oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+            gainNode.connect(ctx.destination);
             
             oscillator.frequency.value = frequency;
             
             if (waveformMode === 'sawtooth-infinite') {
                 oscillator.type = 'sawtooth';
-                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.value = 0.2;
                 
-                oscillator.start(audioContext.currentTime);
+                // Start immediately with 0 delay
+                const now = ctx.currentTime;
+                oscillator.start(now);
                 
-                // Store oscillator for later stopping
-                if (keyId) {
-                    // Stop any existing oscillator for this key
-                    if (activeOscillators.has(keyId)) {
-                        stopOscillator(keyId);
-                    }
-                    activeOscillators.set(keyId, { oscillator, gainNode });
-                } else if (nodePos) {
-                    const nodeId = getNodeId(nodePos.x, nodePos.y);
-                    activeNodeOscillators.set(nodeId, { oscillator, gainNode });
+                // Store oscillator and gain node
+                activeOscillators.set(nodeKey, { oscillator, gainNode, startTime: now });
+                activeSounds.add(nodeKey);
+                drawLattice();
+            } else {
+                // Sine finite mode
+                oscillator.type = 'sine';
+                const now = ctx.currentTime;
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                
+                oscillator.start(now);
+                oscillator.stop(now + 0.5);
+            }
+        }
+        
+        function stopSustainedTone(nodeX, nodeY) {
+            const nodeKey = `${nodeX},${nodeY}`;
+            
+            if (activeOscillators.has(nodeKey)) {
+                const { oscillator, gainNode } = activeOscillators.get(nodeKey);
+                
+                // Fade out quickly
+                const now = audioContext.currentTime;
+                gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                oscillator.stop(now + 0.05);
+                
+                activeOscillators.delete(nodeKey);
+                activeSounds.delete(nodeKey);
+                drawLattice();
+            }
+        }
+        
+        function toggleSustainedTone(cents, nodeX, nodeY) {
+            const nodeKey = `${nodeX},${nodeY}`;
+            
+            if (waveformMode === 'sawtooth-infinite') {
+                // In infinite mode, toggle on/off
+                if (activeOscillators.has(nodeKey)) {
+                    stopSustainedTone(nodeX, nodeY);
+                } else {
+                    startSustainedTone(cents, nodeX, nodeY);
                 }
             } else {
-                // Sine finite mode (original behavior)
-                oscillator.type = 'sine';
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + duration);
+                // In finite mode, just play the note
+                startSustainedTone(cents, nodeX, nodeY);
             }
-        }
-        
-        function stopOscillator(keyId) {
-            if (activeOscillators.has(keyId)) {
-                const { oscillator, gainNode } = activeOscillators.get(keyId);
-                
-                // Fade out
-                gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
-                
-                oscillator.stop(audioContext.currentTime + 0.05);
-                activeOscillators.delete(keyId);
-            }
-        }
-        
-        function stopNodeOscillator(x, y) {
-            const nodeId = getNodeId(x, y);
-            if (activeNodeOscillators.has(nodeId)) {
-                const { oscillator, gainNode } = activeNodeOscillators.get(nodeId);
-                
-                // Fade out
-                gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
-                
-                oscillator.stop(audioContext.currentTime + 0.05);
-                activeNodeOscillators.delete(nodeId);
-                return true;
-            }
-            return false;
-        }
-        
-        function isNodePlaying(x, y) {
-            const nodeId = getNodeId(x, y);
-            return activeNodeOscillators.has(nodeId);
         }
         
         function getCentsForNode(x, y) {
@@ -476,12 +424,12 @@
             ctx.strokeStyle = '#222';
             ctx.lineWidth = 1;
             
-            for (let x = -gridSizeX; x <= gridSizeX; x++) {
-                for (let y = -gridSizeY; y <= gridSizeY; y++) {
+            for (let x = -gridSize; x <= gridSize; x++) {
+                for (let y = -gridSize; y <= gridSize; y++) {
                     const pos = getScreenPos(x, y);
                     
                     // Draw connections
-                    if (x < gridSizeX) {
+                    if (x < gridSize) {
                         const rightPos = getScreenPos(x + 1, y);
                         ctx.beginPath();
                         ctx.moveTo(pos.x, pos.y);
@@ -489,7 +437,7 @@
                         ctx.stroke();
                     }
                     
-                    if (y < gridSizeY) {
+                    if (y < gridSize) {
                         const upPos = getScreenPos(x, y + 1);
                         ctx.beginPath();
                         ctx.moveTo(pos.x, pos.y);
@@ -500,8 +448,8 @@
             }
             
             // Draw nodes
-            for (let x = -gridSizeX; x <= gridSizeX; x++) {
-                for (let y = -gridSizeY; y <= gridSizeY; y++) {
+            for (let x = -gridSize; x <= gridSize; x++) {
+                for (let y = -gridSize; y <= gridSize; y++) {
                     const pos = getScreenPos(x, y);
                     const cents = getCentsForNode(x, y);
                     const octaveReduced = ((cents % 1200) + 1200) % 1200;
@@ -513,37 +461,25 @@
                     let saturation = 70;
                     let lightness = 50;
                     
-                    // For EDT/EDP, adjust color based on tritave/pentave and octave position
-                    const divisionTypeIndex = parseInt(document.getElementById('divisionType').value);
-                    if (divisionTypeIndex > 0) { // EDT (1) or EDP (2)
-                        const divisionBases = [2, 3, 5];
-                        const divisionBase = divisionBases[divisionTypeIndex];
-                        const divisionCents = 1200 * Math.log2(divisionBase);
-                        
-                        // Force hue to wrap at tritave/pentave boundary when reduced to non-octave
-                        if (isOctaveReduced) {
-                            const reduced = ((cents % divisionCents) + divisionCents) % divisionCents;
-                            hue = reduced / divisionCents * 360;
-                        }
-                        
-                        // Adjust lightness based on octave position (for separate octave reduction)
-                        if (isOctaveReducedSeparate) {
-                            const octaveNumber = Math.floor(cents / 1200);
-                            // Each octave above has 10% less value (darker)
-                            lightness = 50 - (octaveNumber * 5); // 10% of 50 base = 5
-                            // Clamp lightness to reasonable bounds
-                            lightness = Math.max(15, Math.min(85, lightness));
-                        }
+                    // Check if this node is currently playing
+                    const nodeKey = `${x},${y}`;
+                    const isPlaying = activeSounds.has(nodeKey);
+                    
+                    // Make playing nodes lighter
+                    if (isPlaying) {
+                        lightness += 25;
                     }
                     
                     const squareSize = 50;
                     
                     // Highlight origin
+                    const isHovered = hoveredNode && hoveredNode.x === x && hoveredNode.y === y;
+                    
                     if (x === 0 && y === 0) {
-                        ctx.fillStyle = '#fff';
+                        ctx.fillStyle = isPlaying ? '#eee' : '#fff';
                         ctx.strokeStyle = '#0af';
                         ctx.lineWidth = 3;
-                    } else if (hoveredNode && hoveredNode.x === x && hoveredNode.y === y) {
+                    } else if (isHovered) {
                         ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness + 20}%)`;
                         ctx.strokeStyle = '#fff';
                         ctx.lineWidth = 2;
@@ -567,14 +503,14 @@
                     
                     // Format ratio
                     let ratioText;
-                    const frac = getFractionForNode(x, y, distance);
+                    const frac = ratioToFraction(ratio, distance);
                     
                     if (frac && frac.denom === 1) {
                         ratioText = `${frac.numer}F`;
                     } else if (frac) {
                         ratioText = `${frac.numer}/${frac.denom}F`;
                     } else {
-                        // Show decimal when no valid fraction exists
+                        // Show decimal when no valid fraction with allowed primes exists
                         ratioText = `${ratio.toFixed(3)}F`;
                     }
                     
@@ -602,8 +538,8 @@
         }
         
         function getNodeAtPosition(mouseX, mouseY) {
-            for (let x = -gridSizeX; x <= gridSizeX; x++) {
-                for (let y = -gridSizeY; y <= gridSizeY; y++) {
+            for (let x = -gridSize; x <= gridSize; x++) {
+                for (let y = -gridSize; y <= gridSize; y++) {
                     const pos = getScreenPos(x, y);
                     const dx = mouseX - pos.x;
                     const dy = mouseY - pos.y;
@@ -648,17 +584,7 @@
         
         canvas.addEventListener('click', (e) => {
             if (hoveredNode) {
-                // In infinite mode, toggle the note on/off
-                if (waveformMode === 'sawtooth-infinite') {
-                    if (isNodePlaying(hoveredNode.x, hoveredNode.y)) {
-                        stopNodeOscillator(hoveredNode.x, hoveredNode.y);
-                    } else {
-                        playTone(hoveredNode.cents, 0.5, null, { x: hoveredNode.x, y: hoveredNode.y });
-                    }
-                } else {
-                    // In finite mode, just play the note
-                    playTone(hoveredNode.cents);
-                }
+                toggleSustainedTone(hoveredNode.cents, hoveredNode.x, hoveredNode.y);
             }
         });
         
@@ -677,11 +603,21 @@
             xRatio = xInput.ratio;
             yRatio = yInput.ratio;
             
-            // Update grid size
-            gridSizeX = parseInt(document.getElementById('gridX').value) || 9;
-            gridSizeY = parseInt(document.getElementById('gridY').value) || 9;
+            console.log('Updated: xRatio =', xRatio, 'yRatio =', yRatio, 'xCents =', xCents, 'yCents =', yCents);
+            
+            // Stop any playing sounds when lattice updates
+            activeOscillators.forEach((_, nodeKey) => {
+                const [x, y] = nodeKey.split(',').map(Number);
+                stopSustainedTone(x, y);
+            });
             
             drawLattice();
+        }
+        
+        function resetToDefaults() {
+            document.getElementById('xCents').value = '3/2F';
+            document.getElementById('yCents').value = '5/4F';
+            updateLattice();
         }
         
         function setPreset(presetName) {
@@ -697,49 +633,19 @@
         
         function toggleOctaveReduction() {
             isOctaveReduced = !isOctaveReduced;
-            updateReductionButton();
-            
-            const divisionTypeIndex = parseInt(document.getElementById('divisionType').value);
-            const divisionBases = [2, 3, 5];
-            const divisionBase = divisionBases[divisionTypeIndex];
-            const fullNames = ['Octave', 'Tritave', 'Pentave'];
-            const fullName = fullNames[divisionTypeIndex];
-            
-            const info = document.getElementById('info');
-            info.innerHTML = `<strong>${isOctaveReduced ? fullName + ' reduction enabled' : fullName + ' reduction disabled'}</strong> - All notes will now play ${isOctaveReduced ? 'within one ' + fullName.toLowerCase() : 'at their full pitch'}`;
-            setTimeout(() => updateInfo(hoveredNode), 2000);
-            
-            // Redraw lattice to update colors
-            drawLattice();
-        }
-        
-        function updateReductionButton() {
-            const divisionTypeIndex = parseInt(document.getElementById('divisionType').value);
-            const fullNames = ['Octave', 'Tritave', 'Pentave'];
-            const fullName = fullNames[divisionTypeIndex];
             const button = document.querySelector('button[onclick="toggleOctaveReduction()"]');
-            button.textContent = isOctaveReduced ? `Unreduce from ${fullName}` : `Reduce to ${fullName}`;
-        }
-        
-        function toggleOctaveReductionSeparate() {
-            isOctaveReducedSeparate = !isOctaveReducedSeparate;
-            const button = document.getElementById('octaveReductionBtn');
-            button.textContent = isOctaveReducedSeparate ? 'Unreduce from Octave' : 'Reduce to Octave';
+            button.textContent = isOctaveReduced ? 'Unreduce from Octave' : 'Reduce to Octave';
             
             const info = document.getElementById('info');
-            info.innerHTML = `<strong>Octave reduction ${isOctaveReducedSeparate ? 'enabled' : 'disabled'}</strong> - All notes will now ${isOctaveReducedSeparate ? 'also be reduced to within one octave' : 'not have additional octave reduction'}`;
+            info.innerHTML = `<strong>${isOctaveReduced ? 'Octave reduction enabled' : 'Octave reduction disabled'}</strong> - All notes will now play ${isOctaveReduced ? 'within one octave' : 'at their full pitch'}`;
             setTimeout(() => updateInfo(hoveredNode), 2000);
-            
-            // Redraw lattice to update colors
-            drawLattice();
         }
         
         function toggleWaveformMode() {
             // Stop all active oscillators when switching modes
-            activeOscillators.forEach((_, key) => stopOscillator(key));
-            activeNodeOscillators.forEach((_, nodeId) => {
-                const [x, y] = nodeId.split(',').map(Number);
-                stopNodeOscillator(x, y);
+            activeOscillators.forEach((_, nodeKey) => {
+                const [x, y] = nodeKey.split(',').map(Number);
+                stopSustainedTone(x, y);
             });
             
             waveformMode = waveformMode === 'sine-finite' ? 'sawtooth-infinite' : 'sine-finite';
@@ -754,74 +660,6 @@
             }
             setTimeout(() => updateInfo(hoveredNode), 2000);
         }
-        
-        function applyEDO() {
-            const edo = parseInt(document.getElementById('edoSlider').value);
-            const divisionTypeIndex = parseInt(document.getElementById('divisionType').value);
-            
-            // Map slider position to division base: 0->2 (octave), 1->3 (tritave), 2->5 (pentave)
-            const divisionBases = [2, 3, 5];
-            const divisionBase = divisionBases[divisionTypeIndex];
-            const divisionNames = ['EDO', 'EDT', 'EDP'];
-            const divisionName = divisionNames[divisionTypeIndex];
-            const fullNames = ['Octave', 'Tritave', 'Pentave'];
-            const fullName = fullNames[divisionTypeIndex];
-            
-            const stepSize = 1200 * Math.log2(divisionBase) / edo;
-            
-            // Calculate best approximations for perfect fifth (3/2) and major third (5/4)
-            const fifthSteps = Math.round(edo * Math.log(3/2) / Math.log(divisionBase));
-            const thirdSteps = Math.round(edo * Math.log(5/4) / Math.log(divisionBase));
-            
-            const fifthCents = fifthSteps * stepSize;
-            const thirdCents = thirdSteps * stepSize;
-            
-            document.getElementById('xCents').value = fifthCents.toFixed(3);
-            document.getElementById('yCents').value = thirdCents.toFixed(3);
-            
-            updateLattice();
-            
-            const info = document.getElementById('info');
-            info.innerHTML = `<strong>${edo}-${divisionName} applied</strong> (${fullName}) - Fifth: ${fifthSteps} steps (${fifthCents.toFixed(3)}¢), Third: ${thirdSteps} steps (${thirdCents.toFixed(3)}¢)`;
-            setTimeout(() => updateInfo(hoveredNode), 2000);
-        }
-        
-        // Update division label when slider moves
-        document.getElementById('divisionType').addEventListener('input', (e) => {
-            const divisionNames = ['For Divisions of the Octave', 'For Divisions of the Tritave', 'For Divisions of the Pentave'];
-            const typeNames = ['EDO', 'EDT', 'EDP'];
-            const index = parseInt(e.target.value);
-            
-            document.getElementById('divisionLabel').textContent = divisionNames[index];
-            
-            // Update EDO value display with correct suffix
-            const edo = document.getElementById('edoSlider').value;
-            document.getElementById('edoValue').textContent = `${edo}-${typeNames[index]}`;
-            
-            // Update reduction button text
-            updateReductionButton();
-            
-            // Show/hide separate octave reduction button (only for EDT/EDP)
-            const octaveBtn = document.getElementById('octaveReductionBtn');
-            octaveBtn.style.display = index > 0 ? 'inline-block' : 'none';
-        });
-        
-        // Update EDO display when slider moves
-        document.getElementById('edoSlider').addEventListener('input', (e) => {
-            const edo = e.target.value;
-            const divisionTypeIndex = parseInt(document.getElementById('divisionType').value);
-            const typeNames = ['EDO', 'EDT', 'EDP'];
-            document.getElementById('edoValue').textContent = `${edo}-${typeNames[divisionTypeIndex]}`;
-        });
-        
-        // Toggle EDO control visibility
-        document.getElementById('showDivisions').addEventListener('change', (e) => {
-            const divisionTypeControl = document.getElementById('divisionTypeControl');
-            const edoControl = document.getElementById('edoControl');
-            const isChecked = e.target.checked;
-            divisionTypeControl.style.display = isChecked ? 'flex' : 'none';
-            edoControl.style.display = isChecked ? 'flex' : 'none';
-        });
         
         // Keyboard controls - play notes relative to hovered position
         document.addEventListener('keydown', (e) => {
@@ -843,10 +681,19 @@
                 const targetY = baseY + offsetY;
                 
                 // Check if target is within grid
-                if (targetX >= -gridSizeX && targetX <= gridSizeX && 
-                    targetY >= -gridSizeY && targetY <= gridSizeY) {
+                if (targetX >= -gridSize && targetX <= gridSize && 
+                    targetY >= -gridSize && targetY <= gridSize) {
                     const cents = getCentsForNode(targetX, targetY);
-                    playTone(cents, 0.5, key);
+                    const nodeKey = `${targetX},${targetY}`;
+                    
+                    if (waveformMode === 'sawtooth-infinite') {
+                        // Track which key is controlling this node
+                        keyToNode.set(key, nodeKey);
+                        startSustainedTone(cents, targetX, targetY);
+                    } else {
+                        // In finite mode, just play the note
+                        startSustainedTone(cents, targetX, targetY);
+                    }
                     
                     // Show info about the played note
                     const info = document.getElementById('info');
@@ -859,11 +706,15 @@
             }
         });
         
-        // Keyboard keyup - stop infinite notes
+        // Keyboard keyup - stop sustained tones in infinite mode
         document.addEventListener('keyup', (e) => {
             const key = e.key.toLowerCase();
-            if (waveformMode === 'sawtooth-infinite' && keyMap.hasOwnProperty(key)) {
-                stopOscillator(key);
+            
+            if (waveformMode === 'sawtooth-infinite' && keyToNode.has(key)) {
+                const nodeKey = keyToNode.get(key);
+                const [x, y] = nodeKey.split(',').map(Number);
+                stopSustainedTone(x, y);
+                keyToNode.delete(key);
             }
         });
         

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Musical Scale System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        h1 {
+            text-align: center;
+            color: #4db8ff;
+        }
+        .container {
+            display: flex;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .section {
+            flex: 1;
+            min-width: 300px;
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        .section h2 {
+            color: #4db8ff;
+            margin-top: 0;
+            border-bottom: 2px solid #4db8ff;
+            padding-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px 0;
+            font-weight: bold;
+            color: #b0b0b0;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0 15px 0;
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+            gap: 5px;
+            margin: 15px 0;
+        }
+        .note-btn {
+            padding: 10px;
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: 2px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .note-btn:hover {
+            background-color: #4a4a4a;
+            border-color: #777;
+        }
+        .note-btn.selected {
+            background-color: #4db8ff;
+            color: #000;
+            border-color: #2d7bb0;
+        }
+        .result-display {
+            background-color: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #4db8ff;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+        .result-display h3 {
+            margin: 0 0 10px 0;
+            color: #4db8ff;
+        }
+        .result-display p {
+            margin: 5px 0;
+        }
+        button {
+            background-color: #4db8ff;
+            color: #000;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 10px;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background-color: #3da0d9;
+        }
+        button:disabled {
+            background-color: #555;
+            color: #999;
+            cursor: not-allowed;
+        }
+        .info {
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            color: #b0b0b0;
+            border-left: 3px solid #666;
+        }
+        .presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .preset-btn {
+            padding: 8px 12px;
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        .preset-btn:hover {
+            background-color: #4a4a4a;
+            border-color: #777;
+        }
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: 2px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .mode-btn.active {
+            background-color: #4db8ff;
+            color: #000;
+            border-color: #2d7bb0;
+        }
+        .mode-btn:hover {
+            background-color: #4a4a4a;
+            border-color: #777;
+        }
+        .keyboard {
+            display: flex;
+            gap: 3px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .key {
+            flex: 1;
+            min-width: 50px;
+            padding: 15px 10px;
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: 2px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            transition: all 0.1s;
+            user-select: none;
+        }
+        .key:hover {
+            background-color: #4a4a4a;
+            border-color: #777;
+        }
+        .key.active {
+            background-color: #ffaa00;
+            color: #000;
+            border-color: #ff8800;
+        }
+        .played-sequence {
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            min-height: 30px;
+            border-left: 3px solid #ff9800;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 Musical Scale Inverse System</h1>
+    
+    <div class="container">
+        <!-- Input Section -->
+        <div class="section">
+            <h2>Scale Configuration</h2>
+            
+            <label for="edo">EDO (Equal Divisions of Octave):</label>
+            <input type="number" id="edo" value="12" min="1" max="120" placeholder="Enter EDO value">
+            
+            <div class="info">
+                Choose an EDO, then click the notes of your scale (excluding the octave note).
+            </div>
+            
+            <label>Quick Presets:</label>
+            <div class="presets">
+                <button class="preset-btn" onclick="loadPreset('12major')">12EDO Major</button>
+                <button class="preset-btn" onclick="loadPreset('12minor')">12EDO Minor</button>
+                <button class="preset-btn" onclick="loadPreset('12phrygian')">12EDO Phrygian</button>
+                <button class="preset-btn" onclick="loadPreset('19edo')">19EDO</button>
+                <button class="preset-btn" onclick="loadPreset('31edo')">31EDO</button>
+            </div>
+            
+            <label>Scale Notes (click to select/deselect):</label>
+            <div class="notes-grid" id="notesGrid"></div>
+            
+            <div style="margin-top: 15px;">
+                <button onclick="calculateInverse()">Calculate Inverse Scale</button>
+                <button onclick="clearSelection()" style="background-color: #555; color: #e0e0e0;">Clear</button>
+                <button onclick="resetAll()" style="background-color: #555; color: #e0e0e0;">Reset All</button>
+            </div>
+        </div>
+        
+        <!-- Keyboard & Analysis Section -->
+        <div class="section">
+            <h2>Play & Analyze</h2>
+            
+            <label>Analysis Mode:</label>
+            <div class="mode-selector">
+                <button class="mode-btn active" onclick="setMode('analytics')">Analytics</button>
+                <button class="mode-btn" onclick="setMode('ratios')">Ratios</button>
+            </div>
+            
+            <label>Keyboard (Click to play notes from scale):</label>
+            <div class="keyboard" id="keyboard"></div>
+            
+            <div class="played-sequence">
+                <strong>Played Sequence:</strong><br>
+                <span id="playedNotes">Click notes above...</span>
+            </div>
+            
+            <button onclick="clearPlayedNotes()" style="margin-top: 10px; background-color: #555; color: #e0e0e0;">Clear Sequence</button>
+        </div>
+        
+        <!-- Result Section -->
+        <div class="section">
+            <h2>Results</h2>
+            
+            <div class="result-display">
+                <h3>Original Scale</h3>
+                <p id="originalScale">No scale selected</p>
+            </div>
+            
+            <div class="result-display">
+                <h3>Inverse Scale</h3>
+                <p id="inverseScale">No inverse calculated</p>
+            </div>
+            
+            <div id="analysisResults" style="margin-top: 15px;"></div>
+            
+            <div class="info">
+                <strong>Modes:</strong><br>
+                <strong>Analytics:</strong> Shows all rotations of the selected scale + inverse<br>
+                <strong>Ratios:</strong> Shows ratio approximations for played notes (lowest note = 1/1)
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const presets = {
+            '12major': { edo: 12, notes: [0, 2, 4, 5, 7, 9, 11], name: '12EDO Major' },
+            '12minor': { edo: 12, notes: [0, 2, 3, 5, 7, 8, 10], name: '12EDO Minor' },
+            '12phrygian': { edo: 12, notes: [0, 1, 3, 5, 7, 8, 10], name: '12EDO Phrygian' },
+            '19edo': { edo: 19, notes: [0, 3, 6, 8, 11, 14, 17], name: '19EDO 7-note' },
+            '31edo': { edo: 31, notes: [0, 5, 10, 13, 18, 23, 28], name: '31EDO 7-note' },
+            '53edo': { edo: 53, notes: [0, 9, 17, 22, 31, 40, 48], name: '53EDO 7-note' }
+        };
+
+        let selectedNotes = new Set();
+        let playedNotes = [];
+        let currentMode = 'analytics';
+        let scaleNotesArray = [];
+
+        function renderNotesGrid() {
+            const edo = parseInt(document.getElementById('edo').value) || 12;
+            const grid = document.getElementById('notesGrid');
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < edo; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'note-btn';
+                btn.textContent = i;
+                btn.onclick = () => toggleNote(i);
+                
+                if (selectedNotes.has(i)) {
+                    btn.classList.add('selected');
+                }
+                
+                grid.appendChild(btn);
+            }
+        }
+
+        function renderKeyboard() {
+            const keyboard = document.getElementById('keyboard');
+            keyboard.innerHTML = '';
+            
+            if (scaleNotesArray.length === 0) {
+                keyboard.innerHTML = '<p style="color: #999;">Select a scale first</p>';
+                return;
+            }
+            
+            scaleNotesArray.forEach(note => {
+                const key = document.createElement('button');
+                key.className = 'key';
+                key.textContent = note;
+                key.onclick = () => playNote(note);
+                keyboard.appendChild(key);
+            });
+        }
+
+        function toggleNote(note) {
+            if (selectedNotes.has(note)) {
+                selectedNotes.delete(note);
+            } else {
+                selectedNotes.add(note);
+            }
+            renderNotesGrid();
+        }
+
+        function clearSelection() {
+            selectedNotes.clear();
+            renderNotesGrid();
+            document.getElementById('originalScale').textContent = 'No scale selected';
+            document.getElementById('inverseScale').textContent = 'No inverse calculated';
+            document.getElementById('analysisResults').innerHTML = '';
+            renderKeyboard();
+        }
+
+        function resetAll() {
+            document.getElementById('edo').value = '12';
+            clearSelection();
+            clearPlayedNotes();
+            renderNotesGrid();
+        }
+
+        function loadPreset(presetKey) {
+            const preset = presets[presetKey];
+            if (!preset) return;
+            
+            document.getElementById('edo').value = preset.edo;
+            selectedNotes.clear();
+            preset.notes.forEach(n => selectedNotes.add(n));
+            renderNotesGrid();
+            calculateInverse();
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateAnalysis();
+        }
+
+        function playNote(note) {
+            playedNotes.push(note);
+            updatePlayedDisplay();
+            updateAnalysis();
+            
+            // Visual feedback
+            event.target.classList.add('active');
+            setTimeout(() => event.target.classList.remove('active'), 200);
+        }
+
+        function clearPlayedNotes() {
+            playedNotes = [];
+            updatePlayedDisplay();
+            updateAnalysis();
+        }
+
+        function updatePlayedDisplay() {
+            const display = document.getElementById('playedNotes');
+            if (playedNotes.length === 0) {
+                display.textContent = 'Click notes above...';
+            } else {
+                display.textContent = playedNotes.join(' → ');
+            }
+        }
+
+        function updateAnalysis() {
+            const resultsDiv = document.getElementById('analysisResults');
+            
+            if (currentMode === 'analytics') {
+                showAnalytics(resultsDiv);
+            } else if (currentMode === 'ratios') {
+                showRatios(resultsDiv);
+            }
+        }
+
+        function showAnalytics(resultsDiv) {
+            const edo = parseInt(document.getElementById('edo').value) || 12;
+            const originalNotes = Array.from(selectedNotes).sort((a, b) => a - b);
+            
+            if (originalNotes.length === 0) {
+                resultsDiv.innerHTML = '';
+                return;
+            }
+            
+            let html = '<div class="result-display"><h3>Scale Rotations</h3>';
+            
+            // Show all rotations
+            for (let rotation = 0; rotation < originalNotes.length; rotation++) {
+                const rotated = originalNotes.map(n => (n - originalNotes[rotation] + edo) % edo).sort((a, b) => a - b);
+                html += `<p><strong>Rotation ${rotation}:</strong> ${rotated.join(' ')}</p>`;
+            }
+            
+            html += '</div>';
+            
+            // Show inverse
+            const inverseNotes = originalNotes.map(n => {
+                const inverted = edo - n;
+                return inverted === edo ? 0 : inverted;
+            }).sort((a, b) => a - b);
+            
+            const uniqueInverse = [...new Set(inverseNotes)];
+            
+            html += '<div class="result-display"><h3>Inverse</h3>';
+            html += `<p>${uniqueInverse.join(' ')}</p>`;
+            html += '</div>';
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        function showRatios(resultsDiv) {
+            if (playedNotes.length === 0) {
+                resultsDiv.innerHTML = '<div class="result-display"><p style="color: #999;">Play some notes to see ratios...</p></div>';
+                return;
+            }
+            
+            const edo = parseInt(document.getElementById('edo').value) || 12;
+            const originalNotes = Array.from(selectedNotes).sort((a, b) => a - b);
+            
+            if (originalNotes.length === 0) {
+                resultsDiv.innerHTML = '';
+                return;
+            }
+            
+            // Calculate cent values for all scale notes
+            const centPerStep = 1200 / edo;
+            const scaleCents = originalNotes.map(n => n * centPerStep);
+            
+            // Get unique played notes and sort them
+            const uniquePlayed = [...new Set(playedNotes)].sort((a, b) => a - b);
+            const minPlayed = uniquePlayed[0];
+            
+            // Calculate cents for played notes relative to lowest
+            const playedCents = uniquePlayed.map(note => (note - minPlayed) * centPerStep);
+            
+            // Common ratios and their cents
+            const commonRatios = [
+                { num: 1, den: 1, cents: 0 },
+                { num: 16, den: 15, cents: 111.73 },
+                { num: 9, den: 8, cents: 203.91 },
+                { num: 6, den: 5, cents: 315.64 },
+                { num: 5, den: 4, cents: 386.31 },
+                { num: 4, den: 3, cents: 498.04 },
+                { num: 7, den: 5, cents: 582.51 },
+                { num: 3, den: 2, cents: 701.96 },
+                { num: 8, den: 5, cents: 813.69 },
+                { num: 5, den: 3, cents: 884.36 },
+                { num: 7, den: 4, cents: 968.83 },
+                { num: 9, den: 5, cents: 1017.60 },
+                { num: 15, den: 8, cents: 1088.27 },
+                { num: 2, den: 1, cents: 1200 }
+            ];
+            
+            let html = '<div class="result-display"><h3>Ratio Analysis</h3>';
+            html += `<p><strong>Root (1/1):</strong> Note ${minPlayed} (${(minPlayed * centPerStep).toFixed(2)} cents)</p><br>`;
+            
+            playedCents.forEach((cents, idx) => {
+                const playedNote = uniquePlayed[idx];
+                if (idx === 0) return; // Skip root
+                
+                // Find closest ratio
+                let closest = commonRatios[0];
+                let minDiff = Math.abs(cents - closest.cents);
+                
+                commonRatios.forEach(ratio => {
+                    const diff = Math.abs(cents - ratio.cents);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closest = ratio;
+                    }
+                });
+                
+                html += `<p><strong>Note ${playedNote}:</strong> ${closest.num}/${closest.den} (${closest.cents.toFixed(2)} cents, error: ${minDiff.toFixed(2)} cents)</p>`;
+            });
+            
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        function calculateInverse() {
+            if (selectedNotes.size === 0) {
+                alert('Please select at least one note');
+                return;
+            }
+            
+            const edo = parseInt(document.getElementById('edo').value) || 12;
+            const originalNotes = Array.from(selectedNotes).sort((a, b) => a - b);
+            scaleNotesArray = [...originalNotes];
+            
+            // Calculate inverse: for each note n, inverse is (octave - n)
+            const inverseNotes = originalNotes.map(n => {
+                const inverted = edo - n;
+                return inverted === edo ? 0 : inverted;
+            }).sort((a, b) => a - b);
+            
+            // Remove duplicates
+            const uniqueInverse = [...new Set(inverseNotes)];
+            
+            // Display results
+            document.getElementById('originalScale').textContent = originalNotes.join(' ');
+            document.getElementById('inverseScale').textContent = uniqueInverse.join(' ');
+            
+            clearPlayedNotes();
+            renderKeyboard();
+            updateAnalysis();
+        }
+
+        // Initialize on page load
+        document.getElementById('edo').addEventListener('change', () => {
+            clearSelection();
+            renderNotesGrid();
+        });
+
+        renderNotesGrid();
+    </script>
+</body>
+</html>

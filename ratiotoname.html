@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ratio to Name Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .input-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .input-group label {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input[type="number"] {
+            width: 100px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .ratio-separator {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        button {
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .result {
+            background: #f0f4ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #667eea;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .result-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .result-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .result-details {
+            font-size: 0.95em;
+            color: #555;
+            line-height: 1.6;
+        }
+        
+        .ratios-section {
+            margin-top: 50px;
+        }
+        
+        .ratios-section h2 {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .controls button {
+            padding: 8px 15px;
+            font-size: 0.95em;
+        }
+        
+        .ratios-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #fafafa;
+            border-radius: 8px;
+        }
+        
+        .ratio-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .ratio-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .ratio-fraction {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .ratio-cents {
+            font-size: 0.85em;
+            color: #999;
+            margin-bottom: 8px;
+        }
+        
+        .ratio-name {
+            font-size: 1em;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            margin-bottom: 15px;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ratio to Name Converter</h1>
+            <p>Discover the musical intervals hidden in every ratio (up to 20x20)</p>
+        </header>
+        
+        <div class="content">
+            <div class="input-section">
+                <h3 style="margin-bottom: 15px; color: #333;">Convert a Ratio</h3>
+                <div class="input-group">
+                    <label for="numerator">Numerator:</label>
+                    <input type="number" id="numerator" value="5" min="1" max="20">
+                    <span class="ratio-separator">/</span>
+                    <label for="denominator">Denominator:</label>
+                    <input type="number" id="denominator" value="4" min="1" max="20">
+                    <button onclick="convertRatio()">Convert</button>
+                </div>
+                <div id="result" class="result">
+                    <div class="result-label">Result:</div>
+                    <div class="result-value" id="resultValue"></div>
+                    <div class="result-details" id="resultDetails"></div>
+                </div>
+            </div>
+            
+            <div class="ratios-section">
+                <h2>All Ratios (20x20)</h2>
+                <div class="controls">
+                    <button onclick="generateAllRatios()">Generate All</button>
+                    <button onclick="clearRatios()">Clear</button>
+                </div>
+                <input type="text" id="searchBox" class="search-box" placeholder="Search ratios (e.g., 'fifth', '7/4', 'major third')..." style="display: none;">
+                <div id="ratiosContainer" class="ratios-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function gcd(a, b) {
+            return b === 0 ? a : gcd(b, a % b);
+        }
+
+        function ratioToCents(numerator, denominator) {
+            return 1200.0 * Math.log2(numerator / denominator);
+        }
+
+        function getPrimeLimit(num, denom) {
+            const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23];
+            let limit = 2;
+            
+            for (let p of primes) {
+                if ((num % p === 0 || denom % p === 0)) {
+                    limit = p;
+                }
+            }
+            return limit;
+        }
+
+        function getHarmonicNumeral(limit) {
+            const harmonics = {
+                3: "", 5: "", 7: "septimal", 11: "undecimal",
+                13: "tridecimal", 17: "septendecimal", 19: "novemdecimal",
+                23: "tricosimal"
+            };
+            return harmonics[limit] || "";
+        }
+
+        function ratioToName(numerator, denominator) {
+            if (denominator === 0) {
+                return "Invalid ratio (denominator cannot be 0)";
+            }
+
+            // Reduce to lowest terms
+            const g = gcd(numerator, denominator);
+            numerator /= g;
+            denominator /= g;
+
+            // Calculate cents and octaves
+            const cents = ratioToCents(numerator, denominator);
+            const octaves = Math.floor(cents / 1200.0);
+            const centsInOctave = cents - (octaves * 1200.0);
+
+            // Get harmonic info
+            const harmonic = getHarmonicNumeral(getPrimeLimit(numerator, denominator));
+
+            let intervalName = "";
+            let quality = "";
+
+            // Categorize interval
+            if (centsInOctave < 50) {
+                if (centsInOctave < 15) {
+                    intervalName = "unison";
+                } else {
+                    intervalName = "comma";
+                    quality = centsInOctave < 30 ? "shallow" : "";
+                }
+            } else if (centsInOctave < 200) {
+                intervalName = "semitone";
+                if (centsInOctave < 80) quality = "shallow";
+                else if (centsInOctave < 130) quality = "small";
+                else quality = "deep";
+            } else if (centsInOctave < 350) {
+                intervalName = "second";
+                quality = centsInOctave < 250 ? "small" : "";
+            } else if (centsInOctave < 550) {
+                intervalName = "third";
+                if (centsInOctave < 420) quality = "minor";
+                else if (centsInOctave < 480) quality = "neutral";
+                else quality = "major";
+            } else if (centsInOctave < 650) {
+                intervalName = "tritone";
+                quality = centsInOctave < 580 ? "small" : "large";
+            } else if (centsInOctave < 750) {
+                intervalName = "fifth";
+                if (centsInOctave < 680) quality = "diminished";
+                else if (centsInOctave < 720) quality = "";
+                else quality = "augmented";
+            } else if (centsInOctave < 900) {
+                intervalName = "sixth";
+                if (centsInOctave < 820) quality = "minor";
+                else if (centsInOctave < 870) quality = "neutral";
+                else quality = "major";
+            } else if (centsInOctave < 1100) {
+                intervalName = "seventh";
+                if (centsInOctave < 965) quality = "minor";
+                else if (centsInOctave < 1020) quality = "deep";
+                else quality = "shallow";
+            } else {
+                intervalName = "octave";
+            }
+
+            // Build result
+            let result = "";
+            if (harmonic && intervalName !== "unison" && intervalName !== "octave") {
+                result += harmonic + " ";
+            }
+            if (quality) {
+                result += quality + " ";
+            }
+            result += intervalName;
+
+            // Add octave information
+            if (octaves > 0) {
+                result += ` and ${octaves} octave${octaves > 1 ? "s" : ""}`;
+            } else if (octaves < 0) {
+                result += ` minus ${-octaves} octave${-octaves > 1 ? "s" : ""}`;
+            }
+
+            return result;
+        }
+
+        function convertRatio() {
+            const num = parseInt(document.getElementById('numerator').value);
+            const denom = parseInt(document.getElementById('denominator').value);
+
+            if (!num || !denom || num < 1 || denom < 1 || num > 20 || denom > 20) {
+                alert('Please enter valid numbers between 1 and 20');
+                return;
+            }
+
+            const cents = ratioToCents(num, denom).toFixed(1);
+            const name = ratioToName(num, denom);
+            
+            document.getElementById('resultValue').textContent = `${num}/${denom}`;
+            document.getElementById('resultDetails').innerHTML = 
+                `<strong>${name}</strong><br><small>${cents} cents</small>`;
+            document.getElementById('result').classList.add('show');
+        }
+
+        function generateAllRatios() {
+            const container = document.getElementById('ratiosContainer');
+            container.innerHTML = '';
+            
+            const ratios = [];
+            for (let denom = 1; denom <= 20; denom++) {
+                for (let numer = denom; numer <= 20; numer++) {
+                    const cents = ratioToCents(numer, denom);
+                    ratios.push({
+                        numer: numer,
+                        denom: denom,
+                        cents: cents,
+                        name: ratioToName(numer, denom)
+                    });
+                }
+            }
+
+            // Sort by cents
+            ratios.sort((a, b) => a.cents - b.cents);
+
+            // Display
+            ratios.forEach(ratio => {
+                const card = document.createElement('div');
+                card.className = 'ratio-card';
+                card.innerHTML = `
+                    <div class="ratio-fraction">${ratio.numer}/${ratio.denom}</div>
+                    <div class="ratio-cents">${ratio.cents.toFixed(1)} cents</div>
+                    <div class="ratio-name">${ratio.name}</div>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('searchBox').style.display = 'block';
+        }
+
+        function clearRatios() {
+            document.getElementById('ratiosContainer').innerHTML = '';
+            document.getElementById('searchBox').style.display = 'none';
+            document.getElementById('searchBox').value = '';
+        }
+
+        // Search functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchBox = document.getElementById('searchBox');
+            searchBox.addEventListener('input', function(e) {
+                const query = e.target.value.toLowerCase();
+                const cards = document.querySelectorAll('.ratio-card');
+                
+                cards.forEach(card => {
+                    const text = card.textContent.toLowerCase();
+                    card.style.display = text.includes(query) ? 'block' : 'none';
+                });
+            });
+
+            // Allow Enter key to convert
+            document.getElementById('numerator').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') convertRatio();
+            });
+            document.getElementById('denominator').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') convertRatio();
+            });
+        });
+    </script>
+</body>
+</html>

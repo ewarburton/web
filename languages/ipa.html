@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Language → IPA Converter</title>
+	<style>
+		:root {
+			--bg: #0b1020;
+			--panel: #131a2e;
+			--panel-2: #1a2440;
+			--text: #ebf0ff;
+			--muted: #aeb9d9;
+			--accent: #79a8ff;
+			--accent-2: #8ef5c2;
+			--border: #2b3963;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 0;
+			padding: 24px;
+			min-height: 100vh;
+			font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+			color: var(--text);
+			background: radial-gradient(circle at 20% 0%, #1a2752 0%, var(--bg) 45%);
+		}
+
+		.app {
+			max-width: 1000px;
+			margin: 0 auto;
+			background: linear-gradient(180deg, var(--panel), #10172b);
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+			overflow: hidden;
+		}
+
+		.header {
+			padding: 20px 24px;
+			border-bottom: 1px solid var(--border);
+			background: linear-gradient(135deg, rgba(121, 168, 255, 0.14), rgba(142, 245, 194, 0.08));
+		}
+
+		.header h1 {
+			margin: 0;
+			font-size: 1.35rem;
+			letter-spacing: 0.2px;
+		}
+
+		.header p {
+			margin: 8px 0 0;
+			color: var(--muted);
+		}
+
+		.grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 20px;
+			padding: 20px;
+		}
+
+		.card {
+			background: var(--panel-2);
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			padding: 16px;
+		}
+
+		.card h2 {
+			margin: 0 0 14px;
+			font-size: 1rem;
+			color: #d6e2ff;
+		}
+
+		label {
+			display: block;
+			margin-bottom: 8px;
+			font-size: 0.9rem;
+			color: var(--muted);
+		}
+
+		select,
+		textarea,
+		button {
+			width: 100%;
+			border-radius: 10px;
+			border: 1px solid var(--border);
+			background: #0f1730;
+			color: var(--text);
+			font-size: 0.95rem;
+		}
+
+		select,
+		button {
+			padding: 10px 12px;
+		}
+
+		textarea {
+			min-height: 200px;
+			padding: 12px;
+			resize: vertical;
+			line-height: 1.45;
+		}
+
+		.controls {
+			display: flex;
+			gap: 10px;
+			margin-top: 12px;
+		}
+
+		.controls button {
+			cursor: pointer;
+			transition: transform 0.06s ease, background 0.2s ease;
+		}
+
+		.controls button:hover {
+			background: #18254a;
+		}
+
+		.controls button:active {
+			transform: translateY(1px);
+		}
+
+		.controls .primary {
+			background: linear-gradient(135deg, #3f79ff, #3ecdb0);
+			color: #081025;
+			border-color: transparent;
+			font-weight: 700;
+		}
+
+		.controls .primary:hover {
+			filter: brightness(1.05);
+		}
+
+		.meta {
+			margin-top: 10px;
+			font-size: 0.85rem;
+			color: var(--muted);
+		}
+
+		.hint {
+			margin-top: 10px;
+			padding: 10px;
+			border-radius: 8px;
+			background: rgba(121, 168, 255, 0.08);
+			color: #dbe6ff;
+			font-size: 0.86rem;
+			line-height: 1.4;
+		}
+
+		@media (max-width: 900px) {
+			.grid {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="app">
+		<div class="header">
+			<h1>Language → IPA Converter</h1>
+			<p>Supports Spanish, Polish, Mandarin Chinese (Pinyin), and Japanese (hiragana, standard romaji, lamplight romaji).</p>
+		</div>
+
+		<div class="grid">
+			<section class="card">
+				<h2>Input</h2>
+
+				<label for="language">Language</label>
+				<select id="language">
+					<option value="spanish">Spanish</option>
+					<option value="polish">Polish</option>
+					<option value="chinese">Chinese (Mandarin Pinyin)</option>
+					<option value="japanese">Japanese</option>
+				</select>
+
+				<div id="japaneseModeWrap" style="display:none; margin-top:12px;">
+					<label for="japaneseMode">Japanese input type</label>
+					<select id="japaneseMode">
+						<option value="hiragana">Hiragana</option>
+						<option value="romaji">Normal romanization</option>
+						<option value="lamplight">Lamplight dialect romanization</option>
+					</select>
+				</div>
+
+				<label for="inputText" style="margin-top:12px;">Text to convert</label>
+				<textarea id="inputText" placeholder="Type text here..."></textarea>
+
+				<div class="controls">
+					<button id="convertBtn" class="primary">Convert → IPA</button>
+					<button id="clearBtn" type="button">Clear</button>
+				</div>
+
+				<div class="hint" id="hint"></div>
+			</section>
+
+			<section class="card">
+				<h2>Output</h2>
+				<label for="outputMode">Output format</label>
+				<div style="display: flex; gap: 10px; margin-bottom: 12px;">
+					<label style="display: flex; align-items: center; cursor: pointer; margin: 0;">
+						<input type="radio" name="outputMode" value="phonetic" checked>
+						<span style="margin-left: 6px; color: var(--text);">Phonetic IPA</span>
+					</label>
+					<label style="display: flex; align-items: center; cursor: pointer; margin: 0;">
+						<input type="radio" name="outputMode" value="phonemic">
+						<span style="margin-left: 6px; color: var(--text);">Phonemic</span>
+					</label>
+				</div>
+				<label for="outputText">Output</label>
+				<textarea id="outputText" readonly placeholder="Output appears here..."></textarea>
+				<div class="meta" id="outputMeta">This is a practical converter with broad-phonetic approximations.</div>
+			</section>
+		</div>
+	</div>
+
+	<script>
+		const languageSelect = document.getElementById('language');
+		const japaneseModeWrap = document.getElementById('japaneseModeWrap');
+		const japaneseModeSelect = document.getElementById('japaneseMode');
+		const inputText = document.getElementById('inputText');
+		const outputText = document.getElementById('outputText');
+		const convertBtn = document.getElementById('convertBtn');
+		const clearBtn = document.getElementById('clearBtn');
+		const hint = document.getElementById('hint');
+		const outputMeta = document.getElementById('outputMeta');
+		const outputModeRadios = document.querySelectorAll('input[name="outputMode"]');
+
+		function escapeRegex(text) {
+			return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		}
+
+		function replaceWholeWord(text, from, to) {
+			const regex = new RegExp(`\\b${escapeRegex(from)}\\b`, 'g');
+			return text.replace(regex, to);
+		}
+
+		function applyReplacements(text, replacements) {
+			let out = text;
+			for (const [from, to] of replacements) {
+				out = out.replace(new RegExp(escapeRegex(from), 'g'), to);
+			}
+			return out;
+		}
+
+		// ---------- Spanish ----------
+		function spanishToPhonemic(ipaText) {
+			return ipaText
+				.replace(/tʃ/g, 'č')           // /tʃ/ → č
+				.replace(/ʝ/g, 'y')             // /ʝ/ → y
+				.replace(/ɾ/g, 'r')             // tap → r
+				.replace(/β/g, 'b')             // [β] → b
+				.replace(/ð/g, 'd')             // [ð] → d
+				.replace(/ɣ/g, 'g')             // [ɣ] → g
+				.replace(/x/g, 'j')             // /x/ → j
+				.replace(/ɲ/g, 'ñ')             // /ɲ/ → ñ
+				.replace(/ks/g, 'ks');
+		}
+
+		function spanishToIPA(text) {
+			let t = text.toLowerCase();
+
+			t = t
+				.normalize('NFD')
+				.replace(/[\u0300-\u036f]/g, '') // remove accents for simple rule handling
+				.replace(/ü/g, 'u')
+				.replace(/ñ/g, 'ɲ');
+
+			// Temporary markers
+			t = t.replace(/ch/g, '§CH§')
+				 .replace(/ll/g, '§LL§')
+				 .replace(/rr/g, '§RR§')
+				 .replace(/qu([ei])/g, 'k$1')
+				 .replace(/gue/g, 'ge')
+				 .replace(/gui/g, 'gi')
+				 .replace(/güe/g, 'gwe')
+				 .replace(/güi/g, 'gwi');
+
+			t = t.replace(/h/g, '');
+
+			// Context-sensitive letters
+			t = t.replace(/g([ei])/g, 'x$1');
+			t = t.replace(/c([ei])/g, 's$1');
+			t = t.replace(/c/g, 'k');
+
+			t = applyReplacements(t, [
+				['§CH§', 'tʃ'],
+				['§LL§', 'ʝ'],
+				['§RR§', 'r'],
+				['j', 'x'],
+				['z', 's'],
+				['v', 'b'],
+				['y', 'ʝ'],
+				['x', 'ks'],
+				['ɲ', 'ɲ']
+			]);
+
+			// Single r becomes tap unless word-initial/after l n s
+			t = t.replace(/(^|\s)r/g, '$1r');
+			t = t.replace(/([lns])r/g, '$1r');
+			t = t.replace(/r/g, 'ɾ');
+			t = t.replace(/ɾɾ/g, 'r');
+
+			// Approximations for b d g between vowels
+			t = t.replace(/([aeiou])b([aeiou])/g, '$1β$2');
+			t = t.replace(/([aeiou])d([aeiou])/g, '$1ð$2');
+			t = t.replace(/([aeiou])g([aeiou])/g, '$1ɣ$2');
+
+			return t;
+		}
+
+		// ---------- Polish ----------
+		function polishToPhonemic(ipaText) {
+			return ipaText
+				.replace(/t͡ʂ/g, 'č')           // /tʂ/ → č
+				.replace(/d͡ʂ/g, 'ž')           // /dʂ/ → ž (dz-like)
+				.replace(/t͡ʑ/g, 'ć')           // /tʑ/ → ć
+				.replace(/d͡ʑ/g, 'ź')           // /dʑ/ → ź
+				.replace(/t͡ɕ/g, 'ć')           // /tɕ/ → ć (alternative)
+				.replace(/d͡ʑ/g, 'ź')           // /dʑ/ → ź (alternative)
+				.replace(/ʂ/g, 'š')             // /ʂ/ → š
+				.replace(/ʐ/g, 'ž')             // /ʐ/ → ž
+				.replace(/ɕ/g, 'ś')             // /ɕ/ → ś
+				.replace(/ʑ/g, 'ź')             // /ʑ/ → ź
+				.replace(/x/g, 'h')             // /x/ → h
+				.replace(/w/g, 'ł')             // /w/ → ł
+				.replace(/v/g, 'v')             // /v/ → v
+				.replace(/ɔ̃/g, 'ǫ')             // /ɔ̃/ → ǫ
+				.replace(/ɛ̃/g, 'ę')             // /ɛ̃/ → ę
+				.replace(/ɨ/g, 'y')             // /ɨ/ → y
+				.replace(/ɛ/g, 'e')             // /ɛ/ → e
+				.replace(/ɔ/g, 'o')             // /ɔ/ → o
+				.replace(/t͡s/g, 'c');           // /ts/ → c
+		}
+
+		function polishToIPA(text) {
+			let t = text.toLowerCase();
+
+			const replacements = [
+				['dzi', 'd͡ʑi'],
+				['dź', 'd͡ʑ'],
+				['dż', 'd͡ʐ'],
+				['cz', 't͡ʂ'],
+				['sz', 'ʂ'],
+				['rz', 'ʐ'],
+				['ch', 'x'],
+				['si', 'ɕi'],
+				['zi', 'ʑi'],
+				['ci', 't͡ɕi'],
+				['ni', 'ɲi'],
+				['ś', 'ɕ'],
+				['ź', 'ʑ'],
+				['ć', 't͡ɕ'],
+				['ń', 'ɲ'],
+				['ż', 'ʐ'],
+				['ł', 'w'],
+				['ą', 'ɔ̃'],
+				['ę', 'ɛ̃'],
+				['ó', 'u'],
+				['w', 'v'],
+				['c', 't͡s'],
+				['j', 'j'],
+				['y', 'ɨ'],
+				['h', 'x']
+			];
+
+			t = applyReplacements(t, replacements);
+
+			// Remaining basic letters
+			t = applyReplacements(t, [
+				['a', 'a'], ['e', 'ɛ'], ['i', 'i'], ['o', 'ɔ'], ['u', 'u'],
+				['b', 'b'], ['p', 'p'], ['m', 'm'], ['f', 'f'], ['v', 'v'],
+				['d', 'd'], ['t', 't'], ['n', 'n'], ['l', 'l'], ['r', 'r'],
+				['s', 's'], ['z', 'z'], ['k', 'k'], ['g', 'ɡ']
+			]);
+
+			return t;
+		}
+
+		// ---------- Mandarin Pinyin ----------
+		function chineseToPhonemic(ipaText) {
+			// For Mandarin, phonemic uses Pinyin-like numerals
+			let t = ipaText;
+			// Simply add tone numbers to represent phonemes
+			t = t.replace(/˥/g, '1').replace(/˧˥/g, '2').replace(/˨˩˦/g, '3').replace(/˥˩/g, '4').replace(/˧/g, '5');
+			return t;
+		}
+
+		const pinyinToneMarks = {
+			'ā': ['a', '1'], 'á': ['a', '2'], 'ǎ': ['a', '3'], 'à': ['a', '4'],
+			'ē': ['e', '1'], 'é': ['e', '2'], 'ě': ['e', '3'], 'è': ['e', '4'],
+			'ī': ['i', '1'], 'í': ['i', '2'], 'ǐ': ['i', '3'], 'ì': ['i', '4'],
+			'ō': ['o', '1'], 'ó': ['o', '2'], 'ǒ': ['o', '3'], 'ò': ['o', '4'],
+			'ū': ['u', '1'], 'ú': ['u', '2'], 'ǔ': ['u', '3'], 'ù': ['u', '4'],
+			'ǖ': ['ü', '1'], 'ǘ': ['ü', '2'], 'ǚ': ['ü', '3'], 'ǜ': ['ü', '4']
+		};
+
+		const pinyinInitials = {
+			'zh': 'ʈʂ', 'ch': 'ʈʂʰ', 'sh': 'ʂ',
+			'b': 'p', 'p': 'pʰ', 'm': 'm', 'f': 'f',
+			'd': 't', 't': 'tʰ', 'n': 'n', 'l': 'l',
+			'g': 'k', 'k': 'kʰ', 'h': 'x',
+			'j': 'tɕ', 'q': 'tɕʰ', 'x': 'ɕ',
+			'r': 'ʐ', 'z': 'ts', 'c': 'tsʰ', 's': 's',
+			'y': '', 'w': ''
+		};
+
+		const pinyinFinals = {
+			'a': 'a', 'o': 'o', 'e': 'ɤ', 'ai': 'ai̯', 'ei': 'ei̯', 'ao': 'au̯', 'ou': 'ou̯',
+			'an': 'an', 'en': 'ən', 'ang': 'ɑŋ', 'eng': 'əŋ', 'ong': 'ʊŋ',
+			'i': 'i', 'ia': 'ja', 'ie': 'jɛ', 'iao': 'jau̯', 'iu': 'jou̯',
+			'ian': 'jɛn', 'in': 'in', 'iang': 'jɑŋ', 'ing': 'iŋ', 'iong': 'jʊŋ',
+			'u': 'u', 'ua': 'wa', 'uo': 'wo', 'uai': 'wai̯', 'ui': 'wei̯',
+			'uan': 'wan', 'un': 'wən', 'uang': 'wɑŋ',
+			'ü': 'y', 'üe': 'ɥe', 'üan': 'ɥɛn', 'ün': 'yn',
+			'er': 'ɑɻ'
+		};
+
+		const toneToChao = {
+			'1': '˥',
+			'2': '˧˥',
+			'3': '˨˩˦',
+			'4': '˥˩',
+			'5': '˧',
+			'0': '˧'
+		};
+
+		function normalizePinyinSyllable(raw) {
+			let tone = '5';
+			let s = raw.toLowerCase();
+
+			s = s.replace(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/g, (m) => {
+				const [base, foundTone] = pinyinToneMarks[m];
+				tone = foundTone;
+				return base;
+			});
+
+			const toneNumMatch = s.match(/([0-5])$/);
+			if (toneNumMatch) {
+				tone = toneNumMatch[1] === '0' ? '5' : toneNumMatch[1];
+				s = s.slice(0, -1);
+			}
+
+			s = s.replace(/u:/g, 'ü').replace(/v/g, 'ü');
+			return { syllable: s, tone };
+		}
+
+		function pinyinSyllableToIPA(rawToken) {
+			const { syllable, tone } = normalizePinyinSyllable(rawToken);
+			if (!syllable) return rawToken;
+
+			let initial = '';
+			let rest = syllable;
+			const initialCandidates = ['zh', 'ch', 'sh', 'b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'r', 'z', 'c', 's', 'y', 'w'];
+
+			for (const cand of initialCandidates) {
+				if (syllable.startsWith(cand)) {
+					initial = cand;
+					rest = syllable.slice(cand.length);
+					break;
+				}
+			}
+
+			if (initial === 'y') {
+				if (rest.startsWith('u')) rest = 'ü' + rest.slice(1);
+				else if (rest === '') rest = 'i';
+				else if (!rest.startsWith('i') && !rest.startsWith('ü')) rest = 'i' + rest;
+			}
+
+			if (initial === 'w') {
+				if (rest === '') rest = 'u';
+				else if (!rest.startsWith('u')) rest = 'u' + rest;
+			}
+
+			if ((initial === 'z' || initial === 'c' || initial === 's') && rest === 'i') {
+				return `${pinyinInitials[initial]}ɨ${toneToChao[tone]}`;
+			}
+
+			if ((initial === 'zh' || initial === 'ch' || initial === 'sh' || initial === 'r') && rest === 'i') {
+				return `${pinyinInitials[initial]}ɻ̩${toneToChao[tone]}`;
+			}
+
+			// Handle common abbreviations in pinyin spelling
+			if (rest === 'ui') rest = 'ui';
+			if (rest === 'iu') rest = 'iu';
+			if (rest === 'un') rest = 'un';
+
+			let finalIPA = pinyinFinals[rest];
+			if (!finalIPA) {
+				// Fallback approximations
+				finalIPA = rest
+					.replace(/iang/g, 'jɑŋ')
+					.replace(/iong/g, 'jʊŋ')
+					.replace(/uang/g, 'wɑŋ')
+					.replace(/ang/g, 'ɑŋ')
+					.replace(/eng/g, 'əŋ')
+					.replace(/ing/g, 'iŋ')
+					.replace(/ong/g, 'ʊŋ')
+					.replace(/an/g, 'an')
+					.replace(/en/g, 'ən')
+					.replace(/ou/g, 'ou̯')
+					.replace(/ao/g, 'au̯')
+					.replace(/ai/g, 'ai̯')
+					.replace(/ei/g, 'ei̯')
+					.replace(/ü/g, 'y')
+					.replace(/i/g, 'i')
+					.replace(/u/g, 'u')
+					.replace(/e/g, 'ɤ')
+					.replace(/o/g, 'o')
+					.replace(/a/g, 'a');
+			}
+
+			const initialIPA = pinyinInitials[initial] || '';
+			return `${initialIPA}${finalIPA}${toneToChao[tone]}`;
+		}
+
+		function chineseToIPA(text) {
+			const tokens = text.split(/(\s+|[,.!?;:，。！？；：])/);
+			return tokens
+				.map((token) => {
+					if (!token || /^\s+$/.test(token) || /^[,.!?;:，。！？；：]$/.test(token)) return token;
+					return pinyinSyllableToIPA(token);
+				})
+				.join('');
+		}
+
+		// ---------- Japanese ----------
+		function japaneseToPhonemic(romajiText) {
+			// For Japanese phonemic, use standard romanization
+			return romajiText
+				.replace(/kʲ/g, 'ky')
+				.replace(/ɡʲ/g, 'gy')
+				.replace(/ɕ/g, 'sh')
+				.replace(/dʑ/g, 'j')
+				.replace(/tɕ/g, 'ch')
+				.replace(/ɲ/g, 'ny')
+				.replace(/ç/g, 'h')
+				.replace(/bʲ/g, 'by')
+				.replace(/pʲ/g, 'py')
+				.replace(/mʲ/g, 'my')
+				.replace(/ɾʲ/g, 'ry')
+				.replace(/ɾ/g, 'r')
+				.replace(/ɸ/g, 'f')
+				.replace(/ʲ/g, '')
+				.replace(/ː/g, 'u')
+				.replace(/ɯ/g, 'u')
+				.replace(/ɴ/g, 'n');
+		}
+
+		const romajiToIPA = {
+			// 3-char clusters
+			'kya': 'kʲa', 'kyu': 'kʲɯ', 'kyo': 'kʲo',
+			'gya': 'ɡʲa', 'gyu': 'ɡʲɯ', 'gyo': 'ɡʲo',
+			'sha': 'ɕa', 'shu': 'ɕɯ', 'sho': 'ɕo',
+			'ja': 'dʑa', 'ju': 'dʑɯ', 'jo': 'dʑo',
+			'cha': 'tɕa', 'chu': 'tɕɯ', 'cho': 'tɕo',
+			'nya': 'ɲa', 'nyu': 'ɲɯ', 'nyo': 'ɲo',
+			'hya': 'ça', 'hyu': 'çɯ', 'hyo': 'ço',
+			'bya': 'bʲa', 'byu': 'bʲɯ', 'byo': 'bʲo',
+			'pya': 'pʲa', 'pyu': 'pʲɯ', 'pyo': 'pʲo',
+			'mya': 'mʲa', 'myu': 'mʲɯ', 'myo': 'mʲo',
+			'rya': 'ɾʲa', 'ryu': 'ɾʲɯ', 'ryo': 'ɾʲo',
+
+			// Specials
+			'shi': 'ɕi', 'chi': 'tɕi', 'tsu': 'tsɯ', 'fu': 'ɸɯ', 'ji': 'dʑi',
+
+			// 2-char syllables
+			'ka': 'ka', 'ki': 'ki', 'ku': 'kɯ', 'ke': 'ke', 'ko': 'ko',
+			'ga': 'ɡa', 'gi': 'ɡi', 'gu': 'ɡɯ', 'ge': 'ɡe', 'go': 'ɡo',
+			'sa': 'sa', 'su': 'sɯ', 'se': 'se', 'so': 'so',
+			'za': 'za', 'zu': 'zɯ', 'ze': 'ze', 'zo': 'zo',
+			'ta': 'ta', 'te': 'te', 'to': 'to',
+			'da': 'da', 'de': 'de', 'do': 'do',
+			'na': 'na', 'ni': 'ni', 'nu': 'nɯ', 'ne': 'ne', 'no': 'no',
+			'ha': 'ha', 'hi': 'çi', 'he': 'he', 'ho': 'ho',
+			'ba': 'ba', 'bi': 'bi', 'bu': 'bɯ', 'be': 'be', 'bo': 'bo',
+			'pa': 'pa', 'pi': 'pi', 'pu': 'pɯ', 'pe': 'pe', 'po': 'po',
+			'ma': 'ma', 'mi': 'mi', 'mu': 'mɯ', 'me': 'me', 'mo': 'mo',
+			'ra': 'ɾa', 'ri': 'ɾi', 'ru': 'ɾɯ', 're': 'ɾe', 'ro': 'ɾo',
+			'ya': 'ja', 'yu': 'jɯ', 'yo': 'jo',
+			'wa': 'wa', 'wo': 'o',
+
+			// single
+			'a': 'a', 'i': 'i', 'u': 'ɯ', 'e': 'e', 'o': 'o',
+			'n': 'ɴ'
+		};
+
+		const hiraganaToRomaji = {
+			'きゃ': 'kya', 'きゅ': 'kyu', 'きょ': 'kyo',
+			'ぎゃ': 'gya', 'ぎゅ': 'gyu', 'ぎょ': 'gyo',
+			'しゃ': 'sha', 'しゅ': 'shu', 'しょ': 'sho',
+			'じゃ': 'ja', 'じゅ': 'ju', 'じょ': 'jo',
+			'ちゃ': 'cha', 'ちゅ': 'chu', 'ちょ': 'cho',
+			'にゃ': 'nya', 'にゅ': 'nyu', 'にょ': 'nyo',
+			'ひゃ': 'hya', 'ひゅ': 'hyu', 'ひょ': 'hyo',
+			'びゃ': 'bya', 'びゅ': 'byu', 'びょ': 'byo',
+			'ぴゃ': 'pya', 'ぴゅ': 'pyu', 'ぴょ': 'pyo',
+			'みゃ': 'mya', 'みゅ': 'myu', 'みょ': 'myo',
+			'りゃ': 'rya', 'りゅ': 'ryu', 'りょ': 'ryo',
+			'し': 'shi', 'ち': 'chi', 'つ': 'tsu', 'ふ': 'fu', 'じ': 'ji',
+			'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o',
+			'か': 'ka', 'き': 'ki', 'く': 'ku', 'け': 'ke', 'こ': 'ko',
+			'が': 'ga', 'ぎ': 'gi', 'ぐ': 'gu', 'げ': 'ge', 'ご': 'go',
+			'さ': 'sa', 'す': 'su', 'せ': 'se', 'そ': 'so',
+			'ざ': 'za', 'ず': 'zu', 'ぜ': 'ze', 'ぞ': 'zo',
+			'た': 'ta', 'て': 'te', 'と': 'to',
+			'だ': 'da', 'で': 'de', 'ど': 'do',
+			'な': 'na', 'に': 'ni', 'ぬ': 'nu', 'ね': 'ne', 'の': 'no',
+			'は': 'ha', 'ひ': 'hi', 'へ': 'he', 'ほ': 'ho',
+			'ば': 'ba', 'び': 'bi', 'ぶ': 'bu', 'べ': 'be', 'ぼ': 'bo',
+			'ぱ': 'pa', 'ぴ': 'pi', 'ぷ': 'pu', 'ぺ': 'pe', 'ぽ': 'po',
+			'ま': 'ma', 'み': 'mi', 'む': 'mu', 'め': 'me', 'も': 'mo',
+			'ら': 'ra', 'り': 'ri', 'る': 'ru', 'れ': 're', 'ろ': 'ro',
+			'や': 'ya', 'ゆ': 'yu', 'よ': 'yo',
+			'わ': 'wa', 'を': 'wo', 'ん': 'n',
+			'ゔ': 'vu'
+		};
+
+		function lamplightToStandardRomaji(s) {
+			let t = s.toLowerCase();
+
+			const lamplightPairs = [
+				['xa', 'ha'], ['xi', 'hi'], ['xu', 'fu'], ['xe', 'he'], ['xo', 'ho'],
+				['si', 'shi'], ['ti', 'chi'], ['tu', 'tsu'], ['hu', 'fu'], ['du', 'zu']
+			];
+
+			for (const [from, to] of lamplightPairs) {
+				t = t.replace(new RegExp(escapeRegex(from), 'g'), to);
+			}
+
+			return t;
+		}
+
+		function kanaToRomaji(text) {
+			let out = '';
+
+			for (let i = 0; i < text.length; i++) {
+				const two = text.slice(i, i + 2);
+				const one = text[i];
+
+				if (one === 'っ') {
+					const nextTwo = text.slice(i + 1, i + 3);
+					const nextOne = text[i + 1] || '';
+					const nextRomaji = hiraganaToRomaji[nextTwo] || hiraganaToRomaji[nextOne] || '';
+					if (nextRomaji) {
+						out += nextRomaji[0];
+					}
+					continue;
+				}
+
+				if (one === 'ー') {
+					const prev = out[out.length - 1];
+					if (prev && 'aeiou'.includes(prev)) out += prev;
+					continue;
+				}
+
+				if (hiraganaToRomaji[two]) {
+					out += hiraganaToRomaji[two];
+					i++;
+					continue;
+				}
+
+				if (hiraganaToRomaji[one]) {
+					out += hiraganaToRomaji[one];
+					continue;
+				}
+
+				out += one;
+			}
+
+			return out;
+		}
+
+		function romajiToIPAConvert(input) {
+			let text = input.toLowerCase();
+			let out = '';
+			let i = 0;
+
+			while (i < text.length) {
+				const ch = text[i];
+
+				if (/\s/.test(ch) || /[,.!?;:、。]/.test(ch)) {
+					out += ch;
+					i++;
+					continue;
+				}
+
+				// Geminate consonants (except n)
+				if (i + 1 < text.length && text[i] === text[i + 1] && /[bcdfghjklmpqrstvwxyz]/.test(text[i]) && text[i] !== 'n') {
+					out += 'Q';
+					i++;
+					continue;
+				}
+
+				const four = text.slice(i, i + 4);
+				const three = text.slice(i, i + 3);
+				const two = text.slice(i, i + 2);
+
+				if (romajiToIPA[four]) {
+					out += romajiToIPA[four];
+					i += 4;
+					continue;
+				}
+				if (romajiToIPA[three]) {
+					out += romajiToIPA[three];
+					i += 3;
+					continue;
+				}
+				if (romajiToIPA[two]) {
+					out += romajiToIPA[two];
+					i += 2;
+					continue;
+				}
+				if (romajiToIPA[ch]) {
+					out += romajiToIPA[ch];
+					i += 1;
+					continue;
+				}
+
+				out += ch;
+				i++;
+			}
+
+			// Realize gemination marker Q as consonant length mark
+			out = out.replace(/Q([kɡsztdnpbmɾhɸtɕdʑɕ])/g, '$1ː');
+
+			// Basic /n/ assimilation
+			out = out.replace(/ɴ([pbm])/g, 'm$1');
+			out = out.replace(/ɴ([kɡ])/g, 'ŋ$1');
+
+			return out;
+		}
+
+		function japaneseToIPA(text, mode) {
+			let romaji;
+			if (mode === 'hiragana') {
+				romaji = kanaToRomaji(text);
+			} else if (mode === 'lamplight') {
+				romaji = lamplightToStandardRomaji(text);
+			} else {
+				romaji = text;
+			}
+			return romajiToIPAConvert(romaji);
+		}
+
+		function getOutputModeLabel() {
+			for (const radio of outputModeRadios) {
+				if (radio.checked) return radio.value;
+			}
+			return 'phonetic';
+		}
+
+		function updateHint() {
+			const lang = languageSelect.value;
+			const jpMode = japaneseModeSelect.value;
+
+			if (lang === 'spanish') {
+				hint.textContent = 'Spanish: broad Latin-American style IPA (e.g., "ll" → ʝ, "j"/"ge"/"gi" → x).';
+			} else if (lang === 'polish') {
+				hint.textContent = 'Polish: broad transcription with common digraph rules (e.g., "cz" → t͡ʂ, "sz" → ʂ, "rz/ż" → ʐ).';
+			} else if (lang === 'chinese') {
+				hint.textContent = 'Chinese: enter Mandarin Pinyin with tone marks or numbers (e.g., ni3 hao3, nǐ hǎo).';
+			} else if (lang === 'japanese') {
+				if (jpMode === 'hiragana') {
+					hint.textContent = 'Japanese hiragana mode: supports small っ for gemination and common digraphs like きゃ, しゃ, ちょ.';
+				} else if (jpMode === 'lamplight') {
+					hint.textContent = 'Lamplight romanization mode: accepts lamplight spellings like xa/xi/xu/xe/xo and converts to IPA.';
+				} else {
+					hint.textContent = 'Japanese normal romanization mode: use Hepburn-like input (shi, chi, tsu, ryo, gakkou...).';
+				}
+			}
+		}
+
+		function updateOutputMeta() {
+			const mode = getOutputModeLabel();
+			const lang = languageSelect.value;
+
+			if (mode === 'phonetic') {
+				outputMeta.textContent = 'Phonetic IPA: detailed surface-level sounds with allophones.';
+			} else {
+				if (lang === 'spanish') {
+					outputMeta.textContent = 'Phonemic: underlying Spanish phoneme inventory (e.g., /tʃ/→č, /ɾ/→r, /ɲ/→ñ).';
+				} else if (lang === 'polish') {
+					outputMeta.textContent = 'Phonemic: underlying Polish phoneme inventory (e.g., /t͡ʂ/→č, /t͡ɕ/→ć, /ʐ/→ž, /ɕ/→ś).';
+				} else if (lang === 'chinese') {
+					outputMeta.textContent = 'Phonemic: Mandarin phonemes with tone numerals (1–5).';
+				} else if (lang === 'japanese') {
+					outputMeta.textContent = 'Phonemic: Japanese phoneme inventory as romanization (e.g., /tɕ/→ch, /dʑ/→j).';
+				} else {
+					outputMeta.textContent = 'Phonemic representation.';
+				}
+			}
+		}
+
+		function convert() {
+			const lang = languageSelect.value;
+			const text = inputText.value;
+			const mode = getOutputModeLabel();
+
+			let result = text;
+			if (lang === 'spanish') {
+				result = spanishToIPA(text);
+				if (mode === 'phonemic') result = spanishToPhonemic(result);
+			} else if (lang === 'polish') {
+				result = polishToIPA(text);
+				if (mode === 'phonemic') result = polishToPhonemic(result);
+			} else if (lang === 'chinese') {
+				result = chineseToIPA(text);
+				if (mode === 'phonemic') result = chineseToPhonemic(result);
+			} else if (lang === 'japanese') {
+				result = japaneseToIPA(text, japaneseModeSelect.value);
+				if (mode === 'phonemic') result = japaneseToPhonemic(result);
+			}
+
+			outputText.value = result;
+		}
+
+		languageSelect.addEventListener('change', () => {
+			japaneseModeWrap.style.display = languageSelect.value === 'japanese' ? 'block' : 'none';
+			updateHint();
+			updateOutputMeta();
+		});
+
+		japaneseModeSelect.addEventListener('change', updateHint);
+		outputModeRadios.forEach(radio => {
+			radio.addEventListener('change', () => {
+				updateOutputMeta();
+				if (outputText.value) convert();
+			});
+		});
+
+		convertBtn.addEventListener('click', convert);
+		clearBtn.addEventListener('click', () => {
+			inputText.value = '';
+			outputText.value = '';
+			inputText.focus();
+		});
+
+		inputText.addEventListener('keydown', (e) => {
+			if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+				convert();
+			}
+		});
+
+		updateHint();
+		updateOutputMeta();
+	</script>
+</body>
+</html>

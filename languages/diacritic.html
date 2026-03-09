@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Diacritic Typer</title>
+		<style>
+			:root {
+				color-scheme: light dark;
+				--bg: #0f1115;
+				--panel: #171a21;
+				--text: #f2f5f7;
+				--muted: #aab4bf;
+				--accent: #6ea8fe;
+				--border: #2a2f3a;
+			}
+
+			body {
+				margin: 0;
+				font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+				background: var(--bg);
+				color: var(--text);
+				min-height: 100vh;
+				display: grid;
+				place-items: center;
+				padding: 32px;
+			}
+
+			.wrap {
+				width: min(900px, 100%);
+				display: grid;
+				gap: 18px;
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 14px;
+				padding: 24px;
+				box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+			}
+
+			h1 {
+				margin: 0;
+				font-size: 1.4rem;
+				letter-spacing: 0.3px;
+			}
+
+			p {
+				margin: 0;
+				color: var(--muted);
+				line-height: 1.5;
+			}
+
+			.grid {
+				display: grid;
+				gap: 16px;
+				grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+			}
+
+			label {
+				font-weight: 600;
+				margin-bottom: 6px;
+				display: block;
+			}
+
+			textarea {
+				width: 100%;
+				min-height: 160px;
+				resize: vertical;
+				border-radius: 10px;
+				border: 1px solid var(--border);
+				background: #0b0d11;
+				color: var(--text);
+				padding: 12px;
+				font-size: 1rem;
+				line-height: 1.5;
+			}
+
+			.output {
+				background: #0b0d11;
+				border: 1px dashed var(--border);
+				border-radius: 10px;
+				padding: 12px;
+				min-height: 160px;
+				white-space: pre-wrap;
+				word-break: break-word;
+				font-size: 1.1rem;
+			}
+
+			.hint {
+				font-size: 0.95rem;
+				color: var(--muted);
+				display: flex;
+				gap: 10px;
+				align-items: center;
+				flex-wrap: wrap;
+			}
+
+			.chip {
+				border: 1px solid var(--border);
+				border-radius: 999px;
+				padding: 4px 10px;
+				background: #121520;
+			}
+
+			.actions {
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+			}
+
+			button {
+				background: var(--accent);
+				color: #081124;
+				border: none;
+				border-radius: 10px;
+				padding: 10px 14px;
+				font-weight: 600;
+				cursor: pointer;
+			}
+
+			button.secondary {
+				background: transparent;
+				color: var(--text);
+				border: 1px solid var(--border);
+			}
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<div>
+				<h1>Diacritic Typer</h1>
+				<p>Type sequences like <strong>s(caron)o(slash)s</strong> to get <strong>šøs</strong>.</p>
+			</div>
+
+			<div class="grid">
+				<div>
+					<label for="source">Input</label>
+					<textarea id="source" placeholder="Try: s(caron)o(slash)s"></textarea>
+				</div>
+				<div>
+					<label for="result">Output</label>
+					<div id="result" class="output" aria-live="polite"></div>
+				</div>
+			</div>
+
+			<div class="hint">
+				<span class="chip">s(caron) → š</span>
+				<span class="chip">o(slash) → ø</span>
+				<span class="chip">c(caron) → č</span>
+				<span class="chip">z(caron) → ž</span>
+				<span class="chip">n(tilde) → ñ</span>
+				<span class="chip">u(umlaut) → ü</span>
+				<span class="chip">z(dot above) → ż</span>
+				<span class="chip">s(dot below) → ṣ</span>
+				<span class="chip">u(stress) → ú</span>
+				<span class="chip">a(long) → ā</span>
+				<span class="chip">o(umlaut)(stress) → ő</span>
+			</div>
+
+			<div class="actions">
+				<button id="copy">Copy Output</button>
+				<button id="clear" class="secondary">Clear</button>
+			</div>
+		</div>
+
+		<script>
+			const input = document.getElementById("source");
+			const result = document.getElementById("result");
+			const copyButton = document.getElementById("copy");
+			const clearButton = document.getElementById("clear");
+
+			const diacriticMap = new Map([
+				["s:caron", "š"],
+				["S:caron", "Š"],
+				["c:caron", "č"],
+				["C:caron", "Č"],
+				["z:caron", "ž"],
+				["Z:caron", "Ž"],
+				["o:slash", "ø"],
+				["O:slash", "Ø"],
+				["a:ring", "å"],
+				["A:ring", "Å"],
+				["n:tilde", "ñ"],
+				["N:tilde", "Ñ"],
+				["e:acute", "é"],
+				["E:acute", "É"],
+				["i:acute", "í"],
+				["I:acute", "Í"],
+				["u:acute", "ú"],
+				["U:acute", "Ú"],
+				["a:umlaut", "ä"],
+				["A:umlaut", "Ä"],
+				["e:umlaut", "ë"],
+				["E:umlaut", "Ë"],
+				["i:umlaut", "ï"],
+				["I:umlaut", "Ï"],
+				["o:umlaut", "ö"],
+				["O:umlaut", "Ö"],
+				["u:umlaut", "ü"],
+				["U:umlaut", "Ü"],
+			]);
+
+			const combiningMarks = new Map([
+				["dot above", "\u0307"],
+				["dot below", "\u0323"],
+				["stress", "\u0301"],
+				["long", "\u0304"],
+				["umlaut", "\u0308"],
+			]);
+
+			const doubleAcuteMap = new Map([
+				["o", "ő"],
+				["O", "Ő"],
+				["u", "ű"],
+				["U", "Ű"],
+			]);
+
+			function transformText(value) {
+				return value.replace(/([A-Za-z])((?:\([^)]*\))+)/g, (match, letter, diacriticGroup) => {
+					const tags = Array.from(diacriticGroup.matchAll(/\(([^)]+)\)/g)).map((tag) =>
+						tag[1].trim().toLowerCase(),
+					);
+
+					if (tags.length === 1) {
+						const diacritic = tags[0];
+						const key = `${letter}:${diacritic}`;
+						const direct = diacriticMap.get(key);
+						if (direct) return direct;
+						const combining = combiningMarks.get(diacritic);
+						if (combining) return `${letter}${combining}`;
+						return match;
+					}
+
+					if (tags.includes("umlaut") && tags.includes("stress")) {
+						const doubleAcute = doubleAcuteMap.get(letter);
+						if (doubleAcute) return doubleAcute;
+						return `${letter}${combiningMarks.get("stress") ?? ""}`;
+					}
+
+					let output = letter;
+					for (const tag of tags) {
+						const combining = combiningMarks.get(tag);
+						if (combining) {
+							output += combining;
+							continue;
+						}
+						const direct = diacriticMap.get(`${letter}:${tag}`);
+						if (direct) output = direct;
+					}
+					return output;
+				});
+			}
+
+			function update() {
+				result.textContent = transformText(input.value);
+			}
+
+			input.addEventListener("input", update);
+
+			copyButton.addEventListener("click", async () => {
+				const text = result.textContent;
+				if (!text) return;
+				try {
+					await navigator.clipboard.writeText(text);
+					copyButton.textContent = "Copied!";
+					setTimeout(() => {
+						copyButton.textContent = "Copy Output";
+					}, 1200);
+				} catch (error) {
+					copyButton.textContent = "Copy failed";
+					setTimeout(() => {
+						copyButton.textContent = "Copy Output";
+					}, 1200);
+				}
+			});
+
+			clearButton.addEventListener("click", () => {
+				input.value = "";
+				update();
+				input.focus();
+			});
+
+			update();
+		</script>
+	</body>
+</html>

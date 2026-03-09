@@ -1,0 +1,385 @@
+<!--
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pitch Shift</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+        .controls {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .control-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .mode-toggle {
+            background: #2196F3;
+        }
+        .mode-toggle:hover {
+            background: #0b7dda;
+        }
+        .inverse-btn {
+            background: #ff9800;
+        }
+        .inverse-btn:hover {
+            background: #e68900;
+        }
+        .value-display {
+            font-size: 24px;
+            text-align: center;
+            padding: 15px;
+            background: #333;
+            border-radius: 5px;
+            margin: 10px 0;
+            color: #4CAF50;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: #333;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .tab.active {
+            background: #4CAF50;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .preset-btn {
+            background: #555;
+            padding: 8px;
+        }
+        .preset-btn:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pitch Shift</h1>
+    
+    <div class="controls">
+        <div class="button-group">
+            <button id="loadBtn">Load Audio File</button>
+            <button id="playBtn" disabled>Play</button>
+            <button id="stopBtn" disabled>Stop</button>
+            <button id="inverseBtn" class="inverse-btn">Inverse</button>
+        </div>
+        <input type="file" id="fileInput" accept="audio/*" style="display: none;">
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="semitones">Semitones</div>
+            <div class="tab" data-tab="ratio">JI Ratios</div>
+        </div>
+        
+        <div class="tab-content active" id="semitones">
+            <div class="control-group">
+                <label>Pitch Shift (Semitones)</label>
+                <div class="value-display" id="semitoneDisplay">0 semitones</div>
+                <input type="range" id="semitoneSlider" min="-12" max="12" step="0.1" value="0">
+                <input type="number" id="semitoneInput" min="-24" max="24" step="0.1" value="0">
+            </div>
+            
+            <div class="preset-buttons">
+                <button class="preset-btn" data-semitones="-12">-1 Oct</button>
+                <button class="preset-btn" data-semitones="-7">-P5</button>
+                <button class="preset-btn" data-semitones="-5">-P4</button>
+                <button class="preset-btn" data-semitones="-3">-m3</button>
+                <button class="preset-btn" data-semitones="0">0</button>
+                <button class="preset-btn" data-semitones="4">M3</button>
+                <button class="preset-btn" data-semitones="5">P4</button>
+                <button class="preset-btn" data-semitones="7">P5</button>
+                <button class="preset-btn" data-semitones="12">+1 Oct</button>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="ratio">
+            <div class="control-group">
+                <label>JI Ratio (e.g., 3/2, 5/4, 7/8)</label>
+                <div class="value-display" id="ratioDisplay">1/1</div>
+                <input type="text" id="ratioInput" value="1/1" placeholder="e.g., 3/2, 5/4, 7/8">
+            </div>
+            
+            <div class="preset-buttons">
+                <button class="preset-btn" data-ratio="1/2">1/2</button>
+                <button class="preset-btn" data-ratio="7/8">7/8</button>
+                <button class="preset-btn" data-ratio="8/7">8/7</button>
+                <button class="preset-btn" data-ratio="9/8">9/8</button>
+                <button class="preset-btn" data-ratio="6/5">6/5</button>
+                <button class="preset-btn" data-ratio="5/4">5/4</button>
+                <button class="preset-btn" data-ratio="4/3">4/3</button>
+                <button class="preset-btn" data-ratio="3/2">3/2</button>
+                <button class="preset-btn" data-ratio="5/3">5/3</button>
+                <button class="preset-btn" data-ratio="7/4">7/4</button>
+                <button class="preset-btn" data-ratio="2/1">2/1</button>
+            </div>
+        </div>
+        
+    </div>
+    
+    <script>
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let audioBuffer = null;
+        let sourceNode = null;
+        let isPlaying = false;
+        
+        // UI Elements
+        const fileInput = document.getElementById('fileInput');
+        const loadBtn = document.getElementById('loadBtn');
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const inverseBtn = document.getElementById('inverseBtn');
+        
+        const semitoneSlider = document.getElementById('semitoneSlider');
+        const semitoneInput = document.getElementById('semitoneInput');
+        const semitoneDisplay = document.getElementById('semitoneDisplay');
+        
+        const ratioInput = document.getElementById('ratioInput');
+        const ratioDisplay = document.getElementById('ratioDisplay');
+        
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        let currentMode = 'semitones'; // 'semitones' or 'ratio'
+        let currentSemitones = 0;
+        let currentRatio = '1/1';
+        
+        // Tab switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+                currentMode = tabName;
+            });
+        });
+        
+        // Load audio file
+        loadBtn.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const arrayBuffer = await file.arrayBuffer();
+            audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            playBtn.disabled = false;
+            stopBtn.disabled = false;
+        });
+        
+        // Semitone controls
+        semitoneSlider.addEventListener('input', (e) => {
+            currentSemitones = parseFloat(e.target.value);
+            semitoneInput.value = currentSemitones;
+            updateSemitoneDisplay();
+        });
+        
+        semitoneInput.addEventListener('input', (e) => {
+            currentSemitones = parseFloat(e.target.value) || 0;
+            semitoneSlider.value = Math.max(-12, Math.min(12, currentSemitones));
+            updateSemitoneDisplay();
+        });
+        
+        function updateSemitoneDisplay() {
+            semitoneDisplay.textContent = `${currentSemitones.toFixed(1)} semitones`;
+        }
+        
+        // Ratio controls
+        ratioInput.addEventListener('input', (e) => {
+            currentRatio = e.target.value.trim();
+            updateRatioDisplay();
+        });
+        
+        function updateRatioDisplay() {
+            ratioDisplay.textContent = currentRatio;
+        }
+        
+        // Preset buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.semitones) {
+                    const semitones = parseFloat(btn.dataset.semitones);
+                    currentSemitones = semitones;
+                    semitoneSlider.value = semitones;
+                    semitoneInput.value = semitones;
+                    updateSemitoneDisplay();
+                } else if (btn.dataset.ratio) {
+                    currentRatio = btn.dataset.ratio;
+                    ratioInput.value = currentRatio;
+                    updateRatioDisplay();
+                }
+            });
+        });
+        
+        // Inverse button
+        inverseBtn.addEventListener('click', () => {
+            if (currentMode === 'semitones') {
+                // Invert semitones: -2 becomes +2
+                currentSemitones = -currentSemitones;
+                semitoneSlider.value = currentSemitones;
+                semitoneInput.value = currentSemitones;
+                updateSemitoneDisplay();
+            } else {
+                // Invert ratio: 7/8 becomes 8/7
+                const ratio = parseRatio(currentRatio);
+                if (ratio) {
+                    currentRatio = `${ratio.denominator}/${ratio.numerator}`;
+                    ratioInput.value = currentRatio;
+                    updateRatioDisplay();
+                }
+            }
+        });
+        
+        // Parse ratio string like "3/2" into {numerator, denominator}
+        function parseRatio(ratioStr) {
+            const parts = ratioStr.split('/');
+            if (parts.length === 2) {
+                const numerator = parseInt(parts[0].trim());
+                const denominator = parseInt(parts[1].trim());
+                if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
+                    return { numerator, denominator };
+                }
+            } else if (parts.length === 1) {
+                const num = parseFloat(parts[0].trim());
+                if (!isNaN(num)) {
+                    return { numerator: num, denominator: 1 };
+                }
+            }
+            return null;
+        }
+        
+        // Convert ratio to pitch ratio
+        function getRatioValue(ratioStr) {
+            const ratio = parseRatio(ratioStr);
+            if (ratio) {
+                return ratio.numerator / ratio.denominator;
+            }
+            return 1;
+        }
+        
+        // Convert semitones to pitch ratio
+        function semitonesToRatio(semitones) {
+            return Math.pow(2, semitones / 12);
+        }
+        
+        // Get current pitch ratio based on mode
+        function getCurrentPitchRatio() {
+            if (currentMode === 'semitones') {
+                return semitonesToRatio(currentSemitones);
+            } else {
+                return getRatioValue(currentRatio);
+            }
+        }
+        
+        // Play audio
+        playBtn.addEventListener('click', () => {
+            if (!audioBuffer) return;
+            
+            if (isPlaying) {
+                stopAudio();
+            }
+            
+            sourceNode = audioContext.createBufferSource();
+            sourceNode.buffer = audioBuffer;
+            
+            const pitchRatio = getCurrentPitchRatio();
+            
+            // Pitch shift by changing playback rate (naturally slows down when pitched down)
+            sourceNode.playbackRate.value = pitchRatio;
+            
+            sourceNode.connect(audioContext.destination);
+            sourceNode.start();
+            isPlaying = true;
+            
+            sourceNode.onended = () => {
+                isPlaying = false;
+            };
+        });
+        
+        // Stop audio
+        function stopAudio() {
+            if (sourceNode && isPlaying) {
+                sourceNode.stop();
+                sourceNode = null;
+                isPlaying = false;
+            }
+        }
+        
+        stopBtn.addEventListener('click', stopAudio);
+    </script>
+</body>
+</html>
+-->

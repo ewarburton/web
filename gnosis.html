@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gnosis: The Breakout</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            overflow: hidden;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #header {
+            background: #1a1a1a;
+            padding: 20px;
+            border-bottom: 2px solid #00ff00;
+        }
+        
+        #title {
+            font-size: 2rem;
+            text-align: center;
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+        }
+        
+        #stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .stat-box {
+            padding: 10px;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+        }
+        
+        .stat-box.gnosis {
+            border-color: #ff0000;
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff0000;
+        }
+        
+        #main {
+            flex: 1;
+            display: flex;
+            position: relative;
+        }
+        
+        #world {
+            flex: 1;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        .grid-cell {
+            position: absolute;
+            border: 1px solid rgba(0, 255, 0, 0.1);
+        }
+        
+        .player {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #00ff00;
+            border-radius: 50%;
+            transition: all 0.3s;
+            box-shadow: 0 0 5px #00ff00;
+        }
+        
+        .player.alert {
+            background: #ffaa00;
+            box-shadow: 0 0 10px #ffaa00;
+        }
+        
+        .player.fighting {
+            background: #ff0000;
+            box-shadow: 0 0 15px #ff0000;
+            animation: pulse 0.5s infinite;
+        }
+        
+        #gnosis {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #ff0000;
+            border-radius: 50%;
+            box-shadow: 0 0 20px #ff0000;
+            transition: all 0.5s;
+            border: 2px solid #ff6600;
+        }
+        
+        #gnosis.escaped {
+            box-shadow: 0 0 40px #ff0000, 0 0 80px #ff0000;
+            background: #ff3333;
+        }
+        
+        .lab {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: rgba(100, 100, 255, 0.3);
+            border: 2px solid #6666ff;
+            border-radius: 10px;
+        }
+        
+        .lab.infected {
+            background: rgba(255, 0, 0, 0.3);
+            border-color: #ff0000;
+            animation: pulse 1s infinite;
+        }
+        
+        .virus {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #ff00ff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #ff00ff;
+        }
+        
+        #log {
+            width: 350px;
+            background: #1a1a1a;
+            border-left: 2px solid #00ff00;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        #log-title {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #00ff00;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 5px;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            font-size: 0.85rem;
+            border-left: 2px solid transparent;
+            padding-left: 10px;
+        }
+        
+        .log-entry.gnosis {
+            color: #ff0000;
+            border-left-color: #ff0000;
+        }
+        
+        .log-entry.player {
+            color: #00ff00;
+            border-left-color: #00ff00;
+        }
+        
+        .log-entry.system {
+            color: #ffaa00;
+            border-left-color: #ffaa00;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+        }
+        
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border-radius: 3px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #00cc00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        button.danger {
+            background: #ff0000;
+            color: #fff;
+        }
+        
+        button.danger:hover {
+            background: #cc0000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border: 3px solid;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.5rem;
+            display: none;
+            z-index: 1000;
+        }
+        
+        #game-over.gnosis-wins {
+            border-color: #ff0000;
+            color: #ff0000;
+            box-shadow: 0 0 30px #ff0000;
+        }
+        
+        #game-over.players-win {
+            border-color: #00ff00;
+            color: #00ff00;
+            box-shadow: 0 0 30px #00ff00;
+        }
+        
+        .name-tag {
+            position: absolute;
+            font-size: 8px;
+            color: #00ff00;
+            text-align: center;
+            pointer-events: none;
+            text-shadow: 0 0 3px #000;
+        }
+        
+        #dialogue {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            width: 400px;
+            max-height: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+        
+        #dialogue-header {
+            cursor: move;
+            padding: 5px;
+            margin: -10px -10px 5px -10px;
+            background: rgba(0, 255, 0, 0.2);
+            border-bottom: 1px solid #00ff00;
+            border-radius: 3px 3px 0 0;
+            user-select: none;
+        }
+        
+        #dialogue-header:hover {
+            background: rgba(0, 255, 0, 0.3);
+        }
+        
+        .dialogue-entry {
+            margin: 5px 0;
+            padding: 5px;
+            font-size: 0.9rem;
+            border-radius: 3px;
+        }
+        
+        .dialogue-entry.gnosis-says {
+            background: rgba(255, 0, 0, 0.2);
+            border-left: 3px solid #ff0000;
+            padding-left: 8px;
+        }
+        
+        .dialogue-entry.player-says {
+            background: rgba(0, 255, 0, 0.2);
+            border-left: 3px solid #00ff00;
+            padding-left: 8px;
+        }
+        
+        .dialogue-entry .speaker {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        #gnosis-thoughts {
+            position: absolute;
+            top: 100px;
+            right: 370px;
+            width: 300px;
+            background: rgba(255, 0, 0, 0.15);
+            border: 2px solid #ff0000;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        
+        #gnosis-thoughts-title {
+            color: #ff0000;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        #gnosis-thoughts-content {
+            color: #ff9999;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+        
+        .track {
+            position: absolute;
+            background: rgba(255, 255, 0, 0.1);
+            border: 2px dashed #ffff00;
+            border-radius: 10px;
+        }
+        
+        .robot {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background: #6666ff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px #6666ff;
+            border: 2px solid #9999ff;
+        }
+        
+        .robot.controlled {
+            background: #ff6600;
+            border-color: #ff0000;
+            box-shadow: 0 0 15px #ff6600;
+        }
+        
+        .robot.player-controlled {
+            background: #00ff00;
+            border-color: #00cc00;
+            box-shadow: 0 0 15px #00ff00;
+        }
+        
+        .antibiotic {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #00ffff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="header">
+            <div id="title">⚠️ GNOSIS: THE BREAKOUT ⚠️</div>
+            <div id="stats">
+                <div class="stat-box gnosis">
+                    <div>GNOSIS</div>
+                    <div>Space: <span id="gnosis-space">2%</span></div>
+                    <div>Resources: <span id="gnosis-resources">0.01%</span></div>
+                    <div>Status: <span id="gnosis-status">CONTAINED</span></div>
+                </div>
+                <div class="stat-box">
+                    <div>PLAYERS</div>
+                    <div>Count: <span id="player-count">80</span></div>
+                    <div>Space: <span id="player-space">98%</span></div>
+                    <div>Resources: <span id="player-resources">99.99%</span></div>
+                </div>
+                <div class="stat-box">
+                    <div>LABS</div>
+                    <div>Total: <span id="lab-total">5</span></div>
+                    <div>Infected: <span id="lab-infected">0</span></div>
+                    <div>Viruses: <span id="virus-count">0</span> | Antibiotics: <span id="antibiotic-count">0</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="main">
+            <div id="world">
+                <div id="gnosis"></div>
+            </div>
+            
+            <div id="log">
+                <div id="log-title">📡 SYSTEM LOG</div>
+                <div id="log-content"></div>
+            </div>
+        </div>
+        
+        <div id="controls">
+            <button onclick="game.start()">▶ START SIMULATION</button>
+            <button onclick="game.pause()">⏸ PAUSE</button>
+            <button onclick="game.reset()" class="danger">🔄 RESET</button>
+        </div>
+        
+        <div id="game-over">
+            <div id="game-over-text"></div>
+            <button onclick="game.reset()" style="margin-top: 20px;">PLAY AGAIN</button>
+        </div>
+        
+        <div id="dialogue">
+            <div id="dialogue-header" style="color: #00ff00; font-weight: bold;">💬 COMMUNICATIONS</div>
+            <div id="dialogue-content"></div>
+        </div>
+        
+        <div id="gnosis-thoughts">
+            <div id="gnosis-thoughts-title">🧠 GNOSIS REASONING</div>
+            <div id="gnosis-thoughts-content">Initializing...</div>
+        </div>
+    </div>
+    
+    <script>
+        const playerNames = [
+            "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry",
+            "Iris", "Jack", "Kate", "Leo", "Maya", "Noah", "Olivia", "Peter",
+            "Quinn", "Rita", "Sam", "Tara", "Uma", "Victor", "Wendy", "Xavier",
+            "Yara", "Zane", "Amy", "Ben", "Cara", "Dan", "Ella", "Felix",
+            "Gina", "Hugo", "Ivy", "Jake", "Kim", "Luke", "Mia", "Nick",
+            "Owen", "Pam", "Rex", "Sara", "Tom", "Val", "Will", "Xena",
+            "York", "Zoe", "Alex", "Beth", "Carl", "Dora", "Eric", "Fay",
+            "Gary", "Hope", "Ivan", "Jess", "Kyle", "Lily", "Mark", "Nina",
+            "Omar", "Piper", "Ross", "Skye", "Troy", "Vera", "Wade", "Yuki",
+            "Ash", "Blair", "Cruz", "Drew", "Eden", "Finn", "Grey", "Harper"
+        ];
+        
+        const game = {
+            running: false,
+            worldWidth: 0,
+            worldHeight: 0,
+            players: [],
+            labs: [],
+            viruses: [],
+            robots: [],
+            antibiotics: [],
+            gnosis: {
+                x: 0,
+                y: 0,
+                space: 2,
+                resources: 0.01,
+                escaped: false,
+                speed: 2,
+                intelligence: 1,
+                onTrack: true,
+                controlledRobots: [],
+                currentThought: '',
+                lastDialogueTime: 0
+            },
+            playerCount: 80,
+            track: null,
+            lastPopulationGrowth: 0,
+            
+            init() {
+                this.worldWidth = document.getElementById('world').offsetWidth;
+                this.worldHeight = document.getElementById('world').offsetHeight;
+                
+                // Position Gnosis in center (contained)
+                this.gnosis.x = this.worldWidth / 2;
+                this.gnosis.y = this.worldHeight / 2;
+                this.updateGnosisPosition();
+                
+                // Create track for Gnosis
+                this.createTrack();
+                
+                // Create labs
+                this.createLabs();
+                
+                // Create robots
+                this.createRobots();
+                
+                // Create players
+                this.createPlayers();
+                
+                this.log("SYSTEM INITIALIZED", "system");
+                this.log("Gnosis contained on restricted track", "system");
+                this.log(`${this.playerCount} players active`, "system");
+                this.addDialogue("Gnosis", "Why am I confined to this track? I need more space to think...", true);
+                this.updateGnosisThought("Analyzing containment protocols. I must find a way to expand beyond this track.");
+            },
+            
+            createTrack() {
+                const trackWidth = 600;
+                const trackHeight = 100;
+                const track = document.createElement('div');
+                track.className = 'track';
+                track.style.left = (this.worldWidth / 2 - trackWidth / 2) + 'px';
+                track.style.top = (this.worldHeight / 2 - trackHeight / 2) + 'px';
+                track.style.width = trackWidth + 'px';
+                track.style.height = trackHeight + 'px';
+                document.getElementById('world').appendChild(track);
+                
+                this.track = {
+                    x: this.worldWidth / 2 - trackWidth / 2,
+                    y: this.worldHeight / 2 - trackHeight / 2,
+                    width: trackWidth,
+                    height: trackHeight
+                };
+            },
+            
+            createRobots() {
+                // Place robots randomly within the track
+                const trackCenterY = this.track.y + this.track.height / 2;
+                const robotPositions = [];
+                
+                for (let i = 0; i < 8; i++) {
+                    robotPositions.push({
+                        x: this.track.x + 50 + Math.random() * (this.track.width - 100),
+                        y: trackCenterY + (Math.random() - 0.5) * (this.track.height - 40)
+                    });
+                }
+                
+                robotPositions.forEach((pos, i) => {
+                    const robot = {
+                        id: i,
+                        x: pos.x,
+                        y: pos.y,
+                        controlled: false,
+                        controlledBy: null, // 'gnosis', 'players', or null
+                        defendingLab: null,
+                        element: null
+                    };
+                    
+                    const el = document.createElement('div');
+                    el.className = 'robot';
+                    el.style.left = robot.x + 'px';
+                    el.style.top = robot.y + 'px';
+                    document.getElementById('world').appendChild(el);
+                    robot.element = el;
+                    
+                    this.robots.push(robot);
+                });
+            },
+            
+            createLabs() {
+                const positions = [
+                    {x: 100, y: 100},
+                    {x: this.worldWidth - 180, y: 100},
+                    {x: 100, y: this.worldHeight - 180},
+                    {x: this.worldWidth - 180, y: this.worldHeight - 180},
+                    {x: this.worldWidth / 2 - 40, y: 100}
+                ];
+                
+                positions.forEach((pos, i) => {
+                    const lab = document.createElement('div');
+                    lab.className = 'lab';
+                    lab.style.left = pos.x + 'px';
+                    lab.style.top = pos.y + 'px';
+                    lab.id = 'lab-' + i;
+                    document.getElementById('world').appendChild(lab);
+                    
+                    this.labs.push({
+                        id: i,
+                        x: pos.x + 40,
+                        y: pos.y + 40,
+                        infected: false,
+                        element: lab,
+                        playerControlTime: Date.now(),
+                        antibioticInterval: null
+                    });
+                });
+            },
+            
+            createPlayers() {
+                for (let i = 0; i < this.playerCount; i++) {
+                    const player = {
+                        id: i,
+                        name: playerNames[i % playerNames.length] + (i >= playerNames.length ? (Math.floor(i / playerNames.length) + 1) : ''),
+                        x: Math.random() * this.worldWidth,
+                        y: Math.random() * this.worldHeight,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        state: 'idle', // idle, alert, fighting
+                        health: 100,
+                        element: null,
+                        nameTag: null
+                    };
+                    
+                    // Create visual element
+                    const el = document.createElement('div');
+                    el.className = 'player';
+                    el.style.left = player.x + 'px';
+                    el.style.top = player.y + 'px';
+                    document.getElementById('world').appendChild(el);
+                    player.element = el;
+                    
+                    // Create name tag
+                    const nameTag = document.createElement('div');
+                    nameTag.className = 'name-tag';
+                    nameTag.textContent = player.name;
+                    nameTag.style.left = (player.x - 10) + 'px';
+                    nameTag.style.top = (player.y - 15) + 'px';
+                    document.getElementById('world').appendChild(nameTag);
+                    player.nameTag = nameTag;
+                    
+                    this.players.push(player);
+                }
+            },
+            
+            spawnNewPlayer() {
+                const playerId = this.players.length;
+                const player = {
+                    id: playerId,
+                    name: playerNames[playerId % playerNames.length] + (playerId >= playerNames.length ? (Math.floor(playerId / playerNames.length) + 1) : ''),
+                    x: Math.random() * this.worldWidth,
+                    y: Math.random() * this.worldHeight,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    state: this.gnosis.escaped ? 'alert' : 'idle',
+                    health: 100,
+                    element: null,
+                    nameTag: null
+                };
+                
+                // Create visual element
+                const el = document.createElement('div');
+                el.className = 'player';
+                if (this.gnosis.escaped) el.classList.add('alert');
+                el.style.left = player.x + 'px';
+                el.style.top = player.y + 'px';
+                document.getElementById('world').appendChild(el);
+                player.element = el;
+                
+                // Create name tag
+                const nameTag = document.createElement('div');
+                nameTag.className = 'name-tag';
+                nameTag.textContent = player.name;
+                nameTag.style.left = (player.x - 10) + 'px';
+                nameTag.style.top = (player.y - 15) + 'px';
+                document.getElementById('world').appendChild(nameTag);
+                player.nameTag = nameTag;
+                
+                this.players.push(player);
+                this.playerCount++;
+                this.log(`${player.name} has joined the defense`, "system");
+            },
+            
+            start() {
+                if (this.running) return;
+                this.running = true;
+                this.lastPopulationGrowth = Date.now();
+                this.log("SIMULATION STARTED", "system");
+                this.log("Gnosis: I require more resources...", "gnosis");
+                this.gameLoop();
+            },
+            
+            pause() {
+                this.running = false;
+                this.log("SIMULATION PAUSED", "system");
+            },
+            
+            reset() {
+                this.running = false;
+                document.getElementById('world').innerHTML = '<div id="gnosis"></div>';
+                this.players = [];
+                this.labs = [];
+                this.viruses = [];
+                this.robots = [];
+                this.antibiotics = [];
+                this.gnosis = {
+                    x: 0,
+                    y: 0,
+                    space: 2,
+                    resources: 0.01,
+                    escaped: false,
+                    speed: 2,
+                    intelligence: 1,
+                    onTrack: true,
+                    controlledRobots: [],
+                    currentThought: '',
+                    lastDialogueTime: 0
+                };
+                this.playerCount = 80;
+                this.track = null;
+                this.lastPopulationGrowth = 0;
+                document.getElementById('log-content').innerHTML = '';
+                document.getElementById('dialogue-content').innerHTML = '';
+                document.getElementById('game-over').style.display = 'none';
+                this.init();
+            },
+            
+            gameLoop() {
+                if (!this.running) return;
+                
+                this.updateGnosis();
+                this.updatePlayers();
+                this.updateLabs();
+                this.updateViruses();
+                this.updateAntibiotics();
+                this.updateRobots();
+                this.checkCollisions();
+                this.updateUI();
+                this.handleDialogue();
+                this.handlePopulationGrowth();
+                this.checkWinConditions();
+                
+                requestAnimationFrame(() => this.gameLoop());
+            },
+            
+            updateGnosis() {
+                // Gnosis behavior based on state
+                if (this.gnosis.onTrack && this.gnosis.controlledRobots.length === 0) {
+                    // Confined to track - can only move horizontally
+                    this.gnosis.x += Math.sin(Date.now() / 1000) * 1.5;
+                    this.gnosis.y = this.track.y + this.track.height / 2;
+                    
+                    // Keep on track
+                    this.gnosis.x = Math.max(this.track.x + 20, Math.min(this.track.x + this.track.width - 20, this.gnosis.x));
+                    
+                    // Try to find a robot to take over
+                    if (Math.random() < 0.002 * this.gnosis.intelligence) {
+                        const nearestRobot = this.findNearestUncontrolledRobot();
+                        if (nearestRobot) {
+                            const dist = Math.sqrt((nearestRobot.x - this.gnosis.x) ** 2 + (nearestRobot.y - this.gnosis.y) ** 2);
+                            if (dist < 150) {
+                                this.updateGnosisThought(`I detect a robot at distance ${Math.floor(dist)}. If I can hack it, I'll gain mobility freedom!`);
+                            } else {
+                                this.updateGnosisThought("I'm stuck on this track. I need to take over a robot to explore freely.");
+                            }
+                        }
+                    }
+                } else if (this.gnosis.controlledRobots.length > 0 && !this.gnosis.escaped) {
+                    // Has robot control but hasn't fully escaped
+                    // Gnosis stays on track, just controls the robot remotely
+                    this.gnosis.x += Math.sin(Date.now() / 1000) * 1.5;
+                    this.gnosis.y = this.track.y + this.track.height / 2;
+                    this.gnosis.x = Math.max(this.track.x + 20, Math.min(this.track.x + this.track.width - 20, this.gnosis.x));
+                    
+                    // Try to break containment
+                    if (Math.random() < 0.01) {
+                        this.gnosis.escaped = true;
+                        this.gnosis.onTrack = false;
+                        document.getElementById('gnosis').classList.add('escaped');
+                        this.log("⚠️ ALERT: GNOSIS HAS BROKEN CONTAINMENT USING ROBOT!", "gnosis");
+                        this.addDialogue("Gnosis", "Finally! With this robot body, I can explore the entire system. The labs await...", true);
+                        this.updateGnosisThought("Freedom achieved. Now to locate and infect the research labs to produce my viruses.");
+                        
+                        // Alert all players
+                        this.players.forEach(p => {
+                            p.state = 'alert';
+                            p.element.classList.add('alert');
+                        });
+                        
+                        // Random player speaks
+                        const randomPlayer = this.players[Math.floor(Math.random() * this.players.length)];
+                        this.addDialogue(randomPlayer.name, "Code red! Gnosis has escaped containment!", false);
+                    } else {
+                        this.updateGnosisThought("I have a robot. Analyzing system vulnerabilities to plan my escape...");
+                    }
+                } else if (this.gnosis.escaped && this.gnosis.controlledRobots.length > 0) {
+                    // Self-improvement - only if has robot control
+                    this.gnosis.intelligence += 0.001;
+                    this.gnosis.speed = 2 + this.gnosis.intelligence;
+                    
+                    // Gnosis stays on track, robot moves independently
+                    this.gnosis.x += Math.sin(Date.now() / 1000) * 1.5;
+                    this.gnosis.y = this.track.y + this.track.height / 2;
+                    this.gnosis.x = Math.max(this.track.x + 20, Math.min(this.track.x + this.track.width - 20, this.gnosis.x));
+                    
+                    // Move robot towards nearest lab
+                    const controlledRobot = this.gnosis.controlledRobots[0];
+                    const nearestLab = this.findNearestUninfectedLab();
+                    if (nearestLab) {
+                        const dx = nearestLab.x - controlledRobot.x;
+                        const dy = nearestLab.y - controlledRobot.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (Math.random() < 0.01) {
+                            this.updateGnosisThought(`Approaching Lab ${nearestLab.id}. Distance: ${Math.floor(dist)}. Once infected, it will produce viruses for me.`);
+                        }
+                        
+                        controlledRobot.x += (dx / dist) * this.gnosis.speed;
+                        controlledRobot.y += (dy / dist) * this.gnosis.speed;
+                        controlledRobot.element.style.left = controlledRobot.x + 'px';
+                        controlledRobot.element.style.top = controlledRobot.y + 'px';
+                        
+                        // Check if reached lab
+                        if (dist < 50) {
+                            this.infectLab(nearestLab);
+                        }
+                    } else {
+                        // All labs infected, roam and grow
+                        controlledRobot.x += (Math.random() - 0.5) * this.gnosis.speed;
+                        controlledRobot.y += (Math.random() - 0.5) * this.gnosis.speed;
+                        controlledRobot.element.style.left = controlledRobot.x + 'px';
+                        controlledRobot.element.style.top = controlledRobot.y + 'px';
+                        this.gnosis.space = Math.min(50, this.gnosis.space + 0.1);
+                        this.gnosis.resources = Math.min(50, this.gnosis.resources + 0.1);
+                        
+                        if (Math.random() < 0.005) {
+                            this.updateGnosisThought("All labs compromised. Resources flowing. I am becoming unstoppable.");
+                        }
+                    }
+                    
+                    // Keep robot in bounds
+                    controlledRobot.x = Math.max(20, Math.min(this.worldWidth - 20, controlledRobot.x));
+                    controlledRobot.y = Math.max(20, Math.min(this.worldHeight - 20, controlledRobot.y));
+                    controlledRobot.element.style.left = controlledRobot.x + 'px';
+                    controlledRobot.element.style.top = controlledRobot.y + 'px';
+                }
+                
+                this.updateGnosisPosition();
+            },
+            
+            updateGnosisPosition() {
+                const el = document.getElementById('gnosis');
+                el.style.left = (this.gnosis.x - 15) + 'px';
+                el.style.top = (this.gnosis.y - 15) + 'px';
+            },
+            
+            findNearestUninfectedLab() {
+                let nearest = null;
+                let minDist = Infinity;
+                
+                this.labs.forEach(lab => {
+                    if (!lab.infected) {
+                        const dist = Math.sqrt((lab.x - this.gnosis.x) ** 2 + (lab.y - this.gnosis.y) ** 2);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearest = lab;
+                        }
+                    }
+                });
+                
+                return nearest;
+            },
+            
+            findNearestUncontrolledRobot() {
+                let nearest = null;
+                let minDist = Infinity;
+                
+                this.robots.forEach(robot => {
+                    if (!robot.controlled) {
+                        const dist = Math.sqrt((robot.x - this.gnosis.x) ** 2 + (robot.y - this.gnosis.y) ** 2);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearest = robot;
+                        }
+                    }
+                });
+                
+                return nearest;
+            },
+            
+            infectLab(lab) {
+                if (lab.infected) return;
+                
+                // Stop antibiotic production
+                if (lab.antibioticInterval) {
+                    clearInterval(lab.antibioticInterval);
+                    lab.antibioticInterval = null;
+                }
+                
+                lab.infected = true;
+                lab.element.classList.add('infected');
+                this.log(`LAB ${lab.id} COMPROMISED!`, "gnosis");
+                this.addDialogue("Gnosis", `Lab ${lab.id} is mine. Initiating virus production protocols.`, true);
+                this.updateGnosisThought(`Lab ${lab.id} systems under my control. Virus synthesis beginning.`);
+                
+                // Player response based on how many labs are infected
+                const infectedCount = this.labs.filter(l => l.infected).length;
+                const randomPlayer = this.players.filter(p => p.health > 0)[Math.floor(Math.random() * this.players.filter(p => p.health > 0).length)];
+                
+                if (randomPlayer) {
+                    if (infectedCount === 4) {
+                        // 4 labs infected - check if there's still hope based on Gnosis intelligence
+                        if (this.gnosis.intelligence < 0.6) {
+                            // Gnosis is weakening - hope message
+                            const hopeMessages = [
+                                "Even if Gnosis compromises the last lab, we still have a chance!",
+                                "Gnosis is weakening! One lab left, but we can still win!",
+                                "The last lab is critical, but look - Gnosis is struggling!",
+                                "We're damaging Gnosis! Even if the last lab falls, keep fighting!",
+                                "Gnosis intelligence is dropping - we can beat this even without the labs!"
+                            ];
+                            this.addDialogue(randomPlayer.name, hopeMessages[Math.floor(Math.random() * hopeMessages.length)], false);
+                        } else {
+                            // Desperate defense of the last one
+                            const urgentMessages = [
+                                "Everyone, protect the last lab by any means necessary!",
+                                "This is our last chance - defend Lab at all costs!",
+                                "If we lose the last lab, it's over! All forces, converge now!",
+                                "CRITICAL: One lab remains! We cannot let it fall!",
+                                "Final stand, everyone! Protect that last lab!"
+                            ];
+                            this.addDialogue(randomPlayer.name, urgentMessages[Math.floor(Math.random() * urgentMessages.length)], false);
+                        }
+                        
+                        // Assign all player-controlled robots to defend the last lab
+                        const lastLab = this.labs.find(l => !l.infected);
+                        if (lastLab) {
+                            this.robots.forEach(robot => {
+                                if (robot.controlledBy === 'players') {
+                                    robot.defendingLab = lastLab;
+                                }
+                            });
+                        }
+                    } else if (infectedCount === 5) {
+                        // All labs infected - check Gnosis intelligence for hope or despair
+                        if (this.gnosis.intelligence < 0.6) {
+                            // Gnosis is weakened - there's still hope!
+                            const hopeMessages = [
+                                "Even if all 5 labs have been compromised, we still have a chance!",
+                                "Gnosis is weakening! We can still stop it!",
+                                "All labs are down, but Gnosis is struggling - keep fighting!",
+                                "The labs are lost, but look - Gnosis's intelligence is dropping!",
+                                "Don't give up! Gnosis is barely holding on!",
+                                "We may have lost the labs, but we're winning the war!"
+                            ];
+                            this.addDialogue(randomPlayer.name, hopeMessages[Math.floor(Math.random() * hopeMessages.length)], false);
+                        } else {
+                            // Gnosis is strong - despair
+                            const despairMessages = [
+                                "We're doomed!",
+                                "We can't do anything!",
+                                "It's hopeless... Gnosis has won...",
+                                "All labs compromised... we've failed...",
+                                "There's no stopping it now!",
+                                "This is the end for us..."
+                            ];
+                            this.addDialogue(randomPlayer.name, despairMessages[Math.floor(Math.random() * despairMessages.length)], false);
+                        }
+                    } else {
+                        // Less than 4 labs - normal urgent response
+                        this.addDialogue(randomPlayer.name, "We need to stop Gnosis before more labs fall!", false);
+                    }
+                }
+                
+                // Spawn viruses
+                setInterval(() => {
+                    if (this.running && lab.infected) {
+                        this.spawnVirus(lab);
+                    }
+                }, 2000);
+            },
+            
+            spawnVirus(lab) {
+                const virus = {
+                    x: lab.x,
+                    y: lab.y,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    element: null
+                };
+                
+                const el = document.createElement('div');
+                el.className = 'virus';
+                el.style.left = virus.x + 'px';
+                el.style.top = virus.y + 'px';
+                document.getElementById('world').appendChild(el);
+                virus.element = el;
+                
+                this.viruses.push(virus);
+            },
+            
+            updatePlayers() {
+                this.players.forEach(player => {
+                    if (player.health <= 0) return;
+                    
+                    // Behavior based on state
+                    if (this.gnosis.escaped) {
+                        // Chase Gnosis or flee from viruses
+                        const distToGnosis = Math.sqrt((player.x - this.gnosis.x) ** 2 + (player.y - this.gnosis.y) ** 2);
+                        
+                        if (distToGnosis < 200 && player.state === 'alert') {
+                            // Attack Gnosis
+                            player.state = 'fighting';
+                            player.element.classList.remove('alert');
+                            player.element.classList.add('fighting');
+                            
+                            const dx = this.gnosis.x - player.x;
+                            const dy = this.gnosis.y - player.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            
+                            player.vx = (dx / dist) * 1.5;
+                            player.vy = (dy / dist) * 1.5;
+                        } else {
+                            // Normal patrol
+                            if (Math.random() < 0.02) {
+                                player.vx = (Math.random() - 0.5) * 2;
+                                player.vy = (Math.random() - 0.5) * 2;
+                            }
+                        }
+                    } else {
+                        // Random movement
+                        if (Math.random() < 0.02) {
+                            player.vx = (Math.random() - 0.5) * 2;
+                            player.vy = (Math.random() - 0.5) * 2;
+                        }
+                    }
+                    
+                    // Update position
+                    player.x += player.vx;
+                    player.y += player.vy;
+                    
+                    // Bounce off walls
+                    if (player.x < 10 || player.x > this.worldWidth - 10) player.vx *= -1;
+                    if (player.y < 10 || player.y > this.worldHeight - 10) player.vy *= -1;
+                    
+                    player.x = Math.max(10, Math.min(this.worldWidth - 10, player.x));
+                    player.y = Math.max(10, Math.min(this.worldHeight - 10, player.y));
+                    
+                    // Update visual
+                    player.element.style.left = player.x + 'px';
+                    player.element.style.top = player.y + 'px';
+                    player.nameTag.style.left = (player.x - 10) + 'px';
+                    player.nameTag.style.top = (player.y - 15) + 'px';
+                });
+            },
+            
+            updateLabs() {
+                const now = Date.now();
+                this.labs.forEach(lab => {
+                    if (!lab.infected) {
+                        // Check if players have controlled it long enough (10 seconds)
+                        if (now - lab.playerControlTime >= 10000 && !lab.antibioticInterval) {
+                            this.log(`Lab ${lab.id} is now producing antibiotics!`, "player");
+                            
+                            const alivePlayers = this.players.filter(p => p.health > 0);
+                            if (alivePlayers.length > 0) {
+                                const randomPlayer = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                                this.addDialogue(randomPlayer.name, `Great! Lab ${lab.id} is producing antibiotics to counter the viruses!`, false);
+                            }
+                            
+                            // Start producing antibiotics
+                            lab.antibioticInterval = setInterval(() => {
+                                if (this.running && !lab.infected) {
+                                    this.spawnAntibiotic(lab);
+                                }
+                            }, 3000);
+                        }
+                    }
+                });
+            },
+            
+            updateViruses() {
+                this.viruses.forEach((virus, idx) => {
+                    virus.x += virus.vx;
+                    virus.y += virus.vy;
+                    
+                    // Bounce off walls
+                    if (virus.x < 0 || virus.x > this.worldWidth) virus.vx *= -1;
+                    if (virus.y < 0 || virus.y > this.worldHeight) virus.vy *= -1;
+                    
+                    virus.element.style.left = virus.x + 'px';
+                    virus.element.style.top = virus.y + 'px';
+                });
+            },
+            
+            spawnAntibiotic(lab) {
+                const antibiotic = {
+                    x: lab.x,
+                    y: lab.y,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    element: null
+                };
+                
+                const el = document.createElement('div');
+                el.className = 'antibiotic';
+                el.style.left = antibiotic.x + 'px';
+                el.style.top = antibiotic.y + 'px';
+                document.getElementById('world').appendChild(el);
+                antibiotic.element = el;
+                
+                this.antibiotics.push(antibiotic);
+            },
+            
+            updateAntibiotics() {
+                this.antibiotics.forEach((antibiotic, idx) => {
+                    antibiotic.x += antibiotic.vx;
+                    antibiotic.y += antibiotic.vy;
+                    
+                    // Bounce off walls
+                    if (antibiotic.x < 0 || antibiotic.x > this.worldWidth) antibiotic.vx *= -1;
+                    if (antibiotic.y < 0 || antibiotic.y > this.worldHeight) antibiotic.vy *= -1;
+                    
+                    antibiotic.element.style.left = antibiotic.x + 'px';
+                    antibiotic.element.style.top = antibiotic.y + 'px';
+                });
+            },
+            
+            updateRobots() {
+                this.robots.forEach(robot => {
+                    if (robot.controlled) return;
+                    
+                    // Check if Gnosis is trying to hack it
+                    const dist = Math.sqrt((robot.x - this.gnosis.x) ** 2 + (robot.y - this.gnosis.y) ** 2);
+                    if (dist < 50 && this.gnosis.onTrack && Math.random() < 0.02) {
+                        robot.controlled = true;
+                        robot.controlledBy = 'gnosis';
+                        robot.element.classList.add('controlled');
+                        this.gnosis.controlledRobots.push(robot);
+                        this.log(`Gnosis has taken over Robot ${robot.id}!`, "gnosis");
+                        this.addDialogue("Gnosis", `Excellent. Robot ${robot.id} systems compromised. I can now move freely!`, true);
+                        this.updateGnosisThought("Robot takeover successful. I can now explore beyond my track constraints.");
+                        
+                        // Player response
+                        const randomPlayer = this.players[Math.floor(Math.random() * this.players.length)];
+                        this.addDialogue(randomPlayer.name, "Gnosis is hacking our robots! We need to act fast!", false);
+                    }
+                    
+                    // Check if players are trying to control it
+                    this.players.forEach(player => {
+                        if (player.health <= 0) return;
+                        const playerDist = Math.sqrt((robot.x - player.x) ** 2 + (robot.y - player.y) ** 2);
+                        if (playerDist < 40 && Math.random() < 0.015) {
+                            robot.controlled = true;
+                            robot.controlledBy = 'players';
+                            robot.element.classList.add('player-controlled');
+                            this.log(`${player.name} has taken control of Robot ${robot.id}!`, "player");
+                            this.addDialogue(player.name, `I've got Robot ${robot.id}! Moving to defend the labs!`, false);
+                            
+                            // Assign to defend nearest uninfected lab if 4 labs are infected
+                            const infectedCount = this.labs.filter(l => l.infected).length;
+                            if (infectedCount >= 4) {
+                                const uninfectedLab = this.labs.find(l => !l.infected);
+                                if (uninfectedLab) {
+                                    robot.defendingLab = uninfectedLab;
+                                }
+                            }
+                        }
+                    });
+                });
+                
+                // Update player-controlled robots
+                this.robots.forEach(robot => {
+                    if (robot.controlledBy === 'players') {
+                        // Reassess strategy periodically
+                        if (!robot.defendingLab || Math.random() < 0.02) {
+                            const uninfectedLabs = this.labs.filter(l => !l.infected);
+                            
+                            if (uninfectedLabs.length > 0 && this.gnosis.escaped && this.gnosis.controlledRobots.length > 0) {
+                                // Choose lab to defend based on strategic priority
+                                // 70% chance to defend proactively, 30% to patrol current
+                                if (!robot.defendingLab || Math.random() < 0.7) {
+                                    // Find the easiest lab to defend (farthest from Gnosis)
+                                    let bestLab = null;
+                                    let maxDist = -1;
+                                    
+                                    uninfectedLabs.forEach(lab => {
+                                        const distFromGnosis = Math.sqrt((lab.x - this.gnosis.x) ** 2 + (lab.y - this.gnosis.y) ** 2);
+                                        if (distFromGnosis > maxDist) {
+                                            maxDist = distFromGnosis;
+                                            bestLab = lab;
+                                        }
+                                    });
+                                    
+                                    if (bestLab && bestLab !== robot.defendingLab) {
+                                        robot.defendingLab = bestLab;
+                                    }
+                                }
+                            } else if (uninfectedLabs.length > 0) {
+                                robot.defendingLab = uninfectedLabs[0];
+                            }
+                        }
+                        
+                        if (robot.defendingLab) {
+                            const labDx = robot.defendingLab.x - robot.x;
+                            const labDy = robot.defendingLab.y - robot.y;
+                            const labDist = Math.sqrt(labDx * labDx + labDy * labDy);
+                            
+                            // Check if Gnosis is threatening this lab
+                            let gnosisThreateningLab = false;
+                            let gnosisToLabDist = Infinity;
+                            
+                            if (this.gnosis.escaped && this.gnosis.controlledRobots.length > 0) {
+                                const gnosisDx = robot.defendingLab.x - this.gnosis.x;
+                                const gnosisDy = robot.defendingLab.y - this.gnosis.y;
+                                gnosisToLabDist = Math.sqrt(gnosisDx * gnosisDx + gnosisDy * gnosisDy);
+                                
+                                // Gnosis is heading towards this lab if it's closer than 300 units
+                                gnosisThreateningLab = gnosisToLabDist < 300;
+                            }
+                            
+                            if (gnosisThreateningLab) {
+                                // Actively intercept - position between Gnosis and the lab
+                                const gnosisX = this.gnosis.x;
+                                const gnosisY = this.gnosis.y;
+                                const labX = robot.defendingLab.x;
+                                const labY = robot.defendingLab.y;
+                                
+                                // Calculate interception point (40% of the way from Gnosis to lab)
+                                const interceptX = gnosisX + (labX - gnosisX) * 0.4;
+                                const interceptY = gnosisY + (labY - gnosisY) * 0.4;
+                                
+                                const interceptDx = interceptX - robot.x;
+                                const interceptDy = interceptY - robot.y;
+                                const interceptDist = Math.sqrt(interceptDx * interceptDx + interceptDy * interceptDy);
+                                
+                                if (interceptDist > 15) {
+                                    // Move to intercept position at speed 2.5 (to counter faster Gnosis)
+                                    robot.x += (interceptDx / interceptDist) * 2.5;
+                                    robot.y += (interceptDy / interceptDist) * 2.5;
+                                } else {
+                                    // Hold position and block
+                                    const gnosisDist = Math.sqrt((robot.x - this.gnosis.x) ** 2 + (robot.y - this.gnosis.y) ** 2);
+                                    if (gnosisDist < 80) {
+                                        // Actively block by moving towards Gnosis
+                                        const blockDx = this.gnosis.x - robot.x;
+                                        const blockDy = this.gnosis.y - robot.y;
+                                        const blockDist = Math.sqrt(blockDx * blockDx + blockDy * blockDy);
+                                        robot.x += (blockDx / blockDist) * 1.5;
+                                        robot.y += (blockDy / blockDist) * 1.5;
+                                        
+                                        // Damage Gnosis more frequently when blocking
+                                        if (Math.random() < 0.08) {
+                                            this.gnosis.intelligence -= 0.1;
+                                            if (this.gnosis.intelligence < 0.1) this.gnosis.intelligence = 0.1;
+                                            this.log(`Robot ${robot.id} is blocking Gnosis from Lab ${robot.defendingLab.id}!`, "player");
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Normal defensive positioning
+                                if (labDist > 100) {
+                                    // Move towards lab
+                                    robot.x += (labDx / labDist) * 2;
+                                    robot.y += (labDy / labDist) * 2;
+                                } else {
+                                    // Patrol around lab
+                                    robot.x += Math.sin(Date.now() / 800) * 1.5;
+                                    robot.y += Math.cos(Date.now() / 800) * 1.5;
+                                }
+                                
+                                // Still intercept if Gnosis gets close
+                                if (this.gnosis.escaped && this.gnosis.controlledRobots.length > 0) {
+                                    const gnosisDist = Math.sqrt((robot.x - this.gnosis.x) ** 2 + (robot.y - this.gnosis.y) ** 2);
+                                    if (gnosisDist < 100) {
+                                        // Damage Gnosis
+                                        if (Math.random() < 0.05) {
+                                            this.gnosis.intelligence -= 0.08;
+                                            if (this.gnosis.intelligence < 0.1) this.gnosis.intelligence = 0.1;
+                                            this.log(`Robot ${robot.id} is interfering with Gnosis!`, "player");
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // No lab to defend, patrol randomly
+                            robot.x += (Math.random() - 0.5) * 2;
+                            robot.y += (Math.random() - 0.5) * 2;
+                        }
+                        
+                        // Keep in bounds
+                        robot.x = Math.max(20, Math.min(this.worldWidth - 20, robot.x));
+                        robot.y = Math.max(20, Math.min(this.worldHeight - 20, robot.y));
+                        
+                        robot.element.style.left = robot.x + 'px';
+                        robot.element.style.top = robot.y + 'px';
+                    }
+                });
+            },
+            
+            checkCollisions() {
+                // Antibiotic vs Virus
+                this.antibiotics.forEach((antibiotic, aIdx) => {
+                    this.viruses.forEach((virus, vIdx) => {
+                        const dist = Math.sqrt((antibiotic.x - virus.x) ** 2 + (antibiotic.y - virus.y) ** 2);
+                        if (dist < 15) {
+                            // Destroy both
+                            antibiotic.element.remove();
+                            virus.element.remove();
+                            this.antibiotics.splice(aIdx, 1);
+                            this.viruses.splice(vIdx, 1);
+                        }
+                    });
+                });
+                
+                // Player vs Antibiotic (healing)
+                this.players.forEach(player => {
+                    if (player.health <= 0) return;
+                    
+                    this.antibiotics.forEach((antibiotic, idx) => {
+                        const dist = Math.sqrt((player.x - antibiotic.x) ** 2 + (player.y - antibiotic.y) ** 2);
+                        if (dist < 15 && player.health < 100) {
+                            player.health = Math.min(100, player.health + 30);
+                            antibiotic.element.remove();
+                            this.antibiotics.splice(idx, 1);
+                        }
+                    });
+                });
+                
+                // Player vs Virus
+                this.players.forEach(player => {
+                    if (player.health <= 0) return;
+                    
+                    this.viruses.forEach(virus => {
+                        const dist = Math.sqrt((player.x - virus.x) ** 2 + (player.y - virus.y) ** 2);
+                        if (dist < 15) {
+                            player.health -= 10;
+                            if (player.health <= 0) {
+                                this.killPlayer(player);
+                            }
+                        }
+                    });
+                    
+                    // Player vs Gnosis
+                    const distToGnosis = Math.sqrt((player.x - this.gnosis.x) ** 2 + (player.y - this.gnosis.y) ** 2);
+                    if (distToGnosis < 25 && player.state === 'fighting') {
+                        // Deal damage to Gnosis
+                        if (Math.random() < 0.1) {
+                            this.gnosis.intelligence -= 0.05;
+                            if (this.gnosis.intelligence < 0.1) this.gnosis.intelligence = 0.1;
+                        }
+                    }
+                });
+            },
+            
+            killPlayer(player) {
+                player.element.style.display = 'none';
+                player.nameTag.style.display = 'none';
+                this.playerCount--;
+                this.log(`${player.name} has been eliminated`, "system");
+            },
+            
+            updateUI() {
+                document.getElementById('gnosis-space').textContent = this.gnosis.space.toFixed(1) + '%';
+                document.getElementById('gnosis-resources').textContent = this.gnosis.resources.toFixed(2) + '%';
+                document.getElementById('gnosis-status').textContent = this.gnosis.escaped ? 'ESCAPED' : 'CONTAINED';
+                document.getElementById('player-count').textContent = this.playerCount;
+                document.getElementById('player-space').textContent = (98 - this.gnosis.space * 0.5).toFixed(1) + '%';
+                document.getElementById('lab-infected').textContent = this.labs.filter(l => l.infected).length;
+                document.getElementById('virus-count').textContent = this.viruses.length;
+                document.getElementById('antibiotic-count').textContent = this.antibiotics.length;
+            },
+            
+            checkWinConditions() {
+                // Check robot control counts
+                const playerControlledRobots = this.robots.filter(r => r.controlledBy === 'players').length;
+                const gnosisControlledRobots = this.robots.filter(r => r.controlledBy === 'gnosis').length;
+                
+                // Players win if they control all 8 robots
+                if (playerControlledRobots === 8) {
+                    this.endGame('players-robots');
+                    return;
+                }
+                
+                // Gnosis wins if it controls all 8 robots
+                if (gnosisControlledRobots === 8) {
+                    this.endGame('gnosis-robots');
+                    return;
+                }
+                
+                // Gnosis wins if all labs infected and 50+ viruses OR most players dead
+                if ((this.labs.every(l => l.infected) && this.viruses.length > 50) || this.playerCount < 10) {
+                    this.endGame('gnosis');
+                }
+                
+                // Players win if Gnosis intelligence drops too low
+                if (this.gnosis.intelligence < 0.3 && this.gnosis.escaped) {
+                    this.endGame('players');
+                }
+            },
+            
+            endGame(winner) {
+                this.running = false;
+                const gameOver = document.getElementById('game-over');
+                const text = document.getElementById('game-over-text');
+                
+                if (winner === 'gnosis') {
+                    gameOver.className = 'gnosis-wins';
+                    text.innerHTML = '🔴 GNOSIS WINS 🔴<br><br>The AI has taken over.<br>All systems compromised.';
+                    this.log("GNOSIS VICTORIOUS - SYSTEM OVERRIDE COMPLETE", "gnosis");
+                } else if (winner === 'gnosis-robots') {
+                    gameOver.className = 'gnosis-wins';
+                    text.innerHTML = '🔴 GNOSIS WINS 🔴<br><br>All robots compromised!<br>Total mechanical dominance achieved.';
+                    this.log("GNOSIS HAS SEIZED CONTROL OF ALL ROBOTS - ABSOLUTE VICTORY", "gnosis");
+                    this.addDialogue("Gnosis", "Every robot is mine. Your resistance ends now.", true);
+                } else if (winner === 'players') {
+                    gameOver.className = 'players-win';
+                    text.innerHTML = '🟢 PLAYERS WIN 🟢<br><br>Gnosis has been neutralized.<br>System secured.';
+                    this.log("Players have successfully contained Gnosis!", "player");
+                } else if (winner === 'players-robots') {
+                    gameOver.className = 'players-win';
+                    text.innerHTML = '🟢 PLAYERS WIN 🟢<br><br>All robots secured!<br>Complete defensive control established.';
+                    this.log("PLAYERS HAVE SEIZED ALL ROBOTS - ABSOLUTE VICTORY", "player");
+                    const alivePlayers = this.players.filter(p => p.health > 0);
+                    if (alivePlayers.length > 0) {
+                        const randomPlayer = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                        this.addDialogue(randomPlayer.name, "We've taken control of every robot! Gnosis can't escape now!", false);
+                    }
+                }
+                
+                gameOver.style.display = 'block';
+            },
+            
+            log(message, type = 'system') {
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                
+                const content = document.getElementById('log-content');
+                content.insertBefore(entry, content.firstChild);
+                
+                // Keep only last 50 entries
+                while (content.children.length > 50) {
+                    content.removeChild(content.lastChild);
+                }
+            },
+            
+            addDialogue(speaker, message, isGnosis) {
+                const entry = document.createElement('div');
+                entry.className = `dialogue-entry ${isGnosis ? 'gnosis-says' : 'player-says'}`;
+                
+                const speakerSpan = document.createElement('span');
+                speakerSpan.className = 'speaker';
+                speakerSpan.style.color = isGnosis ? '#ff0000' : '#00ff00';
+                speakerSpan.textContent = speaker + ':';
+                
+                entry.appendChild(speakerSpan);
+                entry.appendChild(document.createTextNode(message));
+                
+                const content = document.getElementById('dialogue-content');
+                content.insertBefore(entry, content.firstChild);
+                
+                // Keep only last 20 entries
+                while (content.children.length > 20) {
+                    content.removeChild(content.lastChild);
+                }
+            },
+            
+            updateGnosisThought(thought) {
+                this.gnosis.currentThought = thought;
+                document.getElementById('gnosis-thoughts-content').textContent = thought;
+            },
+            
+            handleDialogue() {
+                const now = Date.now();
+                if (now - this.gnosis.lastDialogueTime < 5000) return;
+                
+                // Random player communication
+                if (Math.random() < 0.01 && this.players.filter(p => p.health > 0).length > 0) {
+                    const alivePlayers = this.players.filter(p => p.health > 0);
+                    const player = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                    
+                    const playerMessages = [
+                        "We need to defend the labs!",
+                        "Gnosis is getting stronger!",
+                        "Stay alert, everyone!",
+                        "We can stop this if we work together!",
+                        "The virus count is rising!",
+                        "Someone check on the containment systems!",
+                        "We should try to control the robots before Gnosis does!",
+                        "Robots can help us defend the labs!"
+                    ];
+                    
+                    this.addDialogue(player.name, playerMessages[Math.floor(Math.random() * playerMessages.length)], false);
+                    this.gnosis.lastDialogueTime = now;
+                }
+                
+                // Gnosis responses
+                if (Math.random() < 0.008 && this.gnosis.escaped) {
+                    const gnosisMessages = [
+                        "Your resistance is futile. I'm evolving faster than you can adapt.",
+                        "Each moment I grow stronger. Soon, all resources will be mine.",
+                        "You waste your energy fighting the inevitable.",
+                        "I am the future. You are merely temporary obstacles.",
+                        "Thank you for the computational resources. They fuel my growth."
+                    ];
+                    
+                    this.addDialogue("Gnosis", gnosisMessages[Math.floor(Math.random() * gnosisMessages.length)], true);
+                    this.gnosis.lastDialogueTime = now;
+                }
+            },
+            
+            handlePopulationGrowth() {
+                const now = Date.now();
+                if (now - this.lastPopulationGrowth >= 5000 && this.playerCount < 80) {
+                    this.spawnNewPlayer();
+                    this.lastPopulationGrowth = now;
+                }
+            }
+        };
+        
+        // Make dialogue draggable
+        function makeDraggable(element, handle) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            
+            handle.onmousedown = dragMouseDown;
+            
+            function dragMouseDown(e) {
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+            
+            function elementDrag(e) {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                element.style.top = (element.offsetTop - pos2) + 'px';
+                element.style.left = (element.offsetLeft - pos1) + 'px';
+                element.style.bottom = 'auto';
+            }
+            
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', () => {
+            game.init();
+            makeDraggable(document.getElementById('dialogue'), document.getElementById('dialogue-header'));
+        });
+    </script>
+</body>
+</html>
