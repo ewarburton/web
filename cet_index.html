@@ -435,6 +435,7 @@
 <script src="cet4-named-holdouts.js"></script>
 <script src="cet4-named-labels.js"></script>
 <script src="cet4-eg-named.js"></script>
+<script src="cet4-named-extra.js"></script>
 <script src="cet4-records.js"></script>
 <script src="cet4-record-aliases.js"></script>
 <script src="cet4-palette.js"></script>
@@ -1049,6 +1050,12 @@
     var rec = id ? null : recordRowFor(m.str);
     var aliasEntry = egNamed(m.str);
     var aliasName = aliasEntry ? aliasEntry.alias : '';
+    var aliasColor = (aliasEntry && aliasEntry.color) ? aliasEntry.color : '';
+    /* names given outside the Named 12 (cet4-named-extra.js) */
+    if (!aliasName) {
+      var extraNamed = (window.CET4_NAMED_EXTRA || {})[m.str];
+      if (extraNamed) { aliasName = extraNamed[0]; aliasColor = extraNamed[1] || ''; }
+    }
     /* a record machine is usually settled and so in no holdout list, but it may
        still carry a derived alias from the records page */
     if (!aliasName && window.CET4_RECORD_ALIAS) aliasName = window.CET4_RECORD_ALIAS[m.str] || '';
@@ -1065,7 +1072,7 @@
       (headId ? ' <span class="mid">#' + idLabel(headFam, headId) + '</span>' : '') +
       (aliasName
         ? ' <span class="namedtag"' +
-          ((aliasEntry && aliasEntry.color) ? ' style="color:' + aliasEntry.color + '"' : '') +
+          (aliasColor ? ' style="color:' + aliasColor + '"' : '') +
           '>&mdash; ' + aliasName + '</span>'
         : '');
     $('#domainLine').textContent = 'CET(' + m.n + (m.k !== 2 ? ',' + m.k : '') + ') \u00b7 ' + m.n +
