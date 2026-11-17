@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CET(4) records &mdash; Comet and the distinct halt values</title>
+<style>
+  :root{
+    --bg:#0d1a2b; --panel:#13233a; --line:#1e334b;
+    --text:#c8d8e8; --dim:#8ba1b6; --link:#7cc7ec; --white:#eaf2fb;
+    --mono:"Cascadia Mono",Consolas,"SF Mono",Menlo,"DejaVu Sans Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    font-size:12.5px;line-height:1.55}
+  a{color:var(--link);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .topbar{height:56px;background:#13233a;border-bottom:1px solid #091320}
+  .topbar-inner{max-width:1180px;height:56px;margin:0 auto;padding:0 15px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{font-size:20px;font-weight:700;color:#f1f7fd;letter-spacing:-.3px;white-space:nowrap}
+  .topnav{display:flex;gap:8px;align-items:center}
+  .tbtn{font-size:11.5px;font-weight:600;color:#dcebf8;background:#1a2c42;
+    border:1px solid #2b4460;border-radius:3px;padding:4px 9px;white-space:nowrap}
+  .tbtn:hover{background:#22384f;border-color:#3a5b7d;text-decoration:none}
+  .page{max-width:1180px;margin:0 auto;padding:16px 15px 40px}
+  .h2{font-size:12.5px;font-weight:700;color:#e9f1fa;margin:18px 0 4px}
+  .hint{font-size:10.5px;color:var(--dim);margin-top:6px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:12px 14px}
+  .mrow{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .mhead{font-size:15px;font-weight:700;color:var(--white)}
+  .mhead .mid{color:#eaf2fb;font-weight:600}
+  .namedtag{color:#ffd08a;font-weight:600}
+  .mstr{font-family:var(--mono);font-size:11px;color:#cfe3f3;background:#0a1726;
+    border:1px solid #21384f;border-radius:3px;padding:2px 6px;margin-top:6px;display:inline-block;
+    word-break:break-all;max-width:100%}
+  .vals{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+  .val{font-family:var(--mono);font-size:11.5px;color:#dbeaf7}
+  .val b{color:#eaf2fb}
+  .agenttbl{margin-top:10px}
+  .agentname{font-size:10.5px;color:var(--dim);margin-bottom:2px}
+  table.code{border-collapse:collapse;font-family:var(--mono);font-size:11px}
+  table.code th,table.code td{border:1px solid #1e334b;padding:1px 7px;text-align:center}
+  table.code th{color:var(--dim);font-weight:600;background:#0f2033}
+  table.code th.stname{color:#cfe3f3;background:#122336}
+  table.rectbl{width:100%;border-collapse:collapse;margin-top:4px;font-size:11px}
+  table.rectbl th{text-align:left;font-weight:600;color:var(--dim);
+    border-bottom:1px solid #21384f;padding:3px 5px}
+  table.rectbl td{border-bottom:1px solid #16283c;padding:2px 5px;vertical-align:top}
+  td.rn{font-family:var(--mono);color:#cfe3f3;text-align:right;white-space:nowrap}
+  .recbtn{background:none;border:0;padding:0;color:var(--link);font-family:var(--mono);
+    font-size:10.5px;text-align:left;cursor:pointer;word-break:break-all}
+  .recbtn:hover{text-decoration:underline}
+  .recbtn.on{color:#ffd08a;font-weight:600}
+  .claim{color:#ffd08a;font-size:10px;font-weight:600;margin-left:6px}
+  .muted{color:var(--dim)}
+  .autoalias{font-weight:600;opacity:.85}
+  .vizrow{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-top:10px}
+  .vizbox{flex:0 0 360px;max-width:100%}
+  .vizlabel{font-size:10.5px;color:var(--dim);margin-bottom:4px}
+  #vCanvas{display:block;width:100%;max-width:360px;aspect-ratio:480/512;background:#000;
+    border:1px solid #21384f;border-radius:3px}
+  .vizstatus{font-size:10.5px;color:var(--dim);margin-top:5px;max-width:360px;line-height:1.45}
+  .vizstatus b{color:#dbeaf7;font-weight:600}
+  .vizstatus.bad{color:#ffb3b3}
+  .vizctl{font-size:10.5px;color:var(--dim);margin-top:5px}
+  .vizctl input{width:76px;background:#0a1726;border:1px solid #21384f;color:#dbeaf7;
+    font-family:var(--mono);font-size:10.5px;padding:1px 4px;border-radius:3px}
+  .transport{display:flex;align-items:center;gap:2px;margin-top:5px}
+  .transport button{padding:0;width:20px;height:18px;font-size:10px;line-height:1;
+    background:#152739;border:1px solid #26405a;border-radius:2px;color:#bcd1e4;cursor:pointer}
+  .transport button:hover{background:#1d3448}
+  .transport input[type=range]{flex:1;min-width:0;height:14px;accent-color:#3b82f6;
+    background:transparent;border:0;padding:0;margin:0}
+  .transport .tl{font-size:10px;color:#8ba1b6;min-width:72px;text-align:right;
+    font-variant-numeric:tabular-nums;font-family:var(--mono)}
+  .rowcol{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">CET(4) records</div>
+    <div class="topnav">
+      <a class="tbtn" href="cet_index.html">Viewer</a>
+      <a class="tbtn" href="https://discord.com/channels/960643023006490684/1566772864064159744" target="_blank" rel="noopener">Discord post</a>
+      <a class="tbtn" href="https://wiki.bbchallenge.org/wiki/Catch-Em-Turing" target="_blank" rel="noopener">Catch Em Turing wiki page</a>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+
+  <div class="h1wrap">
+    <div class="h2" style="margin-top:0">Selected machine</div>
+  </div>
+  <div class="panel" id="viewer">
+    <div class="mrow"><div class="mhead" id="vHead">No machine selected</div></div>
+    <div class="mstr" id="vStr"></div>
+    <div class="vals" id="vVals"></div>
+    <div class="vizrow">
+      <div class="vizbox">
+        <div class="vizlabel">Spacetime diagram</div>
+        <canvas id="vCanvas" width="480" height="512"></canvas>
+        <div class="transport">
+          <button id="tReset" type="button" title="Go to the first step">&#9198;</button>
+          <button id="tBack" type="button" title="Step back">&larr;</button>
+          <button id="tPlay" type="button" title="Play / pause">&#9654;</button>
+          <button id="tFwd" type="button" title="Step forward">&rarr;</button>
+          <button id="tEnd" type="button" title="Go to the last simulated step">&#9197;</button>
+          <button id="tFit" type="button" title="Fit the diagram to the whole tape">&#8663;</button>
+          <input id="tRange" type="range" min="0" max="1" value="1" step="1" title="Simulation time">
+          <span id="tLabel" class="tl">0 / 0</span>
+        </div>
+        <div class="vizstatus" id="vStatus"></div>
+        <div class="vizctl">steps <input id="vSteps" type="number" min="100" max="200000" step="100" value="2000"></div>
+      </div>
+      <div class="rowcol" id="vTables"></div>
+    </div>
+    <div class="hint" id="vHint"></div>
+  </div>
+
+  <div class="h2">Comet and its R=25, L2&gt;1000 family (<span id="famCount">0</span>)</div>
+  <div class="hint">Same tower height, all on Comet's glider; only the engine changes.</div>
+  <div id="famTable"></div>
+
+  <div class="h2">Distinct halt values, top down to Prima (<span id="topCount">0</span>)</div>
+  <div class="hint">One machine per distinct (R, L2), best first. Click any row to show it above.
+    Unnamed rows carry a derived alias: the rank offset from the nearest named machine, so
+    <b>Undecomet</b> is one below Comet, <b>Duovixen</b> is two above Vixen and <b>Univixen</b> one above it.
+    These are generated by formula and frozen by machine string; only the twelve named machines
+    keep chosen names.</div>
+  <div id="topTable"></div>
+
+  <div class="h2">E-G ladder (<span id="ladCount">0</span> round certificates)</div>
+  <div class="hint">The engine-glider pairs from the first 16,000 that produced a round certificate, best first:
+    more rounds R, then depth L2. Only 613 of those 16,000 did; the rest returned <span class="mono">weak</span>,
+    <span class="mono">no-glider</span> or <span class="mono">no-gate-valid-bounce</span>, which says nothing about
+    whether they halt. Same model claim as the table above, not a proof.</div>
+  <div id="ladTable"></div>
+
+  <div class="hint" style="margin-top:14px">
+    R and L2 are round-pass claims, not proofs: the value depends on the boot convention
+    (4,000 steps here). Deever's 10&uarr;&uarr;140 is a community claim this pipeline has not
+    reproduced &mdash; it lies outside the sweep, which is why it has no L2.
+    Open a machine in the <a href="cet_index.html">viewer</a> to simulate it.
+  </div>
+</main>
+
+<script src="cet4-records.js"></script>
+<script src="cet4-record-aliases.js"></script>
+<script src="cet4-spacetime.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (s) { return document.querySelector(s); };
+  var fmt = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+  var stateName = function (i) { return String.fromCharCode(65 + i); };
+
+  var FAM = window.CET4_RECORD_FAMILY || [];
+  var TOP = window.CET4_RECORD_TOP || [];
+
+  function parse(spec) {
+    return spec.split('_').map(function (row) {
+      var out = [];
+      for (var i = 0; i + 2 < row.length + 1; i += 3) out.push(row.slice(i, i + 3));
+      return out;
+    });
+  }
+
+  function agentTable(agent, idx) {
+    var rows = parse(agent);
+    var k = rows[0] ? rows[0].length : 2;
+    var h = '<div class="agenttbl"><div class="agentname">Agent ' + (idx + 1) + '</div>' +
+      '<table class="code"><thead><tr><th></th>';
+    for (var s = 0; s < k; s++) h += '<th>' + s + '</th>';
+    h += '</tr></thead><tbody>';
+    for (var st = 0; st < rows.length; st++) {
+      h += '<tr><th class="stname">' + stateName(st) + '</th>';
+      for (var sym = 0; sym < k; sym++) {
+        var e = rows[st][sym] || '---';
+        h += '<td class="' + (e === '---' ? 'undef' : '') + '">' + e + '</td>';
+      }
+      h += '</tr>';
+    }
+    return h + '</tbody></table></div>';
+  }
+
+  function show(row) {
+    if (!row) return;
+    current = row;
+    var pair = row[0], R = row[1], L2 = row[2], L0 = row[3], claim = row[5];
+    var auto = row[4] ? null : autoAlias(pair);
+    var alias = row[4] || auto || '';
+    var aliasColor = row[6] || '';
+    var agents = pair.split('|');
+    $('#vHead').innerHTML = 'Machine' + (alias
+      ? ' <span class="namedtag"' + (aliasColor ? ' style="color:' + aliasColor + '"' : '') + '>&mdash; ' + alias + '</span>'
+      : '');
+    $('#vStr').textContent = pair;
+    $('#vVals').innerHTML =
+      '<span class="val">R <b>' + R + '</b></span>' +
+      '<span class="val">L2 <b>' + (L2 === null ? '&mdash;' : fmt(L2)) + '</b></span>' +
+      '<span class="val">L0 <b>' + (L0 === null ? '&mdash;' : fmt(L0)) + '</b></span>' +
+      (claim ? '<span class="val claim">community claim, not reproduced here</span>' : '');
+    $('#vTables').innerHTML = agentTable(agents[0], 0) + agentTable(agents[1], 1);
+    $('#vHint').innerHTML = 'Round-pass claim, so the value depends on the boot convention. ' +
+      '<a href="cet_index.html?m=' + encodeURIComponent(pair) + '">Open in the viewer</a>' +
+      ' to step through it yourself, or change the step budget under the diagram.';
+    loadViz();
+    var btns = document.querySelectorAll('.recbtn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].className = 'recbtn' + (btns[i].getAttribute('data-pair') === pair ? ' on' : '');
+    }
+    if (history.replaceState) {
+      try { history.replaceState(null, '', '#' + encodeURIComponent(pair)); } catch (e) { /* ignore */ }
+    }
+  }
+
+  /* the spacetime diagram and its playhead transport */
+  var current = null;
+  var view = null;
+
+  function stepsNow() {
+    var n = parseInt($('#vSteps').value, 10);
+    if (!n || n < 100) n = 2000;
+    return Math.min(n, 200000);
+  }
+
+  function onViewChange(s) {
+    var el = $('#vStatus');
+    if (s.error) {
+      el.className = 'vizstatus bad';
+      el.textContent = 'No diagram: ' + s.error;
+    } else {
+      el.className = 'vizstatus';
+      el.innerHTML =
+        (s.halted
+          ? '<b>Collision at step ' + fmt(s.haltStep) + '</b>, on cell ' + fmt(s.haltPos) +
+            '. Both heads share that cell, so this run stops there.'
+          : '<b>No collision in ' + fmt(s.total) + ' steps</b> from this start. The heads stay apart, ' +
+            'which says nothing by itself about whether they ever meet.') +
+        '<br>Blank tape, both agents in state A, heads at cells 0 and 2. Grey columns are tape cells ' +
+        '(darker 0, lighter 1); the trails are the head paths, green moving left and red moving right.' +
+        '<br>The diagram shows the history up to the playhead; drag the timeline to scrub.';
+    }
+    $('#tRange').max = String(s.total);
+    $('#tRange').value = String(s.time);
+    $('#tLabel').textContent = fmt(s.time) + ' / ' + fmt(s.total);
+    $('#tPlay').textContent = s.playing ? '\u2016' : '\u25b6';
+  }
+
+  function loadViz() {
+    if (!current) return;
+    if (!window.CET4_SPACETIME) {
+      var el = $('#vStatus');
+      el.className = 'vizstatus bad';
+      el.textContent = 'Diagram unavailable: cet4-spacetime.js did not load.';
+      return;
+    }
+    if (!view) view = window.CET4_SPACETIME.create($('#vCanvas'), { onChange: onViewChange });
+    view.load(current[0], stepsNow());
+  }
+
+  function withView(f) {
+    return function () { if (view) f(view); };
+  }
+
+  /* an auto-alias names the row, not the machine: only the representative of
+     each (R, L2) value has one, so table 1 (which lists several machines with
+     the same value) leaves them out */
+  function autoAlias(pair) {
+    var m = window.CET4_RECORD_ALIAS;
+    return (m && m[pair]) || null;
+  }
+
+  function table(rows, withAuto) {
+    var h = '<table class="rectbl"><thead><tr><th>R</th><th>L2</th><th>L0</th><th>machine</th></tr></thead><tbody>';
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var a = (withAuto && !r[4]) ? autoAlias(r[0]) : null;
+      var label = r[4] || a || '';
+      var lab = !label ? '' : (r[4]
+        ? '<b' + (r[6] ? ' style="color:' + r[6] + '"' : '') + '>' + label + '</b> '
+        : '<span class="autoalias">' + label + '</span> ');
+      h += '<tr><td class="rn">' + r[1] + '</td>' +
+        '<td class="rn">' + (r[2] === null ? '&mdash;' : fmt(r[2])) + '</td>' +
+        '<td class="rn">' + (r[3] === null ? '&mdash;' : fmt(r[3])) + '</td>' +
+        '<td><button class="recbtn" type="button" data-pair="' + r[0] + '" title="' + r[0] + '">' +
+        lab + r[0] +
+        '</button>' + (r[5] ? '<span class="claim">community claim</span>' : '') + '</td></tr>';
+    }
+    return h + '</tbody></table>';
+  }
+
+  $('#famTable').innerHTML = table(FAM, false);
+  $('#topTable').innerHTML = table(TOP, true);
+  $('#ladTable').innerHTML = table(window.CET4_RECORD_LADDER || [], false);
+  $('#famCount').textContent = String(FAM.length);
+  $('#topCount').textContent = String(TOP.length);
+  $('#ladCount').textContent = String((window.CET4_RECORD_LADDER || []).length);
+  $('#vSteps').addEventListener('change', loadViz);
+  $('#tReset').addEventListener('click', withView(function (v) { v.reset(); }));
+  $('#tBack').addEventListener('click', withView(function (v) { v.step(-1); }));
+  $('#tPlay').addEventListener('click', withView(function (v) { v.toggle(); }));
+  $('#tFwd').addEventListener('click', withView(function (v) { v.step(1); }));
+  $('#tEnd').addEventListener('click', withView(function (v) { v.toEnd(); }));
+  $('#tFit').addEventListener('click', withView(function (v) { v.fit(); }));
+  $('#tRange').addEventListener('input', withView(function (v) {
+    /* read the slider before pausing: pause() repaints the range from the playhead */
+    var t = parseInt($('#tRange').value, 10);
+    v.pause();
+    v.setTime(t);
+  }));
+
+  document.addEventListener('click', function (e) {
+    var el = e.target;
+    while (el && !(el.className && String(el.className).indexOf('recbtn') >= 0)) el = el.parentNode;
+    if (!el) return;
+    var pair = el.getAttribute && el.getAttribute('data-pair');
+    if (!pair) return;
+    var all = FAM.concat(TOP);
+    for (var i = 0; i < all.length; i++) if (all[i][0] === pair) { show(all[i]); break; }
+  });
+
+  /* start on the machine named in the URL, else Comet */
+  var start = null;
+  var h = String(location.hash || '').replace(/^#/, '');
+  if (h) {
+    try {
+      var want = decodeURIComponent(h);
+      var all0 = FAM.concat(TOP);
+      for (var j = 0; j < all0.length; j++) if (all0[j][0] === want) { start = all0[j]; break; }
+    } catch (e2) { /* ignore */ }
+  }
+  show(start || FAM[0] || TOP[0] || null);
+})();
+</script>
+</body>
+</html>

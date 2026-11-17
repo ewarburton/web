@@ -1,0 +1,1976 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>CET (Catch Em Turing)</title>
+<style>
+  :root{
+    --bg:#0d1a2b; --panel:#13233a; --line:#1e334b;
+    --text:#c8d8e8; --dim:#8ba1b6; --link:#7cc7ec; --white:#eaf2fb;
+    --mono:"Cascadia Mono",Consolas,"SF Mono",Menlo,"DejaVu Sans Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    font-size:12.5px;line-height:1.55}
+  a{color:var(--link);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .mono{font-family:var(--mono)}
+
+  /* ---------- header ---------- */
+  .topbar{height:66px;background:#13233a;border-bottom:1px solid #091320}
+  .topbar-inner{max-width:1600px;height:66px;margin:0 auto;padding:0 15px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{font-size:24px;font-weight:700;color:#f1f7fd;letter-spacing:-.3px;white-space:nowrap}
+  .topnav{display:flex;gap:8px;align-items:center}
+  .tbtn{font-size:11.5px;font-weight:600;color:#dcebf8;background:#1a2c42;
+    border:1px solid #2b4460;border-radius:3px;padding:4px 9px;white-space:nowrap}
+  .tbtn:hover{background:#22384f;border-color:#3a5b7d;text-decoration:none}
+
+  /* ---------- layout ---------- */
+  .page{max-width:1600px;margin:0 auto;display:grid;
+    grid-template-columns:minmax(0,1fr) 751px;column-gap:40px;
+    padding:0 8px 48px;align-items:start}
+  .left{min-width:0;padding-top:18px}
+  .right{min-width:0;padding-top:240px}
+  @media (max-width:1120px){
+    .page{grid-template-columns:minmax(0,1fr)}
+    .right{padding-top:26px}
+  }
+  @media (max-width:700px){
+    .topbar{height:auto}
+    .topbar-inner{height:auto;flex-wrap:wrap;padding:8px 12px;gap:8px}
+    .brand{font-size:19px;white-space:normal}
+  }
+
+  /* ---------- left column ---------- */
+  .lbl{font-size:11px;font-weight:700;color:#e6eef7}
+  select.sel{margin-top:3px;width:84px;font-size:11.5px;color:#dbeaf7;background:#0a1624;
+    border:1px solid #2a4159;border-radius:3px;padding:1px 3px}
+  .h2{font-size:12.5px;font-weight:700;color:#e9f1fa;margin:16px 0 4px}
+  .goal p{margin:0 0 6px;max-width:710px}
+  .goal ul{margin:0 0 6px 22px;padding:0}
+  .goal ol{margin:0 0 6px 22px;padding:0}
+  .goal li{margin:0 0 1px}
+  .emo{font-size:11px}
+  .join{color:#a9bfd4}
+  .namedtag{color:#9fd0c0;font-weight:600}
+
+  /* ---------- diagram ---------- */
+  .diagrambox{width:480px;max-width:100%;margin-left:auto;margin-right:36px;position:relative}
+  @media (max-width:1120px){ .diagrambox{margin-left:auto;margin-right:auto} }
+  #cv{display:block;width:100%;max-width:480px;height:auto;aspect-ratio:480/512;
+    background:#000;border:0;box-shadow:0 0 0 1px #16283c;cursor:crosshair}
+  .transport{display:flex;align-items:center;gap:2px;margin-top:5px}
+  .transport button{padding:0;width:20px;height:18px;font-size:10px;line-height:1;
+    background:#152739;border:1px solid #26405a;border-radius:2px;color:#bcd1e4}
+  .transport button:hover{background:#1d3448}
+  .transport input[type=range]{flex:1;min-width:0;height:14px;accent-color:#3b82f6;
+    background:transparent;border:0;padding:0;margin:0}
+  .transport .tl{font-size:10px;color:#8ba1b6;min-width:72px;text-align:right;
+    font-variant-numeric:tabular-nums;font-family:var(--mono)}
+  .statusline{font-size:10.5px;color:#8ba1b6;margin-top:2px;min-height:14px}
+  .statusline.err{color:#ff8f8f}
+  .statusline.ok{color:#84e0a8}
+  #tip{position:absolute;pointer-events:none;background:#081422;border:1px solid #2c4a67;
+    color:#dbe9f7;font-size:10.5px;padding:3px 6px;border-radius:3px;white-space:pre;
+    display:none;z-index:6;font-family:var(--mono)}
+
+  /* ---------- simulation parameters ---------- */
+  .subnav{margin:8px 0 0;font-size:11.5px;color:#8ba1b6}
+  .subnav a{cursor:pointer}
+  .subnav .dot{margin:0 4px;color:#5d7488}
+  .params{margin-top:8px;max-width:none;border-radius:4px;padding:2px}
+  .params.flash{outline:1px solid #3f7dbd;outline-offset:4px}
+  .prow{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-bottom:6px}
+  .pfield{display:flex;flex-direction:column;gap:1px;font-size:10.5px;color:#9fb4c9}
+  .pfield input{width:88px}
+  .pfield.wide{flex:1;min-width:260px}
+  .pfield.wide input{width:100%}
+  input,select{font-family:inherit;font-size:11px;color:#d7e6f4;background:#0a1624;
+    border:1px solid #2a4159;border-radius:3px;padding:2px 5px;outline:none}
+  input:focus,select:focus{border-color:#3f7dbd}
+  input[type=checkbox]{accent-color:#3b82f6}
+  .chk{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#b9cadb;margin:6px 0}
+  .vizrow{font-size:11.5px;color:#b9cadb;display:flex;align-items:center;gap:4px}
+  .vizrow .lab{margin-right:2px}
+  .vizbtn{font-size:10.5px;padding:1px 6px;background:#122336;border:1px solid #26405a;
+    color:#a9bfd4;border-radius:2px}
+  .vizbtn.on{background:#1d4b7d;border-color:#3f7dbd;color:#dcefff}
+  details.adv{margin-top:7px;font-size:11px;color:#8ba1b6}
+  details.adv summary{cursor:pointer;outline:none}
+  .advgrid{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+  .hint{font-size:10.5px;color:#6f8699;margin-top:4px}
+
+  /* ---------- news ---------- */
+  .newswrap{display:flex;gap:18px;align-items:flex-start;margin-top:6px}
+  .newsbadge{width:110px;height:110px;flex:none;border-radius:4px;background:#0a1522;
+    border:1px solid #1f3449;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:2px}
+  .nb-ring{width:86px;height:86px;border:2px solid #c9dcea;border-radius:50%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;color:#e6f0f9}
+  .nb-ring b{font-size:15px;letter-spacing:1px}
+  .nb-ring span{font-size:6px;letter-spacing:1.2px;color:#a9c2d6}
+  .newslist{list-style:none;margin:0;padding:0;font-size:11.5px}
+  .newslist li{margin:0 0 7px;color:#a9bfd4;max-width:560px}
+  .newslist b{color:#cfdfee;font-weight:600}
+
+  /* ---------- right column ---------- */
+  .machinehead{font-size:13px;color:#eaf2fb}
+  .machinehead .mid{color:#eaf2fb;font-weight:600}
+  .domain{font-size:10.5px;color:#7f96ac;margin:2px 0 0}
+  .errbox{display:none;font-size:11px;color:#ffb3b3;background:#3a1520;border:1px solid #6d2333;
+    border-radius:3px;padding:4px 7px;margin-top:6px;max-width:660px}
+  .errbox.on{display:block}
+  .h3{font-size:12px;font-weight:700;color:#e9f1fa;margin:15px 0 4px}
+  .codetables{display:flex;flex-wrap:wrap;gap:28px;margin-top:3px}
+  .agentname{font-size:10.5px;color:#9fb4c9;margin-bottom:2px}
+  table.code{border-collapse:collapse;font-family:var(--mono);font-size:11px;color:#cfdfee}
+  table.code th{font-weight:400;color:#9fb4c9;padding:0 0 3px;min-width:46px;text-align:left}
+  table.code th.stname{color:#c9d9e9;font-weight:600;min-width:16px;padding-right:6px}
+  table.code td{padding:0;min-width:46px;color:#d7e6f4}
+  table.code td.undef{color:#4f6477}
+  .stdline{font-size:10.5px;color:#8ba1b6;margin-top:12px}
+  #stdFormat{display:inline-block;font-family:var(--mono);font-size:11px;color:#cfe3f3;
+    background:#0a1726;border:1px solid #21384f;border-radius:3px;padding:1px 5px;
+    margin-left:4px;word-break:break-all;cursor:pointer;max-width:652px;vertical-align:top}
+  #stdFormat:hover{border-color:#3f7dbd}
+  .dbid{font-size:10.5px;color:#8ba1b6;margin-top:4px}
+  .dbid #dbId{color:#cfdfee}
+  .dbid .muted{color:#7691a7}
+  .verdict{margin-top:6px;font-size:11px;line-height:1.45;max-width:700px;color:#a9bfd4}
+  .verdict.boxed{padding:7px 9px;border-radius:4px;font-weight:500}
+  .verdict.stale{opacity:.62}
+  .startwarn{display:none;margin-top:6px;font-size:10.5px;line-height:1.45;max-width:700px;
+    color:#ffd8a0;background:#3a2c12;border:1px solid #6d5326;border-radius:3px;padding:5px 8px}
+  .startwarn.on{display:block}
+  .startwarn button{margin-left:6px;font-size:10px;padding:1px 7px;background:#4a3a18;
+    border:1px solid #7d6230;color:#ffe6bd;border-radius:3px;cursor:pointer}
+
+  .huelegend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:7px;font-size:10px;line-height:1.35;max-width:700px;color:#7d94a9}
+  .huelegend span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .huelegend i{width:9px;height:9px;border-radius:2px;display:inline-block;flex:none}
+  .huelegend .lsep{width:1px;height:10px;background:#2c4356;display:inline-block}
+  .hldot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:middle;flex:none}
+  .minirow{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;align-items:center}
+  .minirow button,.minirow a.minilink{font-size:10.5px;padding:2px 7px;background:#152739;
+    border:1px solid #26405a;border-radius:3px;color:#c5d8ea;cursor:pointer}
+  .minirow a.minilink{display:inline-block}
+  .minirow button:hover,.minirow a.minilink:hover{background:#1d3448;text-decoration:none}
+  #copyMsg{font-size:10.5px;color:#84e0a8}
+  .bluebtn{margin-top:7px;background:#2f6fd0;border:1px solid #4181e0;color:#f2f8ff;
+    font-weight:600;font-size:11.5px;padding:5px 12px;min-width:216px;border-radius:3px;cursor:pointer}
+  .bluebtn:hover{background:#3a7ad9}
+  .bluebtn.sm{min-width:0;font-size:11px;padding:3px 10px;font-weight:400}
+  .randombox{width:216px;display:flex;flex-direction:column;align-items:stretch;gap:4px}
+  .morelink{display:block;width:100%;text-align:center;font-size:10.5px;color:#8fb6d6;
+    background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
+  .morebox{margin-top:9px;font-size:11px;color:#a9bfd4;display:grid;gap:7px}
+  .morebox[hidden]{display:none}
+  .morebox .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .morebox input[type=text]{width:300px}
+  .morebox input[type=number]{width:88px;color:#d7e6f4}
+  .morebox button{padding:2px 8px;background:#152739;border:1px solid #26405a;color:#c5d8ea}
+  .small{font-size:11px;color:#a9bfd4}
+  .hlhead{font-size:15px;font-weight:700;color:#eef5fc;margin:36px 0 3px}
+  #hlList{display:flex;flex-direction:column;gap:1px;margin-top:7px;max-width:700px}
+  .hlbtn{display:block;width:100%;text-align:left;background:none;border:0;padding:1px 0;
+    color:#7cc7ec;font-size:11.5px;cursor:pointer;line-height:1.4}
+  .hlbtn:hover{text-decoration:underline;background:none}
+  .hlbtn .hlstr{display:block;font-family:var(--mono);font-size:9.5px;color:#546d84;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hlbtn:hover .hlstr{color:#8fa9c0}
+
+  /* ---------- modal ---------- */
+  .modal{position:fixed;inset:0;background:rgba(4,10,18,.8);display:none;z-index:50;
+    padding:40px 16px;overflow:auto}
+  .modal.open{display:block}
+  .modalbox{max-width:740px;margin:0 auto;background:#0f2033;border:1px solid #2a4763;
+    border-radius:6px;padding:18px 22px 22px;box-shadow:0 20px 60px rgba(0,0,0,.65)}
+  .modalbox h2{margin:0 0 2px;font-size:18px;color:#f2f8ff}
+  .modalbox h3{font-size:12.5px;margin:16px 0 4px;color:#e9f1fa}
+  .modalbox p,.modalbox li{font-size:12px;color:#c3d5e6}
+  .modalbox ul{margin:4px 0 4px 18px;padding:0}
+  .modalbox code{font-family:var(--mono);font-size:11px;color:#bfe0f5;background:#0a1726;
+    border:1px solid #21384f;border-radius:3px;padding:0 3px}
+  .modalhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .closebtn{font-size:11px;padding:2px 8px;background:#152739;border:1px solid #26405a;
+    color:#c5d8ea;border-radius:3px;cursor:pointer}
+  .legend{display:flex;align-items:center;gap:10px;margin:8px 0 4px;flex-wrap:wrap}
+  .legend .bar{height:12px;width:220px;border:1px solid #2a4763;border-radius:2px;
+    background:linear-gradient(90deg,#000,#fff)}
+  .legend .sw{display:flex;gap:6px;flex-wrap:wrap}
+  .legend .sw span{font-size:10px;font-family:var(--mono);border:1px solid #2a4763;
+    padding:0 5px;border-radius:2px;color:#e6f0f9}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">CET (Catch Em Turing)</div>
+    <div class="topnav">
+      <a class="tbtn" href="cet_records.html">Records</a>
+      <a class="tbtn" href="https://discord.com/channels/960643023006490684/1566772864064159744" target="_blank" rel="noopener">Discord post</a>
+      <a class="tbtn" href="https://wiki.bbchallenge.org/wiki/Catch-Em-Turing" target="_blank" rel="noopener">Catch Em Turing wiki page</a>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <section class="left">
+
+    <div class="lbl">Choose challenge</div>
+    <select id="challenge" class="sel" title="CET(4): 4 states, 2 symbols, one holdout list per family">
+      <option value="cet4eg" selected>CET(4) Engine-Glider</option>
+      <option value="cet4egm">CET(4) Engine-Glider Modulate</option>
+      <option value="cet4gg">CET(4) Glider-Glider</option>
+      <option value="cet4ee">CET(4) Engine-Engine</option>
+    </select>
+
+    <div class="h2">Challenge goal</div>
+    <div class="goal">
+      <p><b id="remain">0</b> <span id="goalWhat">glider-glider machines survive 47,176,870 steps</span> <span class="emo">⚠️</span></p>
+      <p id="goalBest">The best known CET(4) glider-glider machine runs for <span class="mono">15,214,263</span> steps:</p>
+      <p class="small" id="goalNote">These holdouts are <b>undecided</b>: each one either never halts, or halts after 47,176,870 steps. A second certificate records that it survived that long; it does not settle the outcome.</p>
+      <p class="small">No published write-up of this sweep exists yet. The numbers above come from a local pipeline, not from the wiki.</p>
+      <p>Where this stands:</p>
+      <ol>
+        <li>CET(4) glider-glider is fully swept: 10,327,640,625 well-formed pairs, 10,228,127,046 witnessed halts</li>
+        <li>Background and discussion live on the Catch-Em-Turing Discord and the bbchallenge wiki</li>
+      </ol>
+      <p class="join"><a href="https://discord.com/channels/960643023006490684/1566772864064159744" target="_blank" rel="noopener">Join our Discord server</a> - You can help!</p>
+    </div>
+
+    <div class="diagrambox">
+      <canvas id="cv" width="480" height="512"></canvas>
+      <div id="tip"></div>
+      <div class="transport">
+        <button id="tReset" title="Go to the first step">&#9198;</button>
+        <button id="tBack" title="Step back">&larr;</button>
+        <button id="tPlay" title="Play / pause">&#9654;</button>
+        <button id="tFwd" title="Step forward">&rarr;</button>
+        <button id="tEnd" title="Go to the last simulated step">&#9197;</button>
+        <button id="tFit" title="Fit the diagram to the whole tape">&#8663;</button>
+        <input id="tRange" type="range" min="0" max="1" value="1" step="1" title="Simulation time">
+        <span id="tLabel" class="tl">0 / 0</span>
+      </div>
+      <div class="statusline" id="statusLine"></div>
+
+      <div class="subnav">
+      <a id="whatLink">What is this?</a><span class="dot">&middot;</span><a id="paramsLink">Simulation Parameters</a>
+    </div>
+
+    <div class="params" id="params">
+      <div class="prow">
+        <label class="pfield">steps <input id="pSteps" type="number" min="1" max="200000" step="1" value="2000"></label>
+        <label class="pfield">tape width <input id="pTapeWidth" type="number" min="8" max="20000" step="1" value="400"></label>
+        <label class="pfield">x translation <input id="pXTrans" type="number" min="0" max="1" step="0.01" value="0.5"></label>
+      </div>
+      <label class="pfield wide">initial tape content
+        <input id="pInitTape" type="text" value="0" spellcheck="false" placeholder="e.g. 0110100">
+      </label>
+      <div class="hint" id="viewHint"></div>
+
+      <details class="adv">
+        <summary>More simulation parameters</summary>
+        <div class="advgrid">
+          <label class="pfield">initial tape start x <input id="pInitX" type="number" step="1" value="0"></label>
+          <label class="pfield">agent 1 start x <input id="pX1" type="number" step="1" value="0"></label>
+          <label class="pfield">agent 2 start x <input id="pX2" type="number" step="1" value="2"></label>
+        </div>
+        <div class="hint">Both agents start in state A. The tape is blank outside the initial content.</div>
+      </details>
+
+      <label class="chk"><input id="pShowHeads" type="checkbox" checked> Show head movement (green for L, red for R)</label>
+
+      <div class="vizrow"><span class="lab">Visualization:</span>
+        <button class="vizbtn on" data-viz="default" title="Tape plus head trajectories">Default</button>
+        <button class="vizbtn" data-viz="explore" title="Adds a guide line at cell 0">Explore</button>
+        <button class="vizbtn" data-viz="blaze" title="Tape only, no head trails, step budget up to 2,000,000">Blaze</button>
+      </div>
+    </div>
+
+    <div class="h2">News</div>
+    <div class="newswrap">
+      <div class="newsbadge"><div class="nb-ring"><b>CET</b><span>CATCH EM TURING</span></div></div>
+      <ul class="newslist">
+        <li><b>November 17th 2026</b> &mdash; the CET community names <b>Deever</b>, the 10&uarr;&uarr;140 champion, outside this sweep</li>
+        <li><b>November 16th 2026</b> &mdash; CET(4) glider-glider swept: 1,678 machines survive 47,176,870 steps, champion 15,214,263 steps</li>
+        <li><b>November 15th 2026</b> &mdash; this CET viewer and the holdout browser are published</li>
+        <li><b>November 2026</b> &mdash; Catch-Em-Turing is proposed by NathFR76: two agents, one tape, collision halts</li>
+      </ul>
+
+    </div>
+
+  </section>
+
+  <aside class="right">
+    <div class="machinehead" id="machineHead">Machine</div>
+    <div class="domain" id="domainLine"></div>
+    <div class="errbox" id="errBox"></div>
+
+    <div class="h3">Machine code:</div>
+    <div class="codetables" id="codeArea"></div>
+
+    <div class="stdline">Std format:<a id="stdFormat" class="mono" title="Click to copy this machine string"></a></div>
+    <div class="dbid">Database id: <span id="dbId">not in a CET(4) holdout list</span></div>
+    <div class="verdict" id="verdict"></div>
+    <div class="startwarn" id="startWarn"></div>
+    <div class="huelegend" id="hueLegend"></div>
+
+    <div class="minirow">
+      <button id="btnCopy">Copy CET string</button>
+      <button id="btnCopy1">Copy machine 1</button>
+      <button id="btnCopy2">Copy machine 2</button>
+      <button id="btnCopyLink">Copy link to this machine</button>
+      <a class="minilink" id="btnWiki" href="https://wiki.bbchallenge.org/wiki/Catch-Em-Turing" target="_blank" rel="noopener">Create wiki entry</a>
+      <span id="copyMsg"></span>
+    </div>
+
+    <div class="h3">Change machine:</div>
+    <div class="small">Random machine from the <a href="#" id="seedA">selected holdout list</a></div>
+    <div class="randombox">
+      <button id="btnRandom" class="bluebtn">Go (R)andom</button>
+      <button id="btnTour" class="bluebtn sm">Tour all holdouts</button>
+      <select id="tourSpeed" title="Tour speed (a floor: a slow machine can exceed it)">
+        <option value="500">0.5 s</option>
+        <option value="200">0.2 s</option>
+        <option value="100">0.1 s</option>
+        <option value="50">0.05 s</option>
+      </select>
+      <button id="morelink" class="morelink">More options</button>
+    </div>
+    <div class="small" id="tourState"></div>
+
+    <div class="morebox" id="moreBox" hidden>
+      <div class="row">
+        <button id="btnRandomAny" class="bluebtn sm">Random CET(4) table</button>
+        <button id="btnFitHoldout" class="bluebtn sm">Fit view to random holdout</button>
+      </div>
+      <div class="row">
+        <span>From id in the <a href="#" id="seedA2">selected holdout list</a>:</span>
+        <input id="idInput" type="text" inputmode="numeric" placeholder="1" title="A line number, or an id such as N-AX-3">
+        <button id="goId">Go</button>
+      </div>
+      <div class="row">
+        <span>From standard format:</span>
+        <input id="stdInput" type="text" spellcheck="false" placeholder="1LB0LB_1RB0LA|1RB1LA_1LA1RB">
+        <button id="goStd">Go</button>
+      </div>
+    </div>
+
+    <div class="hlhead">Highlighted machines</div>
+    <div class="small">Interesting machines:</div>
+    <div id="hlList"></div>
+  </aside>
+</main>
+
+<div class="modal" id="modal">
+  <div class="modalbox">
+    <div class="modalhead">
+      <div>
+        <h2>Catch-Em-Turing (CET)</h2>
+        <div class="small">Two agents, one shared tape, collision halts.</div>
+      </div>
+      <button class="closebtn" id="modalClose">Close</button>
+    </div>
+
+    <h3>The model</h3>
+    <ul>
+      <li>A CET(n) machine has <b>2 agents</b>, each with its own table of <b>n states</b> and the same <b>k symbols</b>.</li>
+      <li>Both agents start in state <b>A</b>. Agent 1 starts on cell <b>0</b>, agent 2 on cell <b>2</b>. The tape is blank.</li>
+      <li>Every step both agents read their cell, then write, move one cell and change state &mdash; <b>simultaneously</b>.</li>
+      <li>Reads happen before either write. If both agents write the same cell, the <b>lower-numbered agent wins</b>.</li>
+      <li>There is no HALT state. A run halts only when both agents <b>occupy the same cell after a step</b>.</li>
+    </ul>
+
+    <h3>Machine format</h3>
+    <p><code>machine1|machine2</code> in bbchallenge standard format: rows separated by <code>_</code>,
+      each entry is <code>write + move + next state</code>. For example <code>1RB</code> means
+      write 1, move <b>R</b>ight, go to state <b>B</b>. <code>---</code> is an undefined transition.</p>
+
+    <h3>Diagram</h3>
+    <p>Time runs downward. Each row is a slice of simulated time, columns are tape cells. Every symbol has
+      its own grey level: <b>black is symbol 0</b> and <b>white is the highest symbol</b>; the rest is
+      an even black-to-white gradient, so it works for any number of symbols.</p>
+    <div class="legend">
+      <div class="bar"></div>
+      <div class="sw" id="legendSwatches"></div>
+    </div>
+    <ul>
+      <li>Head markers are <span style="color:#39d353">green when the head moved left</span> and
+        <span style="color:#ff6b6b">red when it moved right</span>. Agent 1 is drawn brighter than agent 2.</li>
+      <li>Click or drag on the diagram to move through time; a yellow ring marks the collision that halts the run.</li>
+      <li><b>Start convention.</b> Every holdout list, certificate and halt time on this page was computed from
+        a <b>blank tape with agent 1 at cell 0 and agent 2 at cell 2</b>. Change the initial tape or the head
+        cells and you are running a different question — the panel will say so, and one button puts the
+        sweep start back.</li>
+      <li><b>Simulation Parameters</b> sets how many steps are run, how many tape cells are visible, where the
+        tape sits horizontally, and the initial tape content in 0s and 1s.</li>
+    </ul>
+
+    <h3>Links</h3>
+    <p>
+      <a href="https://wiki.bbchallenge.org/wiki/Catch-Em-Turing" target="_blank" rel="noopener">Catch-Em-Turing wiki page</a>
+      &nbsp;&middot;&nbsp;
+      <a href="https://discord.com/channels/960643023006490684/1566772864064159744" target="_blank" rel="noopener">Discord post</a>
+    </p>
+  </div>
+</div>
+
+<script src="cet4-gg-holdouts.js"></script>
+<script src="cet4-gg-labels.js"></script>
+<script src="cet4-ee-holdouts.js"></script>
+<script src="cet4-ee-labels.js"></script>
+<script src="cet4-ee-halts.js"></script>
+<script src="cet4-eg-halts.js"></script>
+<script src="cet4-eg-labels.js"></script>
+<script src="cet4-egm-holdouts.js"></script>
+<script src="cet4-egm-labels.js"></script>
+<script src="cet4-ladder-holdouts.js"></script>
+<script src="cet4-ladder-labels.js"></script>
+<script src="cet4-named-holdouts.js"></script>
+<script src="cet4-named-labels.js"></script>
+<script src="cet4-eg-named.js"></script>
+<script src="cet4-records.js"></script>
+<script src="cet4-record-aliases.js"></script>
+<script src="cet4-palette.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------ */
+  /* helpers                                                             */
+  /* ------------------------------------------------------------------ */
+  var CW = 480, CH = 512;               // diagram size (the bbchallenge viewer is 332x355)
+  var MAX_STEPS = 200000;
+  var MAX_STEPS_BLAZE = 2000000;    // Blaze: 10x step budget
+  var MAX_FRAMES = 200000;          // step records kept; sampled beyond this
+
+  var $ = function (s) { return document.querySelector(s); };
+  var fmt = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+  var stateName = function (i) { return String.fromCharCode(65 + i); };
+  var isHttp = location.protocol === 'http:' || location.protocol === 'https:';
+  var clamp = function (v, lo, hi) { return Math.min(hi, Math.max(lo, v)); };
+  var intOf = function (v, d) { var n = parseInt(v, 10); return isFinite(n) ? n : d; };
+  var floatOf = function (v, d) { var n = parseFloat(v); return isFinite(n) ? n : d; };
+
+  /* ------------------------------------------------------------------ */
+  /* confidence box                                                     */
+  /* Two axes in one box. The left colour is the verdict (green =       */
+  /* unhalting side, red = halting side). The right colour is the step  */
+  /* axis, and only appears when a step claim exists at all. Text is    */
+  /* black on the colour, so no contrast juggling.                      */
+  /* ------------------------------------------------------------------ */
+  var VERDICT_RAMP = (window.CET4_PALETTE || {}).verdict || [];
+  var STEP_RAMP = (window.CET4_PALETTE || {}).step || [];
+  function ramp(h, s, l) { return 'hsl(' + h + ',' + s + '%,' + l + '%)'; }
+  function V(i) { var t = VERDICT_RAMP[i]; return ramp(t.h, t.s, t.l); }
+  function S(i) { var t = STEP_RAMP[i]; return ramp(t.h, t.s, t.l); }
+
+  /* 0-2 have no step axis, so they are a single colour */
+  var TIERS = [
+    { name: 'Nonhalting (certified)', v: V(0) },
+    { name: 'Likely nonhalting', v: V(1) },
+    { name: 'Undetermined', v: V(2) },
+    { name: 'Likely halting, unclaimed step', v: V(3), s: S(0) },
+    { name: '>99% halting, unclaimed step', v: V(4), s: S(0) },
+    { name: '>99% halting, claimed step, unlikely true', v: V(4), s: S(1) },
+    { name: '>99% halting, claimed step, likely true', v: V(4), s: S(2) },
+    { name: 'Proven halting, unclaimed step', v: V(5), s: S(0) },
+    { name: 'Proven halting, claimed step', v: V(5), s: S(1) },
+    { name: 'Proven halting, proven step', v: V(5), s: S(3) }
+  ];
+
+  /* engine + glider whose drift the engine modulates: the round law cannot run */
+  function egmLabel(egRef, omitRef) {
+    return {
+      lbl: 'Modulated glide' + ((egRef && !omitRef) ? ' (sweep ' + idLabel('EG', egRef) + ')' : '') + '. ' +
+        String(window.CET4_EGM_TEMPLATE || ''),
+      tier: TIERS[2]
+    };
+  }
+
+  /* a record machine is usually settled, so it is in no holdout list, but the
+     records page still carries the round-pass claim that put it there */
+  function recordRowFor(str) {
+    var k = recKey(str);
+    var lists = [window.CET4_RECORD_FAMILY || [], window.CET4_RECORD_TOP || []];
+    for (var i = 0; i < lists.length; i++) {
+      for (var j = 0; j < lists[i].length; j++) {
+        if (recKey(lists[i][j][0]) === k) return lists[i][j];
+      }
+    }
+    return null;
+  }
+  /* the lists and the parser both use |, but a link may carry spaces */
+  function recKey(s) { return String(s || '').trim().split(/\s+/).join(' ').replace(/\|/g, ' '); }
+
+  function tierBg(t) {
+    if (!t) return '';
+    if (!t.s) return t.v;
+    /* narrow blend so both halves read as solid colours */
+    return 'linear-gradient(90deg,' + t.v + ' 0%,' + t.v + ' 42%,' + t.s + ' 58%,' + t.s + ' 100%)';
+  }
+  function tierForLabel(lbl) {
+    if (!lbl) return null;
+    if (lbl.indexOf('Nonhalting') === 0) return TIERS[0];
+    if (lbl.indexOf('Likely nonhalting') === 0) return TIERS[1];
+    if (lbl.indexOf('Undetermined') === 0) return TIERS[2];
+    if (lbl.indexOf('Likely halting') === 0) return TIERS[3];
+    if (lbl.indexOf('Halting') === 0) return TIERS[9];
+    return null;
+  }
+  function renderHueLegend() {
+    var el = $('#hueLegend');
+    if (!el) return;
+    var html = '';
+    for (var i = 0; i < VERDICT_RAMP.length; i++) {
+      html += '<span><i style="background:' + V(i) + '"></i>' + VERDICT_RAMP[i].name + '</span>';
+    }
+    html += '<span class="lsep"></span>';
+    for (var j = 0; j < STEP_RAMP.length; j++) {
+      html += '<span><i style="background:' + S(j) + '"></i>' + STEP_RAMP[j].name + '</span>';
+    }
+    html += '<span class="lsep"></span><span>box: verdict left, step right</span>';
+    el.innerHTML = html;
+  }
+  renderHueLegend();
+
+
+  /* ------------------------------------------------------------------ */
+  /* CET(4) glider-glider holdout list: line number = machine id                        */
+  /* ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ */
+  /* holdout families: GG (glider-glider), EE (engine-engine)            */
+  /* Ids are line numbers within a family, so they need a namespace.     */
+  /* ------------------------------------------------------------------ */
+  var FAMS = {};
+  function fam(key, raw) {
+    if (!FAMS[key]) {
+      var txt = String(raw || '').trim();
+      FAMS[key] = { key: key, lines: txt ? txt.split('\n') : [], map: null };
+    }
+    return FAMS[key];
+  }
+  /* the reverse map is built on demand: 1.76M entries costs ~4 s and 320 MB,
+     and only a lookup needs it, not a count or a tour. */
+  function famMap(f) {
+    if (!f.map) {
+      f.map = new Map();
+      for (var i = 0; i < f.lines.length; i++) {
+        var t = f.lines[i].trim().split(/\s+/);
+        if (t.length === 2) f.map.set(t[0] + '|' + t[1], i + 1);
+      }
+    }
+    return f.map;
+  }
+  function ggF() { return fam('GG', window.CET4_GG_HOLDOUTS); }
+  function eeF() { return fam('EE', window.CET4_EE_HOLDOUTS); }
+  function egF() { return fam('EG', window.CET4_EG_HOLDOUTS); }
+  function mdF() { return fam('EGM', window.CET4_EGM_HOLDOUTS); }
+  function nF() { return fam('N', window.CET4_NAMED_HOLDOUTS); }
+  function lF() { return fam('L', window.CET4_LADDER_HOLDOUTS); }
+
+  var FAMILY = 'EG';
+  function curF() {
+    if (FAMILY === 'EE') return eeF();
+    if (FAMILY === 'EG') return egF();
+    if (FAMILY === 'EGM') return mdF();
+    if (FAMILY === 'N') return nF();
+    if (FAMILY === 'L') return lF();
+    return ggF();
+  }
+  function holdLines() { return curF().lines; }
+  function holdCount() { return curF().lines.length; }
+  function holdId(str) { return famMap(curF()).get(str) || 0; }
+  function holdAt(id) {
+    var L = curF().lines;
+    if (!L.length) return null;
+    var i = clamp((id | 0) - 1, 0, L.length - 1);
+    var t = L[i].trim().split(/\s+/);
+    return t.length === 2 ? (t[0] + '|' + t[1]) : null;
+  }
+
+  function idLabel(key, id) {
+    if (key === 'EE') return 'EE-' + fmt(id);
+    if (key === 'EG') return 'EG-' + fmt(id);
+    if (key === 'N') return nLabel(id);
+    if (key === 'L') return 'L-' + fmt(id);
+    if (key === 'EGM') return 'EGM-' + fmt(id);
+    return 'GG-' + fmt(id);
+  }
+
+  /* The Named family has two groups: the eleven Axolotls, N-AX-n, and champions
+     the CET community named, N-CET-n. n is the list line, so Deever (line 12) is
+     N-CET-12, and a champion appended at line 13 is N-CET-13. The prefix says
+     which group the line belongs to; the number never moves. */
+  function nGroup(id) {
+    var e = (window.CET4_EG_NAMED || [])[id - 1];
+    return e ? (e.community ? 'CET' : 'AX') : null;
+  }
+  function nLabel(id) {
+    var g = nGroup(id);
+    return g ? 'N-' + g + '-' + fmt(id) : 'N-' + fmt(id);
+  }
+  function nLineOf(grp, line) {
+    return nGroup(line) === grp ? line : 0;
+  }
+  function famName(key) {
+    if (key === 'EE') return 'CET(4) engine-engine holdout list';
+    if (key === 'EG') return 'CET(4) engine-glider sweep';
+    if (key === 'N') return 'Named 12 list (known tetrational values)';
+    if (key === 'L') return 'E-G ladder (round certificates)';
+    if (key === 'EGM') return 'CET(4) engine-glider modulate list';
+    return 'CET(4) glider-glider holdout list';
+  }
+
+  /* EE verdicts are template codes, not per-machine prose: 62k machines of
+     prose would be 20 MB. Code 0 means the certification pass has not
+     reached this machine yet. */
+  function eeLabel(id, str) {
+    var tpl = window.CET4_EE_TEMPLATES, codes = window.CET4_EE_CODES;
+    if (!tpl || !codes) return '';
+    var c = codes[id - 1];
+    if (c === undefined) return '';
+    if (c === 5) {
+      var t = window.CET4_EE_HALTS && window.CET4_EE_HALTS[str];
+      return t ? ('Halting at ' + fmt(t) + ' steps. Witnessed by direct simulation; the two heads first share a cell at that step.')
+        : 'Halting. A collision was witnessed by direct simulation.';
+    }
+    return String(tpl[c] || '');
+  }
+  function eeTier(id) {
+    var codes = window.CET4_EE_CODES;
+    if (!codes) return null;
+    var c = codes[id - 1];
+    if (c === 1 || c === 2 || c === 3) return TIERS[0];  /* certified nonhalting */
+    if (c === 4) return TIERS[1];                        /* likely nonhalting */
+    if (c === 5) return TIERS[9];                        /* proven halt, proven step */
+    return TIERS[2];                                     /* undetermined */
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* machine parsing                                                     */
+  /* ------------------------------------------------------------------ */
+  function parseCET(text) {
+    var t = String(text == null ? '' : text).trim();
+    if (!t) throw new Error('Empty machine string.');
+    t = t.replace(/\s+/g, '');
+    var parts = t.split('|');
+    if (parts.length !== 2) {
+      throw new Error('CET format is machine1|machine2 (exactly two agents).');
+    }
+    var agents = parts.map(function (part, ai) {
+      if (!part) throw new Error('Agent ' + (ai + 1) + ' is empty.');
+      return part.split('_').filter(function (r) { return r.length; }).map(function (row) {
+        if (row.length % 3 !== 0) {
+          throw new Error('Agent ' + (ai + 1) + ': row "' + row + '" is not a whole number of transitions.');
+        }
+        var ents = [];
+        for (var i = 0; i < row.length; i += 3) {
+          var e = row.slice(i, i + 3);
+          if (e === '---') { ents.push(null); continue; }
+          var m = /^([0-9])([LR])([A-Z])$/.exec(e);
+          if (!m) throw new Error('Agent ' + (ai + 1) + ': bad transition "' + e + '".');
+          ents.push({ w: +m[1], d: m[2] === 'L' ? -1 : 1, s: m[3].charCodeAt(0) - 65, raw: e });
+        }
+        return ents;
+      });
+    });
+
+    var n = agents[0].length;
+    if (!n) throw new Error('Agent 1 has no states.');
+    if (agents[1].length !== n) {
+      throw new Error('Both agents need the same number of states (' + n + ' vs ' + agents[1].length + ').');
+    }
+    var k = agents[0][0].length;
+    if (k < 2) throw new Error('A machine needs at least 2 symbols per row.');
+    agents.forEach(function (ag, ai) {
+      if (ag.length !== n) throw new Error('Agent ' + (ai + 1) + ' has ' + ag.length + ' states, expected ' + n + '.');
+      ag.forEach(function (row, si) {
+        if (row.length !== k) {
+          throw new Error('Agent ' + (ai + 1) + ' state ' + stateName(si) + ' has ' + row.length + ' symbols, expected ' + k + '.');
+        }
+        row.forEach(function (e) {
+          if (!e) return;
+          if (e.w >= k) throw new Error('Write symbol ' + e.w + ' does not exist (' + k + ' symbols).');
+          if (e.s >= n) throw new Error('Next state ' + stateName(e.s) + ' does not exist (' + n + ' states).');
+        });
+      });
+    });
+
+    function str() {
+      return agents.map(function (ag) {
+        return ag.map(function (row) {
+          return row.map(function (e) { return e ? e.raw : '---'; }).join('');
+        }).join('_');
+      }).join('|');
+    }
+
+    return { agents: agents, n: n, k: k, str: str() };
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* tape                                                                */
+  /* ------------------------------------------------------------------ */
+  function Tape(limit) {
+    var size = Math.min(1 << 24, Math.max(4096, limit * 2 + 4096));
+    this.size = size;
+    this.off = size >> 1;
+    this.a = new Uint8Array(size);
+    this.spill = null;
+  }
+  Tape.prototype.get = function (p) {
+    var i = p + this.off;
+    if (i >= 0 && i < this.size) return this.a[i];
+    return this.spill ? (this.spill.get(p) || 0) : 0;
+  };
+  Tape.prototype.set = function (p, v) {
+    var i = p + this.off;
+    if (i >= 0 && i < this.size) { this.a[i] = v; return; }
+    if (!this.spill) this.spill = new Map();
+    if (v) this.spill.set(p, v); else this.spill.delete(p);
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* simulation                                                          */
+  /* ------------------------------------------------------------------ */
+  function simulate(m, P) {
+    var n = m.n, k = m.k;
+    var tbl = m.agents.map(function (ag) {
+      var w = new Uint8Array(n * k), d = new Int8Array(n * k);
+      var s = new Int8Array(n * k), bad = new Uint8Array(n * k);
+      for (var st = 0; st < n; st++) {
+        for (var sym = 0; sym < k; sym++) {
+          var idx = st * k + sym, e = ag[st][sym];
+          if (!e) { bad[idx] = 1; continue; }
+          w[idx] = e.w; d[idx] = e.d; s[idx] = e.s;
+        }
+      }
+      return { w: w, d: d, s: s, bad: bad };
+    });
+
+    var cap = (P.viz === 'blaze') ? MAX_STEPS_BLAZE : MAX_STEPS;
+    var limit = clamp(P.steps | 0, 1, cap);
+    var stride = Math.max(1, Math.ceil(limit / MAX_FRAMES));
+    var nFrames = Math.floor(limit / stride) + 2;
+    var tape = new Tape(limit);
+    var init = String(P.initTape || '').replace(/[^0-9]/g, '');
+    for (var i = 0; i < init.length; i++) {
+      var v = init.charCodeAt(i) - 48;
+      if (v >= k) throw new Error('Initial tape symbol ' + v + ' is invalid for ' + k + ' symbols.');
+      if (v) tape.set(P.initX + i, v);
+    }
+
+    var p1 = P.x1 | 0, p2 = P.x2 | 0;
+    var st1 = 0, st2 = 0;
+    var cells = new Map();      // cell -> [t0, t1, val, ...]
+    var open = new Map();       // cell -> { t0, val }
+    var hp1 = new Int32Array(nFrames), hp2 = new Int32Array(nFrames);
+    var hd1 = new Int8Array(nFrames), hd2 = new Int8Array(nFrames);
+    var hs1 = new Int8Array(nFrames), hs2 = new Int8Array(nFrames);
+    hp1[0] = p1; hp2[0] = p2; hs1[0] = 0; hs2[0] = 0;
+
+    var t = 0, halted = false, haltStep = 0, haltPos = 0, error = null;
+
+    function writeCell(c, val, now) {
+      if (tape.get(c) === val) return;
+      var op = open.get(c);
+      if (op) {
+        var arr = cells.get(c);
+        if (!arr) { arr = []; cells.set(c, arr); }
+        arr.push(op.t0, now, op.val);
+      }
+      tape.set(c, val);
+      open.set(c, { t0: now, val: val });
+    }
+
+    for (var step = 0; step < limit; step++) {
+      var s1 = tape.get(p1), s2 = tape.get(p2);
+      var i1 = st1 * k + s1, i2 = st2 * k + s2;
+      if (tbl[0].bad[i1]) { error = 'Agent 1 has no transition in state ' + stateName(st1) + ' on symbol ' + s1 + ' (step ' + (step + 1) + ').'; break; }
+      if (tbl[1].bad[i2]) { error = 'Agent 2 has no transition in state ' + stateName(st2) + ' on symbol ' + s2 + ' (step ' + (step + 1) + ').'; break; }
+
+      var w1 = tbl[0].w[i1], w2 = tbl[1].w[i2];
+      var now = step + 1;
+      if (p1 === p2) {
+        writeCell(p1, w1, now);          // agent 1 has priority on a shared cell
+      } else {
+        writeCell(p1, w1, now);
+        writeCell(p2, w2, now);
+      }
+      p1 += tbl[0].d[i1];
+      p2 += tbl[1].d[i2];
+      st1 = tbl[0].s[i1];
+      st2 = tbl[1].s[i2];
+      var fr = Math.round(now / stride);
+      if (fr < nFrames) {
+        hp1[fr] = p1; hp2[fr] = p2;
+        hd1[fr] = tbl[0].d[i1]; hd2[fr] = tbl[1].d[i2];
+        hs1[fr] = st1; hs2[fr] = st2;
+      }
+      t = now;
+      if (p1 === p2) { halted = true; haltStep = now; haltPos = p1; break; }
+    }
+
+    open.forEach(function (op, c) {
+      var arr = cells.get(c);
+      if (!arr) { arr = []; cells.set(c, arr); }
+      arr.push(op.t0, t, op.val);
+    });
+
+    return {
+      total: t, halted: halted, haltStep: haltStep, haltPos: haltPos, error: error,
+      cells: cells, hp1: hp1, hp2: hp2, hd1: hd1, hd2: hd2, hs1: hs1, hs2: hs2,
+      stride: stride, nFrames: nFrames,
+      x1: P.x1 | 0, x2: P.x2 | 0
+    };
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* application state                                                   */
+  /* ------------------------------------------------------------------ */
+  var params = {
+    steps: 2000, tapeWidth: 400, xTrans: 0.5, initTape: '0', initX: 0,
+    x1: 0, x2: 2, heads: true, viz: 'default'
+  };
+  var app = {
+    machine: null, sim: null, time: 0, playing: false, raf: 0,
+    raster: null, rasterKey: '', fromUrl: false
+  };
+
+  var off = document.createElement('canvas');
+  off.width = CW; off.height = CH;
+  var octx = off.getContext('2d');
+  var cv = $('#cv');
+  var ctx = cv.getContext('2d');
+
+  /* ------------------------------------------------------------------ */
+  /* raster (tape layer): one vertical run per cell / symbol             */
+  /* ------------------------------------------------------------------ */
+  function buildRaster() {
+    var m = app.machine, sim = app.sim;
+    if (!m || !sim) {
+      octx.clearRect(0, 0, CW, CH);
+      octx.fillStyle = '#000';
+      octx.fillRect(0, 0, CW, CH);
+      return;
+    }
+    var W = CW, H = CH;
+    var T = Math.max(1, sim.total);
+    var span = clamp(Math.round(params.tapeWidth), 1, 20000);
+    var x0 = -span * params.xTrans;
+    var k = m.k;
+
+    // black -> white gradient, symbol 0 = black, symbol k-1 = white
+    var grey = new Uint8Array(k);
+    for (var v = 0; v < k; v++) grey[v] = Math.round(255 * v / Math.max(1, k - 1));
+
+    var img = octx.createImageData(W, H);
+    var d = img.data;
+    for (var i = 3; i < d.length; i += 4) d[i] = 255;   // opaque black background
+
+    sim.cells.forEach(function (arr, cell) {
+      var c = Math.floor((cell - x0) * W / span);
+      if (c < 0 || c >= W) return;
+      for (var j = 0; j < arr.length; j += 3) {
+        var t0 = arr[j], t1 = arr[j + 1], val = arr[j + 2];
+        if (!val || t1 <= t0) continue;
+        var y0 = Math.floor(t0 * H / T);
+        var y1 = Math.floor(t1 * H / T);
+        if (y1 <= y0) y1 = y0 + 1;
+        if (y0 < 0) y0 = 0;
+        if (y1 > H) y1 = H;
+        var col = grey[val];
+        for (var y = y0; y < y1; y++) {
+          var p = (y * W + c) * 4;
+          d[p] = col; d[p + 1] = col; d[p + 2] = col;
+        }
+      }
+    });
+
+    octx.putImageData(img, 0, 0);
+    app.raster = off;
+    app.rasterKey = rasterKey();
+  }
+
+  function rasterKey() {
+    var s = app.sim;
+    return [app.machine ? app.machine.str : '', params.steps, params.tapeWidth, params.xTrans,
+      params.initTape, params.initX, params.x1, params.x2, s ? s.total : -1].join('|');
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* drawing                                                             */
+  /* ------------------------------------------------------------------ */
+  var dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+  cv.width = CW * dpr;
+  cv.height = CH * dpr;
+
+  function cellToX(cell) {
+    var span = clamp(Math.round(params.tapeWidth), 1, 20000);
+    var x0 = -span * params.xTrans;
+    return (cell - x0) * CW / span;
+  }
+
+  function draw() {
+    var sim = app.sim;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, CW, CH);
+    ctx.imageSmoothingEnabled = false;
+    if (app.raster) ctx.drawImage(app.raster, 0, 0, CW, CH);
+
+    if (!sim) return;
+    var frameOf = function (t) {
+      var q = Math.round(clamp(t, 0, sim.total) / sim.stride);
+      return q < sim.nFrames ? q : sim.nFrames - 1;
+    };
+    var H = CH, T = Math.max(1, sim.total);
+    var time = clamp(app.time | 0, 0, sim.total);
+    var yTime = Math.min(H, Math.floor(time * H / T));
+
+    // dim the not-yet-reached future
+    if (yTime < H) {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, yTime, CW, H - yTime);
+    }
+    if (yTime < H) {
+      ctx.fillStyle = 'rgba(66,140,200,.55)';
+      ctx.fillRect(0, yTime, CW, 1);
+    }
+
+    // guide line at cell 0 for explore mode
+    if (params.viz === 'explore') {
+      var gx = Math.round(cellToX(0));
+      if (gx >= 0 && gx < CW) {
+        ctx.fillStyle = 'rgba(120,170,220,.18)';
+        ctx.fillRect(gx, 0, 1, H);
+      }
+    }
+
+    // head trajectories, coloured by move direction
+    if (params.viz !== 'blaze' && (params.heads || params.viz !== 'default')) {
+      for (var a = 0; a < 2; a++) {
+        var green = new Path2D(), red = new Path2D(), any = false;
+        var prevX = null, prevY = 0;
+        var hp = a === 0 ? sim.hp1 : sim.hp2;
+        var hd = a === 0 ? sim.hd1 : sim.hd2;
+        for (var y = 0; y <= yTime; y++) {
+          var tt = Math.min(sim.total, Math.round(y * T / H));
+          var x = cellToX(hp[frameOf(tt)]) + 0.5;
+          if (prevX !== null && y > prevY) {
+            var fh = frameOf(tt);
+            var path = hd[fh] < 0 ? green : (hd[fh] > 0 ? red : null);
+            if (path) {
+              path.moveTo(prevX, prevY);
+              path.lineTo(x, y);
+              any = true;
+            }
+          }
+          prevX = x; prevY = y;
+        }
+        ctx.globalAlpha = a === 0 ? 0.95 : 0.6;
+        ctx.lineWidth = params.viz === 'blaze' ? 1.6 : 1;
+        if (any) {
+          ctx.strokeStyle = '#39d353'; ctx.stroke(green);
+          ctx.strokeStyle = '#ff5a5a'; ctx.stroke(red);
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // current heads
+    var c1 = sim.hp1[frameOf(time)], c2 = sim.hp2[frameOf(time)];
+    var hx1 = cellToX(c1) + 0.5, hx2 = cellToX(c2) + 0.5;
+    ctx.fillStyle = '#e9fff1';
+    ctx.fillRect(Math.round(hx1), Math.max(0, yTime - 1), 2, 2);
+    ctx.fillStyle = '#ffe3ef';
+    ctx.fillRect(Math.round(hx2), Math.max(0, yTime - 1), 2, 2);
+
+    // collision marker
+    if (sim.halted && time >= sim.haltStep) {
+      var hx = cellToX(sim.haltPos) + 0.5;
+      var hy = Math.floor(sim.haltStep * H / T);
+      ctx.strokeStyle = '#ffd54a';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(hx, hy, 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* machine panel                                                       */
+  /* ------------------------------------------------------------------ */
+  function agentTable(a) {
+    var m = app.machine;
+    var h = '<div class="agenttbl"><div class="agentname">Agent ' + (a + 1) + '</div>' +
+      '<table class="code"><thead><tr><th></th>';
+    for (var s = 0; s < m.k; s++) h += '<th>' + s + '</th>';
+    h += '</tr></thead><tbody>';
+    for (var st = 0; st < m.n; st++) {
+      h += '<tr><th class="stname">' + stateName(st) + '</th>';
+      for (var sym = 0; sym < m.k; sym++) {
+        var e = m.agents[a][st][sym];
+        h += '<td class="' + (e ? '' : 'undef') + '">' + (e ? e.raw : '---') + '</td>';
+      }
+      h += '</tr>';
+    }
+    return h + '</tbody></table></div>';
+  }
+
+
+  function renderMachineInfo() {
+    var m = app.machine;
+    if (!m) return;
+    var ggid = famMap(ggF()).get(m.str) || 0;
+    var eeid = ggid ? 0 : (famMap(eeF()).get(m.str) || 0);
+    var nid = (ggid || eeid) ? 0 : (famMap(nF()).get(m.str) || 0);
+    var lid = (ggid || eeid || nid) ? 0 : (famMap(lF()).get(m.str) || 0);
+    var egmid = (ggid || eeid || nid) ? 0 : (famMap(mdF()).get(m.str) || 0);
+    var egid = (ggid || eeid || nid || FAMILY !== 'EG') ? 0 : (famMap(egF()).get(m.str) || 0);
+    /* The ladder and the modulate list are slices of the sweep, so a machine can
+       carry two ids. Show the id of the family being browsed, and fall back to
+       whichever list claims it. */
+    var famKey = null, id = 0;
+    if (ggid) { famKey = 'GG'; id = ggid; }
+    else if (eeid) { famKey = 'EE'; id = eeid; }
+    else if (nid) { famKey = 'N'; id = nid; }
+    else if (FAMILY === 'EGM' && egmid) { famKey = 'EGM'; id = egmid; }
+    else if (FAMILY === 'L' && lid) { famKey = 'L'; id = lid; }
+    else if (FAMILY === 'EG' && egid) { famKey = 'EG'; id = egid; }
+    else if (lid) { famKey = 'L'; id = lid; }
+    else if (egmid) { famKey = 'EGM'; id = egmid; }
+    else if (egid) { famKey = 'EG'; id = egid; }
+    var rec = id ? null : recordRowFor(m.str);
+    var aliasEntry = egNamed(m.str);
+    var aliasName = aliasEntry ? aliasEntry.alias : '';
+    /* a record machine is usually settled and so in no holdout list, but it may
+       still carry a derived alias from the records page */
+    if (!aliasName && window.CET4_RECORD_ALIAS) aliasName = window.CET4_RECORD_ALIAS[m.str] || '';
+    /* The header shows a *holdout* id, so a named machine still gets one if it
+       also sits in a real list. The Named 12 are deliberately not a source here:
+       the name is the identity, and their id stays on the Database id line. */
+    var headFam = null, headId = 0;
+    if (ggid) { headFam = 'GG'; headId = ggid; }
+    else if (eeid) { headFam = 'EE'; headId = eeid; }
+    else if (egid) { headFam = 'EG'; headId = egid; }
+    else if (egmid) { headFam = 'EGM'; headId = egmid; }
+    else if (lid) { headFam = 'L'; headId = lid; }
+    $('#machineHead').innerHTML = 'Machine' +
+      (headId ? ' <span class="mid">#' + idLabel(headFam, headId) + '</span>' : '') +
+      (aliasName
+        ? ' <span class="namedtag"' +
+          ((aliasEntry && aliasEntry.color) ? ' style="color:' + aliasEntry.color + '"' : '') +
+          '>&mdash; ' + aliasName + '</span>'
+        : '');
+    $('#domainLine').textContent = 'CET(' + m.n + (m.k !== 2 ? ',' + m.k : '') + ') \u00b7 ' + m.n +
+      ' states \u00b7 ' + m.k + ' symbols \u00b7 2 agents';
+    $('#codeArea').innerHTML = agentTable(0) + agentTable(1);
+    $('#stdFormat').textContent = m.str;
+    var dbId = $('#dbId');
+    if (id) {
+      dbId.innerHTML = '<b>' + idLabel(famKey, id) + '</b> <span class="muted">(line ' + fmt(id) +
+        ' of the ' + famName(famKey) + ')</span>';
+    } else {
+      dbId.innerHTML = rec
+        ? '<span class="muted">record machine &mdash; on the Records page, not in a holdout list</span>'
+        : '<span class="muted">not in a CET(4) holdout list</span>';
+    }
+    var lbl = '', tier = null;
+    if (famKey === 'GG') {
+      if (window.CET4_GG_LABELS) lbl = String(window.CET4_GG_LABELS[id - 1] || '');
+      if (window.CET4_GG_TIERS && window.CET4_GG_TIERS[id - 1] !== undefined) {
+        tier = TIERS[window.CET4_GG_TIERS[id - 1]] || null;
+      }
+    } else if (famKey === 'EE') {
+      lbl = eeLabel(id, m.str);
+      tier = eeTier(id);
+    } else if (famKey === 'EG') {
+      /* the holdout list holds undetermined machines only, so a listed entry has
+         no verdict yet; a machine that halts has left the list, but its measured
+         step stays reachable by machine string (cet4-eg-halts.js) for links and
+         for the sweep-start check */
+      var egh = window.CET4_EG_HALTS && window.CET4_EG_HALTS[m.str];
+      if (egh) {
+        lbl = 'Halting at ' + fmt(egh) + ' steps. Witnessed by direct simulation; the two heads first share a cell at that step.';
+        tier = TIERS[9];
+      } else {
+        lbl = String(window.CET4_EG_TEMPLATE || '');
+        tier = TIERS[2];
+      }
+    } else if (famKey === 'EGM') {
+      var m2 = egmLabel((window.CET4_EGM_EGIDS || [])[id - 1] || 0);
+      lbl = m2.lbl;
+      tier = m2.tier;
+    } else if (famKey === 'N') {
+      lbl = (window.CET4_NAMED_LABELS || [])[id - 1] || '';
+      /* the Axolotls and Deever carry the same kind of claim -- a tetrational
+         halt value -- so they share a colour; the labels say how well founded
+         each one is */
+      tier = TIERS[5];   /* >99% halting, claimed step unlikely to be exactly right */
+    } else if (famKey === 'L') {
+      lbl = (window.CET4_LADDER_LABELS || [])[id - 1] || '';
+      /* the ladder and the Named 11 are the same claim from the same pipeline,
+         so they get the same colour; see the boot-convention caveat in the label */
+      tier = TIERS[5];
+    }
+
+    if (!lbl && rec) {
+      lbl = 'Records page entry: R=' + rec[1] + ', top exponent L2=' + fmt(rec[2]) +
+        ' (round law fitted from counter length L0=' + fmt(rec[3]) + '). A model claim rather ' +
+        'than a proof: the tower height depends on the boot convention and on extrapolating the ' +
+        'law past the range it was fitted on. Treat the value as a conjecture.' + (rec[5]
+          ? ' The value here is a community claim this pipeline has not reproduced, so its L2 is not available.' : '');
+      tier = TIERS[5];
+    }
+    if (!lbl && window.CET4_GG_HALTS && window.CET4_GG_HALTS[m.str]) {
+      lbl = 'Halting at ' + fmt(window.CET4_GG_HALTS[m.str]) + ' steps. Witnessed by direct simulation; the two heads first share a cell at that step.';
+      tier = TIERS[9];
+    }
+    if (!lbl && window.CET4_EE_HALTS && window.CET4_EE_HALTS[m.str]) {
+      lbl = 'Halting at ' + fmt(window.CET4_EE_HALTS[m.str]) + ' steps. Witnessed by direct simulation; the two heads first share a cell at that step.';
+      tier = TIERS[9];
+    }
+    if (!lbl && window.CET4_EG_HALTS && window.CET4_EG_HALTS[m.str]) {
+      lbl = 'Halting at ' + fmt(window.CET4_EG_HALTS[m.str]) + ' steps. Witnessed by direct simulation; the two heads first share a cell at that step.';
+      tier = TIERS[9];
+    }
+    /* a listed record/champion is not in the holdout list, so give it its tier */
+    if (!tier && typeof HIGHLIGHTED !== 'undefined' && HIGHLIGHTED) {
+      for (var hi = 0; hi < HIGHLIGHTED.length; hi++) {
+        if (HIGHLIGHTED[hi].str === m.str) {
+          tier = TIERS[HIGHLIGHTED[hi].tier] || null;
+          if (!lbl) lbl = tier ? tier.name + '.' : '';
+          break;
+        }
+      }
+    }
+    if (!tier) tier = tierForLabel(lbl);
+    /* Every verdict on this page is a statement about ONE start, so the badge
+       must not read as a claim about a different run. But a collision the viewer
+       has just witnessed is a fact about the run on screen: say that first, and
+       keep it out of the sweep-start scoping. */
+    var sweepStart = matchesSweepStart();
+    var auto = (app.sim && app.sim.halted) ? app.sim.haltStep : 0;
+    if (auto) {
+      var tapeNow = String(params.initTape || '').replace(/[^0-9]/g, '');
+      var autoTxt = 'Autohalt: the two heads collide at step ' + fmt(auto) + ' in this run' +
+        (sweepStart ? '' : ' (tape "' + (tapeNow || '0') + '" at cell ' + fmt(params.initX) +
+          ', heads at cells ' + fmt(params.x1) + ' and ' + fmt(params.x2) + ')');
+      /* at the sweep start the run is a check on the list, so compare steps
+         instead of saying "halting at N" twice */
+      var hc = sweepStart ? /^Halting at ([0-9,]+) steps/.exec(lbl) : null;
+      if (hc) {
+        var storedStep = parseInt(hc[1].replace(/,/g, ''), 10);
+        lbl = autoTxt + (storedStep === auto
+          ? ', which is the step this list records, so the run confirms it.'
+          : '; the list records step ' + fmt(storedStep) + ' instead, so the two disagree.');
+      } else {
+        lbl = autoTxt + '. ' + (lbl ? (sweepStart ? '' : 'Sweep start: ') + lbl : '');
+      }
+      tier = TIERS[9];   /* the halt and its step are witnessed right here */
+    } else if (!sweepStart && lbl) {
+      lbl = 'Start-dependent. From the sweep start (blank tape, heads at 0 and 2): ' + lbl;
+    }
+    var vd = $('#verdict');
+    vd.textContent = lbl;
+    vd.className = 'verdict' + (tier ? ' boxed' : '') + ((!sweepStart && !auto) ? ' stale' : '');
+    vd.style.background = tier ? tierBg(tier) : '';
+    vd.style.color = tier ? '#0b0f14' : '';
+    vd.title = tier ? tier.name : '';
+    var wiki = 'https://wiki.bbchallenge.org/wiki/Catch-Em-Turing';
+    $('#btnWiki').href = wiki;
+    $('#legendSwatches').innerHTML = (function () {
+      var out = '';
+      for (var v = 0; v < m.k; v++) {
+        var g = Math.round(255 * v / Math.max(1, m.k - 1));
+        out += '<span style="background:rgb(' + g + ',' + g + ',' + g + ');color:' +
+          (g > 140 ? '#111' : '#eee') + '">' + v + '</span>';
+      }
+      return out;
+    })();
+  }
+
+  function setError(msg) {
+    var box = $('#errBox');
+    if (!msg) { box.classList.remove('on'); box.textContent = ''; return; }
+    box.classList.add('on');
+    box.textContent = msg;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* status + timeline                                                   */
+  /* ------------------------------------------------------------------ */
+  function updateStatus() {
+    var sim = app.sim, el = $('#statusLine');
+    el.classList.remove('err', 'ok');
+    if (!sim) { el.textContent = ''; return; }
+    if (sim.error) {
+      el.classList.add('err');
+      el.textContent = 'stopped at step ' + fmt(sim.total) + ' \u2014 ' + sim.error;
+    } else if (sim.halted) {
+      el.classList.add('ok');
+      el.textContent = 'halted at step ' + fmt(sim.haltStep) + ' \u2014 collision on cell ' + fmt(sim.haltPos);
+    } else {
+      el.textContent = 'no collision in ' + fmt(sim.total) + ' simulated steps';
+    }
+    var range = $('#tRange');
+    range.max = String(sim.total);
+    range.value = String(app.time);
+    $('#tLabel').textContent = fmt(app.time) + ' / ' + fmt(sim.total);
+
+    var span = clamp(Math.round(params.tapeWidth), 1, 20000);
+    var x0 = -span * params.xTrans;
+    $('#viewHint').textContent = 'view: cells ' + fmt(Math.round(x0)) + ' \u2026 ' +
+      fmt(Math.round(x0 + span)) + ' (' + fmt(span) + ' cells across ' + CW + 'px)';
+  }
+
+  function setTime(t) {
+    if (!app.sim) return;
+    app.time = clamp(t | 0, 0, app.sim.total);
+    $('#tRange').value = String(app.time);
+    $('#tLabel').textContent = fmt(app.time) + ' / ' + fmt(app.sim.total);
+    draw();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* parameters -> simulation                                            */
+  /* ------------------------------------------------------------------ */
+  function readParams() {
+    params.steps = clamp(intOf($('#pSteps').value, 2000), 1,
+      params.viz === 'blaze' ? MAX_STEPS_BLAZE : MAX_STEPS);
+    params.tapeWidth = clamp(intOf($('#pTapeWidth').value, 400), 1, 20000);
+    params.xTrans = clamp(floatOf($('#pXTrans').value, 0.5), 0, 1);
+    params.initTape = $('#pInitTape').value;
+    params.initX = intOf($('#pInitX').value, 0);
+    params.x1 = intOf($('#pX1').value, 0);
+    params.x2 = intOf($('#pX2').value, 2);
+    params.heads = $('#pShowHeads').checked;
+    $('#pSteps').value = params.steps;
+    $('#pTapeWidth').value = params.tapeWidth;
+  }
+
+  function resimulate(keepTime) {
+    if (!app.machine) return;
+    readParams();
+    var sim;
+    try {
+      sim = simulate(app.machine, params);
+      setError('');
+    } catch (e) {
+      setError(e.message);
+      return;
+    }
+    app.sim = sim;
+    app.time = keepTime ? clamp(app.time, 0, sim.total) : sim.total;
+    app.rasterKey = '';
+    buildRaster();
+    renderMachineInfo();
+    renderStartWarn();
+    updateStatus();
+    draw();
+  }
+
+  /* Every certificate and holdout on this page was computed for ONE start: a
+     blank tape with agent 1 at cell 0 and agent 2 at cell 2. Any other start is
+     a different question, so say so rather than let the verdict describe a run
+     the diagram is not showing. */
+  function matchesSweepStart() {
+    var t = String(params.initTape || '').replace(/[^0-9]/g, '');
+    return !/[1-9]/.test(t) && params.x1 === 0 && params.x2 === 2;
+  }
+  function renderStartWarn() {
+    var el = $('#startWarn');
+    if (!el) return;
+    if (matchesSweepStart()) {
+      el.className = 'startwarn';
+      el.textContent = '';
+      return;
+    }
+    var t = String(params.initTape || '').replace(/[^0-9]/g, '');
+    var what = /[1-9]/.test(t)
+      ? 'tape "' + t + '" at cell ' + fmt(params.initX)
+      : 'a blank tape';
+    el.className = 'startwarn on';
+    el.textContent = 'This run starts from ' + what + ' with the heads at cells ' + fmt(params.x1) +
+      ' and ' + fmt(params.x2) + ' \u2014 a different question from the sweep. An Autohalt, if ' +
+      'shown, is about this run; the sweep-start verdict is scoped to a blank tape with heads at ' +
+      '0 and 2.';
+    var b = document.createElement('button');
+    b.textContent = 'Reset to sweep start';
+    b.addEventListener('click', function () {
+      $('#pInitTape').value = '0';
+      $('#pInitX').value = '0';
+      $('#pX1').value = '0';
+      $('#pX2').value = '2';
+      scheduleResim();
+    });
+    el.appendChild(b);
+  }
+
+  function rasterIfNeeded() {
+    if (app.rasterKey !== rasterKey()) buildRaster();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* loading machines                                                    */
+  /* ------------------------------------------------------------------ */
+  function setMachine(text, opts) {
+    opts = opts || {};
+    if (tourTimer && !opts.tour) tourStop('paused');
+    var m;
+    try {
+      m = parseCET(text);
+    } catch (e) {
+      setError(e.message);
+      return false;
+    }
+    setError('');
+    app.machine = m;
+    resimulate(false);
+    if (opts.pushUrl !== false && isHttp) {
+      try { history.replaceState(null, '', encodeURIComponent(m.str)); } catch (e) { /* ignore */ }
+    }
+    return true;
+  }
+
+  function loadFromUrl() {
+    var q = new URLSearchParams(location.search).get('m');
+    if (q) return q;
+    var segs = location.pathname.split('/').filter(Boolean);
+    var last = segs.length ? segs[segs.length - 1] : '';
+    if (!last || /\.html?$/i.test(last)) return null;
+    try { last = decodeURIComponent(last); } catch (e) { /* ignore */ }
+    return (last.indexOf('|') >= 0 && last.indexOf('_') >= 0) ? last : null;
+  }
+
+  // "#8783" in the address bar selects CET(4) glider-glider holdout line 8783.
+  function hashIdText() {
+    return location.hash.replace(/^#/, '').replace(/\/+$/, '').trim();
+  }
+  /* "#GG1234", "#EE123", "#EG1047402", "#N-AX-3", "#N-CET-12", and bare "#1234" */
+  function hashHoldoutId() {
+    var h = hashIdText();
+    var ng = h.match(/^(?:n-?)?(ax|cet)-?(\d{1,2})$/i);
+    if (ng) return nLineOf(ng[1].toUpperCase(), parseInt(ng[2], 10)) || 0;
+    var em = h.match(/^egm-?(\d{1,7})$/i);
+    if (em) return parseInt(em[1], 10) || 0;
+    var m = h.match(/^(gg|ee|eg|n|l)-?(\d{1,7})$/i);
+    if (m) return parseInt(m[2], 10) || 0;
+    if (!/^\d{1,7}$/.test(h)) return 0;
+    return parseInt(h, 10) || 0;
+  }
+
+  function hashFamily() {
+    var h = hashIdText();
+    if (/^(?:n-?)?(ax|cet)/i.test(h)) return 'N';
+    if (/^egm-?\d/i.test(h)) return 'EGM';
+    var m = h.match(/^(gg|ee|eg|n|l)-?\d/i);
+    if (m) return m[1].toUpperCase();
+    /* a bare number means the family being browsed, not the old GG default */
+    return FAMILY;
+  }
+
+  function loadHashHoldout() {
+    var id = hashHoldoutId();
+    if (!id) return false;
+    var fam = hashFamily();
+    setFamily(fam);
+    if (fam === 'EG' && !window.CET4_EG_HOLDOUTS) {
+      /* the list is fetched on demand, so defer the jump until it arrives */
+      loadEg(function () {
+        var s = id <= holdCount() ? holdAt(id) : null;
+        if (s) setMachine(s);
+        else setError('No machine ' + idLabel('EG', id) + ' in the ' + famName('EG') +
+          ' (1 \u2013 ' + fmt(holdCount()) + ').');
+      });
+      return true;
+    }
+    var str = id <= holdCount() ? holdAt(id) : null;
+    if (!str) {
+      setError('No machine ' + idLabel(fam, id) + ' in the ' + famName(fam) + ' (1 \u2013 ' + fmt(holdCount()) + ').');
+      return false;
+    }
+    return setMachine(str);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* highlighted machines                                                */
+  /* ------------------------------------------------------------------ */
+  var HIGHLIGHTED = [
+    { label: 'CET(1) champion (1 step)', tier: 9, str: '1RA---|1LA---' },
+    { label: 'CET(2) champion (97 steps)', tier: 9, str: '1LB0LB_1RB0LA|1RB1LA_1LA1RB' },
+    { label: 'CET(3) champion (10^^12.467 steps)', tier: 6, str: '1LB1RA_0RB1LC_0RA0LC|1RB0RC_1LB1LC_1RA0RB' },
+    { label: 'CET(4) glider-glider record (15,214,263 steps, verified)', tier: 9, str: '0LB1LA_1RC0RA_1RD1RA_1LA0LC|1RB0LC_1RD0RB_1RB1LB_0LA1RA' },
+    { label: 'CET(4) engine-engine best halt (1,999,962 steps, capped at the 2M budget)', tier: 9, str: '1LB0RA_1LC1RB_1RD0LC_0RA1LB|0RB0LB_0RC0LA_1RD1RC_1LD1LB' },
+    { label: 'CET(4) champion (10^^140 steps)', tier: 6, str: '0LD0LA_1LC1RB_0RB0LC_1RD0LB|1RB0RD_0RC0LA_1LB1RC_1LC0LC' },
+    { label: 'CET(2,3) champion (10^10^10^10^10^10^10^45 steps)', tier: 6, str: '1LB1RA0LB_2RB2LB2RA|2RB1LA1RB_2LB2RB1LA' },
+    { label: 'CET(4) record (4,622,083,548 steps)', tier: 9, str: '1LC0LC_1LA1RB_0RB1LC_0RA0RA|1RC0RA_1RA1RB_1LC0RD_0RA0RC' },
+    { label: 'CET(4) former record (65,579,412 steps)', tier: 9, str: '0LC0RA_0LD0RA_0LB0RA_0RA0RA|1RB1LD_1RC1RB_1LC1LA_0RC0RD' },
+    { label: 'CET(2,3) record (20,350 steps)', tier: 9, str: '2LB1LA2LA_2RB2LA0LB|1RB0LB1RB_2LA2LA1RA' },
+    { label: 'CET(2,3) former record (8,786 steps)', tier: 9, str: '2LB1LA2LA_2RB0LA0LB|1RB0LB1LB_2LA2LA1RA' },
+  ];
+
+  function defaultMachine() {
+    /* E-G is the default family, so open on a machine from it. The named ones
+       load by string, so this works before the 95 MB list has finished. */
+    if (FAMILY === 'EG' && window.CET4_EG_NAMED) {
+      for (var i = 0; i < window.CET4_EG_NAMED.length; i++) {
+        if (window.CET4_EG_NAMED[i].alias === 'Comet') return window.CET4_EG_NAMED[i].pair;
+      }
+    }
+    var h = HIGHLIGHTED.filter(function (x) { return x.label.indexOf('CET(4) glider-glider record') === 0; })[0];
+    return (h || HIGHLIGHTED[0]).str;
+  }
+
+  function renderHighlighted() {
+    var box = $('#hlList');
+    box.innerHTML = '';
+    HIGHLIGHTED.forEach(function (h) {
+      var b = document.createElement('button');
+      b.className = 'hlbtn';
+      b.type = 'button';
+      var dot = tierBg(TIERS[h.tier] || null) || 'transparent';
+      b.innerHTML = '<span class="hllabel"><span class="hldot" style="background:' + dot +
+        '" title="' + ((TIERS[h.tier] || {}).name || '') + '"></span>' + h.label + '</span><span class="hlstr">' + h.str + '</span>';
+      b.addEventListener('click', function () { setMachine(h.str); });
+      box.appendChild(b);
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* clipboard                                                           */
+  /* ------------------------------------------------------------------ */
+  function flash(msg) {
+    var el = $('#copyMsg');
+    el.textContent = msg;
+    clearTimeout(flash.t);
+    flash.t = setTimeout(function () { el.textContent = ''; }, 1600);
+  }
+
+  function copy(text, what) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { flash(what + ' copied'); },
+        function () { fallbackCopy(text, what); });
+    } else {
+      fallbackCopy(text, what);
+    }
+  }
+  function fallbackCopy(text, what) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); flash(what + ' copied'); }
+    catch (e) { flash('copy failed'); }
+    document.body.removeChild(ta);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* random                                                              */
+  /* ------------------------------------------------------------------ */
+  function randomHoldout() {
+    var total = holdCount();
+    if (!total) {
+      setError(FAMILY === 'EG'
+        ? 'No Engine-Glider list to draw from yet. The sweep is done (1,758,066 survive 20,000 steps) but the round pass that defines the list has not been run.'
+        : 'The ' + famName(FAMILY) + ' is missing.');
+      return;
+    }
+    var id = 1 + Math.floor(Math.random() * total);
+    var str = holdAt(id);
+    if (str) setMachine(str);
+  }
+
+  /* switching family resets the tour and the id range */
+  /* The E-G list is 95 MB and takes ~5 s to parse, so it is fetched only when
+     E-G is selected. Everyone else pays nothing. */
+  function loadEg(cb) {
+    if (window.CET4_EG_HOLDOUTS) { cb(); return; }
+    $('#tourState').textContent = 'loading the Engine-Glider list (95 MB, one time)...';
+    var s = document.createElement('script');
+    s.src = 'cet4-eg-holdouts.js';
+    s.onload = function () { FAMS.EG = null; $('#tourState').textContent = ''; cb(); };
+    s.onerror = function () { setError('Could not load cet4-eg-holdouts.js'); };
+    document.head.appendChild(s);
+  }
+
+  function setFamily(k) {
+    FAMILY = k;
+    if (k === 'EG' && !window.CET4_EG_HOLDOUTS) {
+      syncFamilyUi(k);
+      loadEg(function () { syncFamilyUi(k); });
+      return;
+    }
+    syncFamilyUi(k);
+  }
+
+  /* named machines: load by machine string, so the link survives a list rebuild */
+  var EG_BY_PAIR = null;
+  function egNamed(str) {
+    if (!window.CET4_EG_NAMED) return null;
+    if (!EG_BY_PAIR) {
+      EG_BY_PAIR = new Map();
+      for (var i = 0; i < window.CET4_EG_NAMED.length; i++) {
+        EG_BY_PAIR.set(window.CET4_EG_NAMED[i].pair, window.CET4_EG_NAMED[i]);
+      }
+    }
+    return EG_BY_PAIR.get(str) || null;
+  }
+  function egAlias(str) {
+    var e = egNamed(str);
+    return e ? e.alias : '';
+  }
+
+  function syncFamilyUi(k) {
+    tourId = 1;
+    /* 0.5 s over 62k machines is 8.7 hours, so the big list starts at 0.1 s.
+       Set the speed before tourStop, because tourLabel reads it. */
+    tourSpeed = (k === 'EE' || k === 'EGM') ? 100 : (k === 'EG' ? 50 : 500);
+    var sp = $('#tourSpeed');
+    if (sp) sp.value = String(tourSpeed);
+    tourStop(null);
+    var ch = $('#challenge');
+    if (ch) {
+      /* only the four swept families are challenges; the E-G ladder and the
+         Named 12 are reached by link (#L-1, #N-AX-3) or from the records page,
+         so the dropdown keeps whatever challenge was selected */
+      var sel = (k === 'EE') ? 'cet4ee' : (k === 'EG' ? 'cet4eg' : (k === 'EGM' ? 'cet4egm' : (k === 'GG' ? 'cet4gg' : '')));
+      ch.value = sel;   /* blank for L/N, so picking any challenge still fires change */
+    }
+    $('#tourState').textContent = '';
+
+    var what = $('#goalWhat'), best = $('#goalBest'), note = $('#goalNote');
+    if (k === 'L') {
+      if (what) what.textContent = 'engine-glider machines with a round certificate, from the first 16,000 pairs';
+      if (best) best.innerHTML = 'Best in this slice: <span class="mono">EG-2,254</span> at R=24, L2=991 \u2014 one round below Comet:';
+      if (note) note.innerHTML = 'Only <b>613</b> of the first 16,000 pairs produced a round certificate; the other 15,387 returned <b>weak</b>, <b>no-glider</b>, <b>no-gate-valid-bounce</b> or similar, which says nothing about whether they halt. Sorted best first: more rounds R, then depth L2. These are model claims, not proofs.';
+    } else if (k === 'EGM') {
+      if (what) what.textContent = 'engine-glider machines whose glider is modulated by the engine';
+      if (best) best.innerHTML = 'Archetype from outside this sweep: <span class="mono">Deever</span> (<a href="#N-CET-12">N-CET-12</a>), the community 10\u2191\u2191140 champion \u2014 same shape, and no round law here either:';
+      if (note) note.innerHTML = 'The round pass over <b>1,166,500</b> pairs returned <b>55,520</b> of this kind: an engine plus a gliding agent whose period and drift against this engine differ from the agent\u2019s solo geometry, because the engine keeps rewriting the tape under it. No round law applies, so no tetrational value is claimed \u2014 these are the machines the ladder stops short of. The non-halting certifier has since run over the whole class: <b>31,763</b> were certified non-halting and <b>1,499</b> halt (every step measured), so this list now holds only the <b>22,258</b> that remain undecided. All of them survived the sweep\u2019s 20,000 steps, and that is the whole claim. The class is exact at this project\u2019s convention \u2014 boot 4,000 puts all <b>55,520</b> here \u2014 but off that convention it softens: in a 301-machine sample at boot 5,000 about 12% shifted to weak or no-gate-valid-bounce, and one machine (EGM-32,561) even produced an R=2 certificate. Membership is convention-dependent.';
+    } else if (k === 'N') {
+      if (what) what.textContent = 'named machines with claimed tetrational halt values';
+      if (best) best.innerHTML = 'Highest value this project measured: <span class="mono">Comet</span>, at 10\u2191\u219125 (R=25, L2=1012). Highest community claim in the list: <span class="mono">Deever</span>, at 10\u2191\u2191140, unverified here:';
+      if (note) note.innerHTML = 'The eleven Axolotls come from this project\u2019s round pipeline: each value is a round law fitted on counter lengths L0..L0+5 and applied beyond that range, and R also depends on the boot convention — at boot 5,000 several of them give no gate-valid bounce at all, and Comet drops from R=25 to R=10. <b>Deever</b> (N-CET-12) is different: it is named by the CET community, it lies outside the engine x glider enumeration behind every other list here, and the round pipeline returns <b>glider-drift</b> for it, so this clone can neither reproduce nor refute 10\u2191\u2191140. It survives 2,000,000 steps here. It is coloured like the Axolotls because it carries the same kind of claim, a claimed tetrational halt value \u2014 the colour describes the claim, not a measurement.';
+    } else if (k === 'EG') {
+      if (what) what.textContent = 'engine-glider machines survive 20,000 steps';
+      if (best) best.innerHTML = 'The largest value this project measured: <span class="mono">Comet</span>, at 10\u2191\u219125 (R=25, L2=1012) \u2014 a round estimate, not a certificate. The community champion <span class="mono">Deever</span> claims 10\u2191\u2191140, but it lies outside this sweep and is not reproduced here:';
+      if (note) note.innerHTML = '<b>1,091,655,750</b> well-formed pairs were swept to 1,000 steps and <b>1,885,964</b> survived; a 20,000-step pass left <b>1,758,066</b>. The non-halting certifier has now run over every one of the <b>1,000</b> chunks: <b>708,305</b> machines are certified non-halting (694,081 joint, 14,222 escape, 2 confined), <b>58,555</b> halt with the step measured by direct simulation at the sweep start (BB(5) budget, 47,176,870 steps), and the round pass adds <b>62,305</b> round certificates. That leaves <b>928,890</b> undetermined: the <b>906,632</b> in this list plus the <b>22,258</b> engine-glider modulate machines, which have their own section. The eleven Axolotls are their own category, and Deever was never in this sweep. Ids shift whenever the list is rebuilt, which is why work is tracked in survivors-line chunks rather than ids.';
+    } else if (k === 'EE') {
+      if (what) what.textContent = 'engine-engine machines survive 100,000 steps';
+      if (best) best.innerHTML = 'The best verified CET(4) engine-engine machine runs for <span class="mono">1,999,962</span> steps:';
+      if (note) note.innerHTML = 'Of these, <b>8,185</b> are certified non-halting, <b>562</b> are likely non-halting, <b>2,695</b> are known to halt within 2,000,000 steps, and <b>51,176</b> remain undecided. Those 51,176 survived 2,000,000 steps; being listed says nothing about them beyond that.';
+    } else {
+      if (what) what.textContent = 'glider-glider machines survive 47,176,870 steps';
+      if (best) best.innerHTML = 'The best known CET(4) glider-glider machine runs for <span class="mono">15,214,263</span> steps:';
+      /* count the claim tiers from the data instead of quoting numbers that can drift */
+      var gt = window.CET4_GG_TIERS || [];
+      var gCert = 0, gLikely = 0, gOpen = 0;
+      for (var gi = 0; gi < gt.length; gi++) {
+        if (gt[gi] === 0) gCert++; else if (gt[gi] === 1) gLikely++; else gOpen++;
+      }
+      if (note) note.innerHTML = 'Of these, <b>' + fmt(gCert) + '</b> carry a non-halting certificate: both heads reproduce ' +
+        'their states and their 65-cell surroundings at a fixed gap, so the pattern repeats exactly and the heads can ' +
+        'never meet. Another <b>' + fmt(gLikely) + '</b> are <b>likely non-halting but unproven</b>: the heads drift apart ' +
+        'at fixed rates, so the gap cannot close. The remaining <b>' + fmt(gOpen) + '</b> are <b>undecided</b> \u2014 each ' +
+        'either never halts, or halts after 47,176,870 steps. Surviving that budget is not an outcome: only the ' +
+        'certified ones have their non-halting proved here.';
+    }
+    $('#remain').textContent = (k === 'EG' && !holdCount()) ? '1,520,706' : fmt(holdCount());
+    $('#btnTour').textContent = tourLabel();
+  }
+
+  function randomTable() {
+    var n = 3, k = 2;
+    var syms = '01';
+    var rows = [];
+    for (var a = 0; a < 2; a++) {
+      var agent = [];
+      for (var st = 0; st < n; st++) {
+        var row = '';
+        for (var s = 0; s < k; s++) {
+          row += syms[Math.floor(Math.random() * k)] +
+            (Math.random() < 0.5 ? 'L' : 'R') +
+            stateName(Math.floor(Math.random() * n));
+        }
+        agent.push(row);
+      }
+      rows.push(agent.join('_'));
+    }
+    setMachine(rows.join('|'));
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* events                                                              */
+  /* ------------------------------------------------------------------ */
+  $('#remain').textContent = fmt(holdCount());
+
+  $('#whatLink').addEventListener('click', function () { $('#modal').classList.add('open'); });
+  $('#modalClose').addEventListener('click', function () { $('#modal').classList.remove('open'); });
+  $('#modal').addEventListener('click', function (e) {
+    if (e.target === $('#modal')) $('#modal').classList.remove('open');
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') $('#modal').classList.remove('open');
+  });
+
+  $('#paramsLink').addEventListener('click', function () {
+    var p = $('#params');
+    p.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    p.classList.add('flash');
+    setTimeout(function () { p.classList.remove('flash'); }, 1200);
+  });
+
+  $('#stdFormat').addEventListener('click', function () {
+    if (app.machine) copy(app.machine.str, 'CET string');
+  });
+  $('#btnCopy').addEventListener('click', function () { if (app.machine) copy(app.machine.str, 'CET string'); });
+  $('#btnCopy1').addEventListener('click', function () {
+    if (app.machine) copy(app.machine.str.split('|')[0], 'Machine 1');
+  });
+  $('#btnCopy2').addEventListener('click', function () {
+    if (app.machine) copy(app.machine.str.split('|')[1], 'Machine 2');
+  });
+  $('#btnCopyLink').addEventListener('click', function () {
+    if (!app.machine) return;
+    var base = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
+    copy(base + encodeURIComponent(app.machine.str), 'Link');
+  });
+
+  /* ------------------------------------------------------------------ */
+  /* tour: step through the whole holdout list, 0.5 s each               */
+  /* ------------------------------------------------------------------ */
+  var tourTimer = null, tourId = 1;
+  /* A floor, not a guarantee: setTimeout cannot fire faster than the render
+     inside it, so a slow machine makes the real pace its own render time. */
+  var tourSpeed = 500;
+  function tourMs() { return tourSpeed; }
+
+  function tourLabel() {
+    var n = holdCount();
+    var fam = FAMILY === 'EG' ? 'E-G' : FAMILY;
+    if (!n) return 'Tour ' + fam + ' (no list yet)';
+    var secs = n * (tourMs() / 1000);
+    var dur = secs >= 3600 ? (secs / 3600).toFixed(1) + ' h' : Math.round(secs / 60) + ' min';
+    return 'Tour ' + fam + ' all ' + fmt(n) + ' (' + (tourMs() / 1000) + ' s each, ' + dur + ')';
+  }
+
+  function tourStop(why) {
+    if (tourTimer) { clearTimeout(tourTimer); tourTimer = null; }
+    $('#btnTour').textContent = tourLabel();
+    if (why === 'done') $('#tourState').textContent = 'tour complete';
+    else if (why) $('#tourState').textContent = 'stopped at id ' +
+      fmt(Math.min(tourId, holdCount()));
+  }
+
+  function tourNext() {
+    tourTimer = null;
+    if (!holdCount()) { tourStop(null); return; }
+    if (tourId > holdCount()) { tourStop('done'); return; }
+    var str = holdAt(tourId);
+    if (str) setMachine(str, { pushUrl: false, tour: true });
+    $('#tourState').textContent = 'id ' + fmt(tourId) + ' / ' + fmt(holdCount());
+    tourId++;
+    tourTimer = setTimeout(tourNext, tourMs());
+  }
+
+  function tourStart() {
+    if (tourTimer) { tourStop('paused'); return; }
+    if (!holdCount()) {
+      setError(FAMILY === 'EG'
+        ? 'The Engine-Glider holdout list has not been built yet: 1,758,066 machines survive 20,000 steps, and the list will be defined by the round pass (~5% of them). Load a machine from the box above.'
+        : 'The ' + famName(FAMILY) + ' is missing.');
+      return;
+    }
+    tourId = 1;
+    $('#btnTour').textContent = 'Stop tour';
+    tourNext();
+  }
+
+  $('#btnTour').textContent = tourLabel();
+  $('#btnTour').addEventListener('click', tourStart);
+  $('#tourSpeed').addEventListener('change', function () {
+    tourSpeed = intOf(this.value, 500);
+    $('#btnTour').textContent = tourLabel();
+  });
+
+  $('#btnRandom').addEventListener('click', randomHoldout);
+  $('#seedA').addEventListener('click', function (e) { e.preventDefault(); randomHoldout(); });
+  $('#seedA2').addEventListener('click', function (e) { e.preventDefault(); randomHoldout(); });
+  $('#btnRandomAny').addEventListener('click', randomTable);
+  $('#btnFitHoldout').addEventListener('click', function () {
+    if (!holdCount()) return;
+    randomHoldout();
+    fitView();
+  });
+
+  $('#morelink').addEventListener('click', function () {
+    var b = $('#moreBox');
+    b.hidden = !b.hidden;
+    $('#morelink').textContent = b.hidden ? 'More options' : 'Hide options';
+  });
+
+  $('#goId').addEventListener('click', function () {
+    var raw = String($('#idInput').value || '').trim();
+    var ng = raw.match(/^(?:n-)?(ax|cet)-?(\d{1,2})$/i);
+    var id = ng ? nLineOf(ng[1].toUpperCase(), parseInt(ng[2], 10)) : intOf(raw, 0);
+    if (ng && FAMILY !== 'N') setFamily('N');
+    var str = id > 0 ? holdAt(id) : null;
+    if (!str) {
+      setError('No machine ' + (id > 0 ? idLabel(FAMILY, id) : 'with that id') + ' in the ' +
+        famName(FAMILY) + ' (1 \u2013 ' + fmt(holdCount()) + ').');
+      return;
+    }
+    setMachine(str);
+  });
+  $('#idInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') $('#goId').click();
+  });
+
+  $('#goStd').addEventListener('click', function () {
+    var v = $('#stdInput').value.trim();
+    if (v) setMachine(v);
+  });
+  $('#stdInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') $('#goStd').click();
+  });
+
+  $('#challenge').addEventListener('change', function () {
+    var v = this.value;
+    setFamily(v === 'cet4ee' ? 'EE' : (v === 'cet4eg' ? 'EG' : (v === 'cet4egm' ? 'EGM' : 'GG')));
+  });
+
+  // parameters
+  var resimTimer = 0;
+  function scheduleResim() {
+    clearTimeout(resimTimer);
+    resimTimer = setTimeout(function () { resimulate(false); }, 180);
+  }
+  $('#pSteps').addEventListener('change', scheduleResim);
+  $('#pInitTape').addEventListener('change', scheduleResim);
+  $('#pInitX').addEventListener('change', scheduleResim);
+  $('#pX1').addEventListener('change', scheduleResim);
+  $('#pX2').addEventListener('change', scheduleResim);
+
+  $('#pTapeWidth').addEventListener('input', function () {
+    readParams(); buildRaster(); updateStatus(); draw();
+  });
+  $('#pXTrans').addEventListener('input', function () {
+    readParams(); buildRaster(); updateStatus(); draw();
+  });
+  $('#pShowHeads').addEventListener('change', function () {
+    readParams(); draw();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.vizbtn'), function (b) {
+    b.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.vizbtn'), function (x) {
+        x.classList.remove('on');
+      });
+      b.classList.add('on');
+      params.viz = b.getAttribute('data-viz');
+      $('#pSteps').max = String(params.viz === 'blaze' ? MAX_STEPS_BLAZE : MAX_STEPS);
+      draw();
+    });
+  });
+
+  function fitView() {
+    if (!app.sim || !app.machine) return;
+    var lo = 0, hi = 0, any = false;
+    app.sim.cells.forEach(function (arr, cell) {
+      if (!any) { lo = hi = cell; any = true; }
+      if (cell < lo) lo = cell;
+      if (cell > hi) hi = cell;
+    });
+    if (!any) return;
+    var pad = Math.max(8, Math.round((hi - lo) * 0.04));
+    var width = Math.max(16, hi - lo + 1 + 2 * pad);
+    params.tapeWidth = clamp(width, 8, 20000);
+    params.xTrans = clamp((0 - (lo - pad)) / params.tapeWidth, 0, 1);
+    $('#pTapeWidth').value = params.tapeWidth;
+    $('#pXTrans').value = params.xTrans.toFixed(3);
+    buildRaster(); updateStatus(); draw();
+  }
+
+  // timeline
+  $('#tReset').addEventListener('click', function () { stopPlay(); setTime(0); });
+  $('#tEnd').addEventListener('click', function () { stopPlay(); if (app.sim) setTime(app.sim.total); });
+  $('#tBack').addEventListener('click', function () { stopPlay(); setTime(app.time - 1); });
+  $('#tFwd').addEventListener('click', function () { stopPlay(); setTime(app.time + 1); });
+  $('#tRange').addEventListener('input', function () {
+    stopPlay();
+    setTime(intOf(this.value, 0));
+  });
+  $('#tPlay').addEventListener('click', function () { togglePlay(); });
+  $('#tFit').addEventListener('click', function () { fitView(); });
+
+  function stopPlay() {
+    app.playing = false;
+    $('#tPlay').textContent = '\u25b6';
+    if (app.raf) { cancelAnimationFrame(app.raf); app.raf = 0; }
+  }
+  function togglePlay() {
+    if (!app.sim || !app.sim.total) return;
+    if (app.playing) { stopPlay(); return; }
+    if (app.time >= app.sim.total) setTime(0);
+    app.playing = true;
+    $('#tPlay').textContent = '\u2016';
+    var last = 0;
+    var total = app.sim.total;
+    var perMs = total / 2800;
+    function frame(ts) {
+      if (!app.playing) return;
+      if (!last) last = ts;
+      var dt = Math.min(120, ts - last);
+      last = ts;
+      var next = app.time + Math.max(1, Math.round(dt * perMs));
+      if (next >= total) { setTime(total); stopPlay(); return; }
+      setTime(next);
+      app.raf = requestAnimationFrame(frame);
+    }
+    app.raf = requestAnimationFrame(frame);
+  }
+
+  // diagram scrubbing + hover readout
+  var dragging = false;
+  function timeFromEvent(e) {
+    var r = cv.getBoundingClientRect();
+    var frac = clamp((e.clientY - r.top) / r.height, 0, 1);
+    return Math.round(frac * (app.sim ? app.sim.total : 0));
+  }
+  function cellFromEvent(e) {
+    var r = cv.getBoundingClientRect();
+    var span = clamp(Math.round(params.tapeWidth), 1, 20000);
+    var x0 = -span * params.xTrans;
+    return Math.floor((e.clientX - r.left) / r.width * span + x0);
+  }
+  function tapeValueAt(cell, t) {
+    var arr = app.sim ? app.sim.cells.get(cell) : null;
+    if (!arr) return 0;
+    for (var i = 0; i < arr.length; i += 3) {
+      if (t >= arr[i] && t < arr[i + 1]) return arr[i + 2];
+    }
+    return 0;
+  }
+  cv.addEventListener('pointerdown', function (e) {
+    if (!app.sim) return;
+    dragging = true;
+    stopPlay();
+    cv.setPointerCapture(e.pointerId);
+    setTime(timeFromEvent(e));
+  });
+  cv.addEventListener('pointermove', function (e) {
+    if (!app.sim) return;
+    if (dragging) { setTime(timeFromEvent(e)); return; }
+    var t = timeFromEvent(e);
+    var cell = cellFromEvent(e);
+    var val = tapeValueAt(cell, t);
+    var tip = $('#tip');
+    var r = cv.parentNode.getBoundingClientRect();
+    var frt = Math.min(app.sim.nFrames - 1, Math.round(t / app.sim.stride));
+    tip.textContent = 'step ' + fmt(t) + '  cell ' + fmt(cell) + '\n' +
+      'value ' + val +
+      '\nagent 1: ' + stateName(app.sim.hs1[frt]) + ' @ ' + fmt(app.sim.hp1[frt]) +
+      '\nagent 2: ' + stateName(app.sim.hs2[frt]) + ' @ ' + fmt(app.sim.hp2[frt]);
+    tip.style.display = 'block';
+    var x = e.clientX - r.left, y = e.clientY - r.top;
+    if (x > CW * 0.55) x -= 180;
+    if (y > CH - 70) y -= 64;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  });
+  cv.addEventListener('pointerleave', function () {
+    dragging = false;
+    $('#tip').style.display = 'none';
+  });
+  cv.addEventListener('pointerup', function () { dragging = false; });
+
+  // Keep the machine panel starting at the diagram, like the reference layout.
+  var rightCol = document.querySelector('.right');
+  function alignColumns() {
+    if (!rightCol) return;
+    if (window.innerWidth <= 1120) { rightCol.style.paddingTop = ''; return; }
+    var dt = cv.getBoundingClientRect().top - rightCol.getBoundingClientRect().top;
+    rightCol.style.paddingTop = Math.max(0, Math.round(dt + 16)) + 'px';
+  }
+
+  window.addEventListener('resize', function () {
+    var d = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+    if (d !== dpr) {
+      dpr = d;
+      cv.width = CW * dpr;
+      cv.height = CH * dpr;
+      draw();
+    }
+    alignColumns();
+  });
+
+  window.addEventListener('hashchange', function () {
+    if (hashHoldoutId()) loadHashHoldout();
+  });
+
+  /* ------------------------------------------------------------------ */
+  /* boot                                                                */
+  /* ------------------------------------------------------------------ */
+  // Secret easter egg: /catch (or ?egg=catch, #catch).
+  var eggMode = /[?&]egg=catch\b/.test(location.search) ||
+    /^#?catch$/i.test(location.hash || '') ||
+    /^catch$/i.test(location.pathname.replace(/\/+$/, '').split('/').pop() || '');
+  if (eggMode) {
+    if (isHttp) {
+      try { history.replaceState(null, '', 'catch'); } catch (e) { /* ignore */ }
+    }
+    var eggScript = document.createElement('script');
+    eggScript.src = location.href.replace(/[?#].*$/, '').replace(/[^\/]*$/, '') + 'catch.js';
+    document.head.appendChild(eggScript);
+    return;
+  }
+
+  renderHighlighted();
+  alignColumns();
+  requestAnimationFrame(alignColumns);
+
+  if (hashHoldoutId()) {
+    // "#8783" selects CET(4) glider-glider holdout line 8783.
+    app.fromUrl = true;
+    if (!loadHashHoldout()) setMachine(defaultMachine(), { pushUrl: false });
+  } else {
+    var fromUrl = loadFromUrl();
+    var note = '';
+    if (fromUrl) {
+      app.fromUrl = true;
+      if (!setMachine(fromUrl)) {
+        // fall back to the CET(4) glider-glider record when the URL is malformed
+        setMachine(defaultMachine(), { pushUrl: false });
+        note = 'That link does not parse as a CET(4) machine, so the default machine is shown.';
+      }
+    } else {
+      setMachine(defaultMachine(), { pushUrl: false });
+      /* an id that names no machine would otherwise be dropped in silence, and
+         the default machine on screen could be mistaken for the one asked for */
+      if (hashIdText()) {
+        note = 'This link points at "' + hashIdText().slice(0, 40) + '", which is not a CET(4) holdout id, so the default ' +
+          'machine is shown. Ids look like #GG123, #EE123, #EG123, #EGM12, #N-AX-3 or #N-CET-12; ' +
+          'a machine string goes in ?m=<string>.';
+      }
+    }
+    if (note) setError(note);
+  }
+
+  /* apply the starting family, and fetch the E-G list if that is it */
+  syncFamilyUi(FAMILY);
+  if (FAMILY === 'EG' && !window.CET4_EG_HOLDOUTS) {
+    loadEg(function () { syncFamilyUi('EG'); renderMachineInfo(); });
+  }
+})();
+</script>
+</body>
+</html>
