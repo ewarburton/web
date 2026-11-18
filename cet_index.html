@@ -623,7 +623,7 @@
   function famName(key) {
     if (key === 'EE') return 'CET(4) engine-engine holdout list';
     if (key === 'EG') return 'CET(4) engine-glider sweep';
-    if (key === 'N') return 'Named 12 list (known tetrational values)';
+    if (key === 'N') return 'Named 13 list (known tetrational values)';
     if (key === 'L') return 'E-G ladder (round certificates)';
     if (key === 'EGM') return 'CET(4) engine-glider modulate list';
     return 'CET(4) glider-glider holdout list';
@@ -1051,7 +1051,7 @@
     var aliasEntry = egNamed(m.str);
     var aliasName = aliasEntry ? aliasEntry.alias : '';
     var aliasColor = (aliasEntry && aliasEntry.color) ? aliasEntry.color : '';
-    /* names given outside the Named 12 (cet4-named-extra.js) */
+    /* names given outside the Named 13 (cet4-named-extra.js) */
     if (!aliasName) {
       var extraNamed = (window.CET4_NAMED_EXTRA || {})[m.str];
       if (extraNamed) { aliasName = extraNamed[0]; aliasColor = extraNamed[1] || ''; }
@@ -1060,7 +1060,7 @@
        still carry a derived alias from the records page */
     if (!aliasName && window.CET4_RECORD_ALIAS) aliasName = window.CET4_RECORD_ALIAS[m.str] || '';
     /* The header shows a *holdout* id, so a named machine still gets one if it
-       also sits in a real list. The Named 12 are deliberately not a source here:
+       also sits in a real list. The Named 13 are deliberately not a source here:
        the name is the identity, and their id stays on the Database id line. */
     var headFam = null, headId = 0;
     if (ggid) { headFam = 'GG'; headId = ggid; }
@@ -1547,7 +1547,7 @@
     var ch = $('#challenge');
     if (ch) {
       /* only the four swept families are challenges; the E-G ladder and the
-         Named 12 are reached by link (#L-1, #N-AX-3) or from the records page,
+         Named 13 are reached by link (#L-1, #N-AX-3) or from the records page,
          so the dropdown keeps whatever challenge was selected */
       var sel = (k === 'EE') ? 'cet4ee' : (k === 'EG' ? 'cet4eg' : (k === 'EGM' ? 'cet4egm' : (k === 'GG' ? 'cet4gg' : '')));
       ch.value = sel;   /* blank for L/N, so picking any challenge still fires change */
@@ -1566,7 +1566,7 @@
     } else if (k === 'N') {
       if (what) what.textContent = 'named machines with claimed tetrational halt values';
       if (best) best.innerHTML = 'Highest value this project measured: <span class="mono">Comet</span>, at 10\u2191\u219125 (R=25, L2=1012). Highest community claim in the list: <span class="mono">Deever</span>, at 10\u2191\u2191140, unverified here:';
-      if (note) note.innerHTML = 'The eleven Axolotls come from this project\u2019s round pipeline: each value is a round law fitted on counter lengths L0..L0+5 and applied beyond that range, and R also depends on the boot convention — at boot 5,000 several of them give no gate-valid bounce at all, and Comet drops from R=25 to R=10. <b>Deever</b> (N-CET-12) is different: it is named by the CET community, it lies outside the engine x glider enumeration behind every other list here, and the round pipeline returns <b>glider-drift</b> for it, so this clone can neither reproduce nor refute 10\u2191\u2191140. It survives 2,000,000 steps here. It is coloured like the Axolotls because it carries the same kind of claim, a claimed tetrational halt value \u2014 the colour describes the claim, not a measurement.';
+      if (note) note.innerHTML = 'The eleven Axolotls come from this project\u2019s round pipeline: each value is a round law fitted on counter lengths L0..L0+5 and applied beyond that range, and R also depends on the boot convention — at boot 5,000 several of them give no gate-valid bounce at all, and Comet drops from R=25 to R=10. <b>Harmony</b> (N-AX-13) is the twelfth of that kind: the same round law, on a machine the full sweep turned up after the original 16,000-pair ladder slice, so it carries the same caveat and no extra weight. <b>Deever</b> (N-CET-12) is different: it is named by the CET community, it lies outside the engine x glider enumeration behind every other list here, and the round pipeline returns <b>glider-drift</b> for it, so this clone can neither reproduce nor refute 10\u2191\u2191140. It survives 2,000,000 steps here. It is coloured like the Axolotls because it carries the same kind of claim, a claimed tetrational halt value \u2014 the colour describes the claim, not a measurement.';
     } else if (k === 'EG') {
       if (what) what.textContent = 'engine-glider machines survive 20,000 steps';
       if (best) best.innerHTML = 'The largest value this project measured: <span class="mono">Comet</span>, at 10\u2191\u219125 (R=25, L2=1012) \u2014 a round estimate, not a certificate. The community champion <span class="mono">Deever</span> claims 10\u2191\u2191140, but it lies outside this sweep and is not reproduced here:';
