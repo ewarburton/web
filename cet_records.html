@@ -154,15 +154,22 @@
     (<i>no gate</i>, <i>alive</i>, <i>drift</i>). The certificates themselves are a boot-4,000
     convention. L0 is unchanged by the boot in every machine that still produces a value; R and L2
     are not.<br>
-    R and L2 are round-pass claims, not proofs: the value depends on the boot convention
-    (4,000 steps here). Deever's 10&uarr;&uarr;140 is a community claim this pipeline has not
-    reproduced &mdash; it lies outside the sweep, which is why it has no L2.
+    <b>variance</b> summarises a seven-boot sweep (3,999 / 4,000 / 4,001 / 4,010 / 5,000 / 10,000 /
+    20,000): <span style="color:#9be49b">Stable</span> &mdash; same R, L2 within 2%;
+    <span style="color:#ffe4a3">Drifting</span> &mdash; same R, L2 wanders further;
+    <span style="color:#ffb3b3">Halts Differently</span> &mdash; R moves, so the tower height changes;
+    <span style="color:#a9bfd4">Alive</span> / <span style="color:#a9bfd4">No Gate</span> &mdash; no
+    certificate at any boot; <span style="color:#ffd08a">Mixed</span> &mdash; some boots halt, some do not.
+    R is the soft number here: Comet is R=7 at boot 3,999, R=25 at 4,000, and alive at 4,001.<br>
+    R and L2 are round-pass claims, not proofs. Deever's 10&uarr;&uarr;140 is a community claim this
+    pipeline has not reproduced &mdash; it lies outside the sweep, which is why it has no L2.
     Open a machine in the <a href="cet_index.html">viewer</a> to simulate it.
   </div>
 </main>
 
 <script src="cet4-records.js"></script>
 <script src="cet4-record-boot.js"></script>
+<script src="cet4-record-variance.js"></script>
 <script src="cet4-record-aliases.js"></script>
 <script src="cet4-spacetime.js"></script>
 <script>
@@ -303,9 +310,21 @@
     return '<td class="rn" title="' + v[0] + '">' + label + '</td>';
   }
 
+  /* how the certificate behaves across a boot sweep (see emit_record_variance.js) */
+  function varianceCell(pair) {
+    var v = (window.CET4_RECORD_VARIANCE || {})[pair];
+    if (!v) return '<td class="rn">&mdash;</td>';
+    var col = v === 'Stable' ? '#9be49b'
+      : v === 'Drifting' ? '#ffe4a3'
+      : v === 'Halts Differently' ? '#ffb3b3'
+      : v === 'Mixed' ? '#ffd08a'
+      : '#a9bfd4';
+    return '<td class="rn" style="color:' + col + '" title="boots 3999, 4000, 4001, 4010, 5000, 10000, 20000">' + v + '</td>';
+  }
+
   function table(rows, withAuto, withBoot) {
     var h = '<table class="rectbl"><thead><tr><th>R</th><th>L2</th><th>L0</th>' +
-      (withBoot ? '<th style="text-align:right">boot 5,000</th>' : '') +
+      (withBoot ? '<th style="text-align:right">boot 5,000</th><th style="text-align:right">variance</th>' : '') +
       '<th>machine</th></tr></thead><tbody>';
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
@@ -317,7 +336,7 @@
       h += '<tr><td class="rn">' + r[1] + '</td>' +
         '<td class="rn">' + (r[2] === null ? '&mdash;' : fmt(r[2])) + '</td>' +
         '<td class="rn">' + (r[3] === null ? '&mdash;' : fmt(r[3])) + '</td>' +
-        (withBoot ? bootCell(r[0]) : '') +
+        (withBoot ? bootCell(r[0]) + varianceCell(r[0]) : '') +
         '<td><button class="recbtn" type="button" data-pair="' + r[0] + '" title="' + r[0] + '">' +
         lab + r[0] +
         '</button>' + (r[5] ? '<span class="claim">community claim</span>' : '') + '</td></tr>';
