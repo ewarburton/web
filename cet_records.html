@@ -149,6 +149,11 @@
   <div id="ladTable"></div>
 
   <div class="hint" style="margin-top:14px">
+    <b>boot 5,000</b> is the same pipeline re-run with a 1,000-step longer boot, shown as
+    R / L2 / L0 where it still yields a value, and otherwise why it doesn't
+    (<i>no gate</i>, <i>alive</i>, <i>drift</i>). The certificates themselves are a boot-4,000
+    convention. L0 is unchanged by the boot in every machine that still produces a value; R and L2
+    are not.<br>
     R and L2 are round-pass claims, not proofs: the value depends on the boot convention
     (4,000 steps here). Deever's 10&uarr;&uarr;140 is a community claim this pipeline has not
     reproduced &mdash; it lies outside the sweep, which is why it has no L2.
@@ -157,6 +162,7 @@
 </main>
 
 <script src="cet4-records.js"></script>
+<script src="cet4-record-boot.js"></script>
 <script src="cet4-record-aliases.js"></script>
 <script src="cet4-spacetime.js"></script>
 <script>
@@ -283,8 +289,24 @@
     return (m && m[pair]) || null;
   }
 
-  function table(rows, withAuto) {
-    var h = '<table class="rectbl"><thead><tr><th>R</th><th>L2</th><th>L0</th><th>machine</th></tr></thead><tbody>';
+  /* the same pipeline re-run at boot 5,000: R / L2 / L0, or why there is none */
+  function bootCell(pair) {
+    var v = (window.CET4_RECORD_BOOT || {})[pair];
+    if (!v) return '<td class="rn">&mdash;</td>';
+    if (v[0] === 'halt') {
+      return '<td class="rn" title="boot 5,000">' + v[1] + ' / ' + fmt(v[2]) + ' / ' + v[3] + '</td>';
+    }
+    var label = v[0] === 'no-gate-valid-bounce' ? 'no gate'
+      : v[0] === 'ALIVE' ? 'alive'
+      : v[0] === 'glider-drift' ? 'drift'
+      : String(v[0]).toLowerCase();
+    return '<td class="rn" title="' + v[0] + '">' + label + '</td>';
+  }
+
+  function table(rows, withAuto, withBoot) {
+    var h = '<table class="rectbl"><thead><tr><th>R</th><th>L2</th><th>L0</th>' +
+      (withBoot ? '<th style="text-align:right">boot 5,000</th>' : '') +
+      '<th>machine</th></tr></thead><tbody>';
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
       var a = (withAuto && !r[4]) ? autoAlias(r[0]) : null;
@@ -295,6 +317,7 @@
       h += '<tr><td class="rn">' + r[1] + '</td>' +
         '<td class="rn">' + (r[2] === null ? '&mdash;' : fmt(r[2])) + '</td>' +
         '<td class="rn">' + (r[3] === null ? '&mdash;' : fmt(r[3])) + '</td>' +
+        (withBoot ? bootCell(r[0]) : '') +
         '<td><button class="recbtn" type="button" data-pair="' + r[0] + '" title="' + r[0] + '">' +
         lab + r[0] +
         '</button>' + (r[5] ? '<span class="claim">community claim</span>' : '') + '</td></tr>';
@@ -302,9 +325,9 @@
     return h + '</tbody></table>';
   }
 
-  $('#famTable').innerHTML = table(FAM, false);
-  $('#topTable').innerHTML = table(TOP, true);
-  $('#ladTable').innerHTML = table(window.CET4_RECORD_LADDER || [], false);
+  $('#famTable').innerHTML = table(FAM, false, true);
+  $('#topTable').innerHTML = table(TOP, true, true);
+  $('#ladTable').innerHTML = table(window.CET4_RECORD_LADDER || [], false, true);
   $('#famCount').textContent = String(FAM.length);
   $('#topCount').textContent = String(TOP.length);
   $('#ladCount').textContent = String((window.CET4_RECORD_LADDER || []).length);
