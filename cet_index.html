@@ -57,6 +57,7 @@
   .emo{font-size:11px}
   .join{color:#a9bfd4}
   .namedtag{color:#9fd0c0;font-weight:600}
+  .structtag{font-family:var(--mono);color:#9bd5f2;font-size:11px;margin-left:6px;white-space:nowrap}
 
   /* ---------- diagram ---------- */
   .diagrambox{width:480px;max-width:100%;margin-left:auto;margin-right:36px;position:relative}
@@ -437,7 +438,7 @@
 <script src="cet4-eg-named.js"></script>
 <script src="cet4-named-extra.js"></script>
 <script src="cet4-records.js"></script>
-<script src="cet4-record-aliases.js"></script>
+<script src="cet4-record-structure.js"></script>
 <script src="cet4-palette.js"></script>
 <script>
 (function () {
@@ -1056,9 +1057,9 @@
       var extraNamed = (window.CET4_NAMED_EXTRA || {})[m.str];
       if (extraNamed) { aliasName = extraNamed[0]; aliasColor = extraNamed[1] || ''; }
     }
-    /* a record machine is usually settled and so in no holdout list, but it may
-       still carry a derived alias from the records page */
-    if (!aliasName && window.CET4_RECORD_ALIAS) aliasName = window.CET4_RECORD_ALIAS[m.str] || '';
+    /* structure coordinates: E is an engine family, G a glider family. They are
+       shown beside the machine and never stand in for a chosen name. */
+    var structTag = ((window.CET4_RECORD_STRUCTURE || {}).labels || {})[m.str] || '';
     /* The header shows a *holdout* id, so a named machine still gets one if it
        also sits in a real list. The Named 13 are deliberately not a source here:
        the name is the identity, and their id stays on the Database id line. */
@@ -1074,7 +1075,8 @@
         ? ' <span class="namedtag"' +
           (aliasColor ? ' style="color:' + aliasColor + '"' : '') +
           '>&mdash; ' + aliasName + '</span>'
-        : '');
+        : '') +
+      (structTag ? ' <span class="structtag">' + structTag + '</span>' : '');
     $('#domainLine').textContent = 'CET(' + m.n + (m.k !== 2 ? ',' + m.k : '') + ') \u00b7 ' + m.n +
       ' states \u00b7 ' + m.k + ' symbols \u00b7 2 agents';
     $('#codeArea').innerHTML = agentTable(0) + agentTable(1);
